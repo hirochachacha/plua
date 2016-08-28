@@ -1,12 +1,10 @@
 package object
 
 type Process interface {
-	MainThread() Thread
-
+	// returns new Process which environment is inherited from parent
 	Fork() Process
 
-	Load(p *Proto)
-	Resume(args ...Value) (rets []Value, err error)
+	Exec(p *Proto, args ...Value) (rets []Value, err error)
 
 	NewTableSize(asize, msize int) Table
 	NewTableArray(a []Value) Table

@@ -35,6 +35,10 @@ type Compiler struct {
 	r    readerAt
 }
 
+func NewCompiler() *Compiler {
+	return new(Compiler)
+}
+
 func (c *Compiler) SetMode(mode Mode) {
 	c.mode = mode
 }
