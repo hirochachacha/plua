@@ -11,7 +11,7 @@ import (
 
 type SelectCase struct {
 	Dir  String
-	Chan *Channel
+	Chan Channel
 	Send Value
 }
 
@@ -60,54 +60,27 @@ func Repr(val Value) string {
 		return fmt.Sprintf("userdata: %p", val.Pointer)
 	case GoFunction:
 		return fmt.Sprintf("function: %p", &val)
-	case *Table:
+	case Table:
 		return fmt.Sprintf("table: %p", val)
-	case *Userdata:
+	case Userdata:
 		return fmt.Sprintf("userdata: %p", val)
-	case *Closure:
+	case Closure:
 		return fmt.Sprintf("function: %p", val)
-	case *Thread:
+	case Thread:
 		return fmt.Sprintf("thread: %p", val)
-	case *Channel:
+	case Channel:
 		return fmt.Sprintf("channel: %p", val)
 	}
 
-	panic("unreachable")
-
-	return ""
+	return fmt.Sprintf("unknown type: %v", val)
 }
 
 func ToType(val Value) Type {
-	switch val.(type) {
-	case nil:
+	if val == nil {
 		return TNIL
-	case Integer:
-		return TNUMBER
-	case Number:
-		return TNUMBER
-	case String:
-		return TSTRING
-	case Boolean:
-		return TBOOLEAN
-	case LightUserdata:
-		return TUSERDATA
-	case GoFunction:
-		return TFUNCTION
-	case *Table:
-		return TTABLE
-	case *Userdata:
-		return TUSERDATA
-	case *Closure:
-		return TFUNCTION
-	case *Thread:
-		return TTHREAD
-	case *Channel:
-		return TCHANNEL
 	}
 
-	panic("unreachable")
-
-	return TNIL
+	return val.Type()
 }
 
 func ToInteger(val Value) (Integer, bool) {
@@ -202,16 +175,6 @@ func ValueOf(x interface{}) (Value, bool) {
 		return x, true
 	case GoFunction:
 		return x, true
-	case *Table:
-		return x, true
-	case *Userdata:
-		return x, true
-	case *Closure:
-		return x, true
-	case *Thread:
-		return x, true
-	case *Channel:
-		return x, true
 	case nil:
 		return nil, true
 	case bool:
@@ -232,6 +195,16 @@ func ValueOf(x interface{}) (Value, bool) {
 		return String(x), true
 	case unsafe.Pointer:
 		return LightUserdata{x}, true
+	case Table:
+		return x, true
+	case Userdata:
+		return x, true
+	case Closure:
+		return x, true
+	case Thread:
+		return x, true
+	case Channel:
+		return x, true
 	}
 
 	return nil, false

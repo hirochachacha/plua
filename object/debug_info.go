@@ -13,7 +13,7 @@ type DebugInfo struct {
 	IsVararg        bool
 	IsTailCall      bool
 	ShortSource     string
-	Lines           *Table
+	Lines           Table
 	Func            Value       // go function or closure
 	CallInfo        interface{} // implementation detail
 }

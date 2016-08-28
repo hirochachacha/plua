@@ -9,7 +9,7 @@ import (
 )
 
 type Value interface {
-	value()
+	Type() Type
 }
 
 var (
@@ -49,61 +49,39 @@ func (err *Error) NewRuntimeError() error {
 
 type Integer int64
 
+func (i Integer) Type() Type {
+	return TNUMBER
+}
+
 type Number float64
+
+func (n Number) Type() Type {
+	return TNUMBER
+}
 
 type String string
 
+func (s String) Type() Type {
+	return TSTRING
+}
+
 type Boolean bool
+
+func (b Boolean) Type() Type {
+	return TBOOLEAN
+}
 
 // see https://code.google.com/p/go/issues/detail?id=6116
 type LightUserdata struct {
 	Pointer unsafe.Pointer
 }
 
-type GoFunction func(th *Thread, args ...Value) (rets []Value)
-
-// dynamic values
-
-type Table struct {
-	Impl iTable
+func (lud LightUserdata) Type() Type {
+	return TUSERDATA
 }
 
-type Userdata struct {
-	Impl iUserdata
+type GoFunction func(th Thread, args ...Value) (rets []Value)
+
+func (fn GoFunction) Type() Type {
+	return TFUNCTION
 }
-
-type Closure struct {
-	Impl iClosure
-}
-
-type Thread struct {
-	Impl iThread
-
-	hasReflection bool
-}
-
-type Channel struct {
-	Impl iChannel
-}
-
-func (i Integer) value() {}
-
-func (n Number) value() {}
-
-func (s String) value() {}
-
-func (b Boolean) value() {}
-
-func (lud LightUserdata) value() {}
-
-func (fn GoFunction) value() {}
-
-func (t *Table) value() {}
-
-func (ud *Userdata) value() {}
-
-func (cl *Closure) value() {}
-
-func (t *Thread) value() {}
-
-func (ch *Channel) value() {}
