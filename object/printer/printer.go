@@ -32,7 +32,7 @@ func (pr printer) print(x interface{}) {
 	case *object.Error:
 		fmt.Fprintf(pr.w, "error %p = %s\n", x, x)
 	case object.Value:
-		fmt.Fprintf(pr.w, "%s value = ", object.ToType(x), x)
+		fmt.Fprintf(pr.w, "%s value = %s", object.ToType(x), object.Repr(x))
 		pr.printValue(x)
 		fmt.Fprintln(pr.w)
 	case object.Process:
