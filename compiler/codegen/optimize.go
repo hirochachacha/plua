@@ -301,8 +301,6 @@ func (g *generator) foldBinary(expr *ast.BinaryExpr) (val object.Value, ok bool)
 		}
 	case token.AND:
 		if x, ok := g.foldExpr(expr.X); ok {
-			// TODO?
-			// without caching
 			if object.ToBoolean(x) {
 				return g.foldExpr(expr.Y)
 			}
@@ -311,8 +309,6 @@ func (g *generator) foldBinary(expr *ast.BinaryExpr) (val object.Value, ok bool)
 		}
 	case token.OR:
 		if x, ok := g.foldExpr(expr.X); ok {
-			// TODO?
-			// without caching
 			if object.ToBoolean(x) {
 				return x, true
 			}

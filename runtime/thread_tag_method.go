@@ -17,8 +17,8 @@ func (t tagType) String() string {
 const (
 	TM_INDEX tagType = iota
 	TM_NEWINDEX
-	TM_GC   // unused?
-	TM_MODE // TODO ?
+	TM_GC
+	TM_MODE
 	TM_LEN
 	TM_EQ
 	TM_ADD
@@ -69,7 +69,6 @@ var tagNames = [...]string{
 }
 
 func (th *thread) fasttm(mt object.Table, tag tagType) object.Value {
-	// TODO caching stuff?
 	return th.gettm(mt, tag)
 }
 
