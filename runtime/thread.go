@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	// "fmt"
 	"github.com/hirochachacha/blua/object"
 )
 
@@ -246,12 +245,6 @@ func (th *thread) Call(fn object.Value, args ...object.Value) ([]object.Value, b
 
 func (th *thread) PCall(fn object.Value, errh object.Value, args ...object.Value) ([]object.Value, bool) {
 	return th.dopcallv(fn, errh, args...)
-}
-
-func (th *thread) Propagate(err *object.Error) {
-	if th.status != object.THREAD_ERROR {
-		th.propagate(err)
-	}
 }
 
 func (th *thread) newThreadWith(typ threadType, env *environment, stackSize int) *thread {

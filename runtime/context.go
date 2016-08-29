@@ -20,16 +20,14 @@ type context struct {
 	lastLine  int
 
 	status object.ThreadStatus
-	data   interface{} // *object.Error or []object.Value or nil
+	data   interface{} // *errData or []object.Value or nil
 	errh   object.Value
 	prev   *context
 }
 
 func (ctx *context) err() error {
 	if ctx.status == object.THREAD_ERROR {
-		err := ctx.data.(*object.Error)
-
-		return fmt.Errorf("runtime: %v", err)
+		return fmt.Errorf("runtime: %v", ctx.data)
 	}
 	return nil
 }

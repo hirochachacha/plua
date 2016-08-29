@@ -59,5 +59,4 @@ type Thread interface {
 	PCall(fn Value, errh Value, args ...Value) ([]Value, bool)
 
 	Yield(args ...Value) (rets []Value)
-	Propagate(err *Error)
 }

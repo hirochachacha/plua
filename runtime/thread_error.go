@@ -9,28 +9,35 @@ import (
 	"github.com/hirochachacha/blua/position"
 )
 
+type errData struct {
+	val object.Value
+	pos position.Position
+}
+
+func (err *errData) Value() object.Value {
+	if msg, ok := object.ToGoString(err.val); ok {
+		if err.pos.IsValid() {
+			msg = err.pos.String() + ": " + msg
+		}
+		return object.String(msg)
+	}
+	return err.val
+}
+
+func (err *errData) Error() string {
+	if msg, ok := object.ToGoString(err.val); ok {
+		return msg
+	}
+
+	return fmt.Sprintf("(error object is a %s value)", object.ToType(err.val))
+}
+
 var protect = new(closure) // just make a stub
 
 var (
 	errDeadCoroutine  = errors.New("runtime: cannot resume dead coroutine")
 	errGoroutineTwice = errors.New("runtime: cannot resume goroutine twice")
 )
-
-func (th *thread) where(msg object.String) object.String {
-	ci := th.ci
-
-	if !ci.isGoFunction() {
-		line := getCurrentLine(ci)
-
-		if len(ci.Source) == 0 {
-			return object.String(fmt.Sprintf("?:%d: %s", line, msg))
-		}
-
-		return object.String(fmt.Sprintf("%s:%d: %s", shorten(ci.Source), line, msg))
-	}
-
-	return msg
-}
 
 func (th *thread) varinfo(x object.Value) string {
 	// TODO? INCOMPATIBLE
@@ -40,40 +47,44 @@ func (th *thread) varinfo(x object.Value) string {
 	return ""
 }
 
-func (th *thread) propagate(err *object.Error) {
+func (th *thread) propagate(e *errData) {
 	th.status = object.THREAD_ERROR
-	th.data = err
+	th.data = e
 }
 
-func (th *thread) throwInternalError(msg object.Value, where bool) {
-	ctx := th.context
-
-	if ctx.status != object.THREAD_ERROR {
+func (th *thread) errorLevel(val object.Value, level int) {
+	if th.status != object.THREAD_ERROR {
 		pos := position.Position{}
 
-		if where {
-			d := th.getInfo(0, "Sl")
-			if d != nil {
-				pos.Filename = "@" + d.ShortSource
-				pos.Line = d.CurrentLine
-			}
+		d := th.getInfo(level, "Sl")
+		if d != nil {
+			pos.Filename = "@" + d.ShortSource
+			pos.Line = d.CurrentLine
 		}
 
-		err := &object.Error{
-			Value: msg,
-			Pos:   pos,
+		errData := &errData{
+			val: val,
+			pos: pos,
 		}
 
-		th.propagate(err)
+		th.propagate(errData)
 	}
 }
 
+func (th *thread) error(val object.Value) {
+	th.errorLevel(val, 1)
+}
+
+func (th *thread) throwInternalError(msg string) {
+	th.errorLevel(object.String(msg), 0)
+}
+
 func (th *thread) throwByteCodeError() {
-	th.throwInternalError(object.String("malformed bytecode detected"), false)
+	th.throwInternalError("malformed bytecode detected")
 }
 
 func (th *thread) throwRuntimeError(msg string) {
-	th.throwInternalError(object.String(msg), true)
+	th.throwInternalError(msg)
 }
 
 func (th *thread) throwYieldMainThreadError() {

@@ -116,7 +116,7 @@ func (th *thread) execute() {
 				return
 			}
 
-			err := ctx.data.(*object.Error)
+			errData := ctx.data.(*errData)
 
 			for ctx.errh == nil {
 				ctx.closeUpvals(0) // close all upvalues on this context
@@ -125,7 +125,7 @@ func (th *thread) execute() {
 				if ctx.isRoot() {
 					th.context = ctx
 
-					th.propagate(err)
+					th.propagate(errData)
 
 					return
 				}
@@ -133,12 +133,12 @@ func (th *thread) execute() {
 
 			ctx.closeUpvals(0) // close all upvalues on this context
 
-			msg := err.Message()
+			val := errData.Value()
 
 			if ctx.errh == protect {
-				rets = []object.Value{msg}
+				rets = []object.Value{val}
 			} else {
-				rets = th.dohandle(ctx.errh, msg)
+				rets = th.dohandle(ctx.errh, val)
 			}
 
 			args = rets
@@ -185,23 +185,23 @@ func (th *thread) doExecute(fn, errh object.Value, args []object.Value) (rets []
 
 		return rets, true
 	case object.THREAD_ERROR:
-		err := ctx.data.(*object.Error)
+		errData := ctx.data.(*errData)
 
 		ctx.closeUpvals(0) // close all upvalues on this context
 
 		if ctx.errh != nil {
-			msg := err.Message()
+			val := errData.Value()
 
 			if ctx.errh == protect {
-				rets = []object.Value{msg}
+				rets = []object.Value{val}
 			} else {
-				rets = th.dohandle(ctx.errh, msg)
+				rets = th.dohandle(ctx.errh, val)
 			}
 
 			return rets, false
 		}
 
-		th.propagate(err)
+		th.propagate(errData)
 
 		return nil, false
 	default:

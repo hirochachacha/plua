@@ -29,8 +29,6 @@ func (pr printer) print(x interface{}) {
 		pr.printFunc(x)
 	case *object.DebugInfo:
 		pr.printDebug(x)
-	case *object.Error:
-		fmt.Fprintf(pr.w, "error %p = %s\n", x, x)
 	case object.Value:
 		fmt.Fprintf(pr.w, "%s value = %s", object.ToType(x), object.Repr(x))
 		pr.printValue(x)

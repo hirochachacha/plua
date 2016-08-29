@@ -3,8 +3,6 @@ package object
 import (
 	"math"
 	"unsafe"
-
-	"github.com/hirochachacha/blua/position"
 )
 
 type Value interface {
@@ -18,29 +16,6 @@ var (
 	Infinity = Number(math.Inf(0))
 	NaN      = Number(math.NaN())
 )
-
-type Error struct {
-	Value Value
-	Pos   position.Position
-}
-
-func (err *Error) Message() Value {
-	if msg, ok := ToGoString(err.Value); ok {
-		if err.Pos.IsValid() {
-			msg = err.Pos.String() + ": " + msg
-		}
-		return String(msg)
-	}
-	return err.Value
-}
-
-func (err *Error) Error() string {
-	if msg, ok := ToGoString(err.Value); ok {
-		return msg
-	}
-
-	return "(error object is a " + ToType(err.Value).String() + " value)"
-}
 
 type Integer int64
 
@@ -75,7 +50,7 @@ func (lud LightUserdata) Type() Type {
 	return TUSERDATA
 }
 
-type GoFunction func(th Thread, args ...Value) (rets []Value)
+type GoFunction func(th Thread, args ...Value) (rets []Value, err Value)
 
 func (fn GoFunction) Type() Type {
 	return TFUNCTION

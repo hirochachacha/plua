@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	// "fmt"
 	"github.com/hirochachacha/blua/object"
 )
 
@@ -148,7 +147,10 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 		}
 	}
 
-	rets := fn(th, args...)
+	rets, err := fn(th, args...)
+	if err != nil {
+		th.error(err)
+	}
 
 	ctx.stackEnsure(len(rets))
 
@@ -208,7 +210,10 @@ func (th *thread) callvGo(fn object.GoFunction, args ...object.Value) (rets []ob
 
 	ctx.stack[1] = fn
 
-	rets = fn(th, args...)
+	rets, err := fn(th, args...)
+	if err != nil {
+		th.error(err)
+	}
 
 	ctx.stack[1] = old
 
@@ -234,18 +239,18 @@ func (th *thread) pcallvGo(fn object.GoFunction, errh object.Value, args ...obje
 	ctx := th.context
 
 	if ctx.status == object.THREAD_ERROR {
-		err := ctx.data.(*object.Error)
+		errData := ctx.data.(*errData)
 
 		ctx.status = object.THREAD_RUNNING
 		ctx.data = nil
 
-		msg := err.Message()
+		val := errData.Value()
 
 		if errh == nil {
-			return []object.Value{msg}, false
+			return []object.Value{val}, false
 		}
 
-		return th.dohandle(errh, msg), false
+		return th.dohandle(errh, val), false
 	}
 
 	return
