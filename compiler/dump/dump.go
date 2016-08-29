@@ -2,18 +2,19 @@ package dump
 
 import (
 	"encoding/binary"
+	"errors"
 	"io"
 
 	"github.com/hirochachacha/blua"
-	"github.com/hirochachacha/blua/errors"
 	"github.com/hirochachacha/blua/internal/limits"
 	"github.com/hirochachacha/blua/object"
 	"github.com/hirochachacha/blua/opcode"
 )
 
 var (
-	errDumpOverflow  = errors.DumpError.New("dump overflow")
-	errDumpUnderflow = errors.DumpError.New("dump underflow")
+	errIntegerOverflow = errors.New("compiler/dump: integer overflow")
+	errFloatOverflow   = errors.New("compiler/dump: float overflow")
+	errFloatUnderflow  = errors.New("compiler/dump: float underflow")
 )
 
 type Mode uint
@@ -44,23 +45,23 @@ type Config struct {
 
 func (cfg *Config) validate() error {
 	if !isPowerOfTwo(cfg.IntSize) {
-		return errors.DumpError.New("IntSize should be power of 2")
+		return errors.New("compiler/dump: IntSize should be power of 2")
 	}
 
 	if !isPowerOfTwo(cfg.SizeTSize) {
-		return errors.DumpError.New("SizeTSize should be power of 2")
+		return errors.New("compiler/dump: SizeTSize should be power of 2")
 	}
 
 	if !isPowerOfTwo(cfg.IntegerSize) {
-		return errors.DumpError.New("IntegerSize should be power of 2")
+		return errors.New("compiler/dump: IntegerSize should be power of 2")
 	}
 
 	if !(cfg.NumberSize == 4 || cfg.NumberSize == 8) {
-		return errors.DumpError.New("NumberSize should be 4 or 8")
+		return errors.New("compiler/dump: NumberSize should be 4 or 8")
 	}
 
 	if cfg.ByteOrder == nil {
-		return errors.DumpError.New("ByteOrder should not be nil")
+		return errors.New("compiler/dump: ByteOrder should not be nil")
 	}
 
 	return nil
@@ -116,20 +117,16 @@ func (cfg *Config) DumpTo(w io.Writer, p *object.Proto, mode Mode) (err error) {
 
 	err = d.dumpHeader()
 	if err != nil {
-		return errors.DumpError.Wrap(err)
+		return err
 	}
 
 	err = d.dumpByte(len(p.Upvalues))
 	if err != nil {
-		return errors.DumpError.Wrap(err)
+		return err
 	}
 
 	err = d.dumpFunction(p, "")
 	if err != nil {
-		if _, ok := err.(*errors.Error); !ok {
-			return errors.DumpError.Wrap(err)
-		}
-
 		return err
 	}
 
@@ -453,21 +450,21 @@ func makeInt(size int) (f func(*dumper, int) error) {
 	case 1:
 		f = func(d *dumper, x int) error {
 			if x < limits.MinInt8 || x > limits.MaxInt8 {
-				return errDumpOverflow
+				return errIntegerOverflow
 			}
 			return binary.Write(d.w, d.cfg.ByteOrder, int8(x))
 		}
 	case 2:
 		f = func(d *dumper, x int) error {
 			if x < limits.MinInt16 || x > limits.MaxInt16 {
-				return errDumpOverflow
+				return errIntegerOverflow
 			}
 			return binary.Write(d.w, d.cfg.ByteOrder, int16(x))
 		}
 	case 4:
 		f = func(d *dumper, x int) error {
 			if x < limits.MinInt32 || x > limits.MaxInt32 {
-				return errDumpOverflow
+				return errIntegerOverflow
 			}
 			return binary.Write(d.w, d.cfg.ByteOrder, int32(x))
 		}
@@ -487,21 +484,21 @@ func makeInteger(size int) (f func(*dumper, object.Integer) error) {
 	case 1:
 		f = func(d *dumper, x object.Integer) error {
 			if x < limits.MinInt8 || x > limits.MaxInt8 {
-				return errDumpOverflow
+				return errIntegerOverflow
 			}
 			return binary.Write(d.w, d.cfg.ByteOrder, int8(x))
 		}
 	case 2:
 		f = func(d *dumper, x object.Integer) error {
 			if x < limits.MinInt16 || x > limits.MaxInt16 {
-				return errDumpOverflow
+				return errIntegerOverflow
 			}
 			return binary.Write(d.w, d.cfg.ByteOrder, int16(x))
 		}
 	case 4:
 		f = func(d *dumper, x object.Integer) error {
 			if x < limits.MinInt32 || x > limits.MaxInt32 {
-				return errDumpOverflow
+				return errIntegerOverflow
 			}
 			return binary.Write(d.w, d.cfg.ByteOrder, int32(x))
 		}
@@ -526,11 +523,11 @@ func makeNumber(size int) (f func(*dumper, object.Number) error) {
 			}
 
 			if abs > limits.MaxFloat32 {
-				return errDumpOverflow
+				return errFloatOverflow
 			}
 
 			if abs < limits.SmallestNonzeroFloat32 {
-				return errDumpUnderflow
+				return errFloatUnderflow
 			}
 
 			return binary.Write(d.w, d.cfg.ByteOrder, float32(x))

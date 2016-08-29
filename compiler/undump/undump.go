@@ -2,30 +2,30 @@ package undump
 
 import (
 	"encoding/binary"
+	"errors"
 	"io"
 
 	"github.com/hirochachacha/blua"
-	"github.com/hirochachacha/blua/errors"
 	"github.com/hirochachacha/blua/internal/limits"
 	"github.com/hirochachacha/blua/object"
 	"github.com/hirochachacha/blua/opcode"
 )
 
 var (
-	errUndumpOverflow         = errors.UndumpError.New("undump overflow")
-	errShortHeader            = errors.UndumpError.New("header is too short")
-	errSignatureMismatch      = errors.UndumpError.New("signature mismatch")
-	errVersionMismatch        = errors.UndumpError.New("version mismatch")
-	errFormatMismatch         = errors.UndumpError.New("format mismatch")
-	errDataMismatch           = errors.UndumpError.New("data mismatch")
-	errInvalidIntSize         = errors.UndumpError.New("int size is invalid")
-	errInvalidIntegerSize     = errors.UndumpError.New("integer size is invalid")
-	errInvalidNumberSize      = errors.UndumpError.New("number size is invalid")
-	errInvalidInstructionSize = errors.UndumpError.New("instruction size is invalid")
-	errEndiannessMismatch     = errors.UndumpError.New("endianness mismatch")
-	errNumberFormatMismatch   = errors.UndumpError.New("number format mismatch")
-	errMalformedByteCode      = errors.UndumpError.New("malformed byte code detected")
-	errTruncatedChunk         = errors.UndumpError.New("truncated precompiled chunk")
+	errIntegerOverflow        = errors.New("compiler/undump: integer overflow")
+	errShortHeader            = errors.New("compiler/undump: header is too short")
+	errSignatureMismatch      = errors.New("compiler/undump: signature mismatch")
+	errVersionMismatch        = errors.New("compiler/undump: version mismatch")
+	errFormatMismatch         = errors.New("compiler/undump: format mismatch")
+	errDataMismatch           = errors.New("compiler/undump: data mismatch")
+	errInvalidIntSize         = errors.New("compiler/undump: int size is invalid")
+	errInvalidIntegerSize     = errors.New("compiler/undump: integer size is invalid")
+	errInvalidNumberSize      = errors.New("compiler/undump: number size is invalid")
+	errInvalidInstructionSize = errors.New("compiler/undump: instruction size is invalid")
+	errEndiannessMismatch     = errors.New("compiler/undump: endianness mismatch")
+	errNumberFormatMismatch   = errors.New("compiler/undump: number format mismatch")
+	errMalformedByteCode      = errors.New("compiler/undump: malformed byte code detected")
+	errTruncatedChunk         = errors.New("compiler/undump: truncated precompiled chunk")
 )
 
 const bufferSize = 20
@@ -56,10 +56,6 @@ func Undump(r io.Reader, mode Mode) (*object.Proto, error) {
 			return nil, errShortHeader
 		}
 
-		if _, ok := err.(*errors.Error); !ok {
-			return nil, errors.UndumpError.Wrap(err)
-		}
-
 		return nil, err
 	}
 
@@ -69,10 +65,6 @@ func Undump(r io.Reader, mode Mode) (*object.Proto, error) {
 			return nil, errTruncatedChunk
 		}
 
-		if _, ok := err.(*errors.Error); !ok {
-			return nil, errors.UndumpError.Wrap(err)
-		}
-
 		return nil, err
 	}
 
@@ -80,10 +72,6 @@ func Undump(r io.Reader, mode Mode) (*object.Proto, error) {
 	if err != nil {
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return nil, errTruncatedChunk
-		}
-
-		if _, ok := err.(*errors.Error); !ok {
-			return nil, errors.UndumpError.Wrap(err)
 		}
 
 		return nil, err
@@ -548,7 +536,7 @@ func makeInt(size int) (f func(*undumper) (int, error), err error) {
 			}
 
 			if limits.IntSize == 4 && (i > limits.MaxInt || i < limits.MinInt) {
-				return 0, errUndumpOverflow
+				return 0, errIntegerOverflow
 			}
 
 			return int(i), nil

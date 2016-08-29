@@ -32,19 +32,18 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/hirochachacha/blua/compiler/ast"
 	"github.com/hirochachacha/blua/compiler/scanner"
 	"github.com/hirochachacha/blua/compiler/token"
-	"github.com/hirochachacha/blua/errors"
 	"github.com/hirochachacha/blua/position"
 )
 
 var (
-	errUnexpectedToken = errors.SyntaxError.New("expected %s, found %s")
-	errIllegalVararg   = errors.SyntaxError.New("cannot use '...' outside of vararg function")
-	errIllegalBreak    = errors.SyntaxError.New("cannot use 'break' outside of loop")
+	errIllegalVararg = errors.New("compiler/parser: cannot use '...' outside of vararg function")
+	errIllegalBreak  = errors.New("compiler/parser: cannot use 'break' outside of loop")
 )
 
 type Mode uint // currently, no mode are defined
@@ -236,20 +235,16 @@ func (p *parser) next() {
 	}
 }
 
-func (p *parser) error(pos position.Position, err error, args ...interface{}) {
+func (p *parser) error(pos position.Position, err error) {
 	if serr := p.scanner.Err(); serr != nil {
 		p.err = serr
 	} else {
 		pos.Filename = p.scanner.Filename
 
-		var e *errors.Error
-		if err, ok := err.(*errors.Error); ok {
-			e = err.With(pos, args...)
-		} else {
-			e = errors.SyntaxError.WrapWith(pos, err)
+		p.err = &Error{
+			Pos: pos,
+			Err: err,
 		}
-
-		p.err = e
 	}
 
 	panic(bailout{})
@@ -260,7 +255,8 @@ func (p *parser) errorExpected(actual token.Token, expected string) {
 	if len(actual.Lit) > 0 {
 		found += " " + actual.Lit
 	}
-	p.error(actual.Pos, errUnexpectedToken, expected, found)
+
+	p.error(actual.Pos, fmt.Errorf("compiler/parser: expected %s, found %s", expected, found))
 }
 
 func (p *parser) expect(expected token.Type) position.Position {
@@ -672,7 +668,8 @@ func (p *parser) checkExpr(x ast.Expr) ast.Expr {
 	case *ast.BinaryExpr:
 	default:
 		// all other nodes are not proper expressions
-		p.error(x.Pos(), errUnexpectedToken, "expression", fmt.Sprintf("%T", x))
+		p.error(x.Pos(), fmt.Errorf("compiler/parser: expected expression, found %T", x))
+
 		x = &ast.BadExpr{From: x.Pos(), To: x.End()}
 	}
 	return x
@@ -702,7 +699,7 @@ func (p *parser) checkLHS(x ast.Expr) ast.Expr {
 
 error:
 	// all other nodes are not proper expressions
-	p.error(x.Pos(), errUnexpectedToken, "LHS", fmt.Sprintf("%T", x))
+	p.error(x.Pos(), fmt.Errorf("compiler/parser: expected LHS, found %T", x))
 
 	x = &ast.BadExpr{From: x.Pos(), To: x.End()}
 

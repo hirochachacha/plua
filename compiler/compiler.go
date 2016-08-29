@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"bufio"
+	"errors"
 	"io"
 
 	"github.com/hirochachacha/blua"
@@ -10,11 +11,10 @@ import (
 	"github.com/hirochachacha/blua/compiler/parser"
 	"github.com/hirochachacha/blua/compiler/scanner"
 	"github.com/hirochachacha/blua/compiler/undump"
-	"github.com/hirochachacha/blua/errors"
 	"github.com/hirochachacha/blua/object"
 )
 
-var errModeMismatch = errors.CompileError.New("mode mismatch")
+var errModeMismatch = errors.New("compiler: mode mismatch")
 
 type Mode uint
 

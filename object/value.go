@@ -4,7 +4,6 @@ import (
 	"math"
 	"unsafe"
 
-	"github.com/hirochachacha/blua/errors"
 	"github.com/hirochachacha/blua/position"
 )
 
@@ -41,10 +40,6 @@ func (err *Error) Error() string {
 	}
 
 	return "(error object is a " + ToType(err.Value).String() + " value)"
-}
-
-func (err *Error) NewRuntimeError() error {
-	return errors.RuntimeError.WrapWith(err.Pos, err)
 }
 
 type Integer int64

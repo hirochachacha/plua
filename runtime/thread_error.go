@@ -3,7 +3,8 @@ package runtime
 import (
 	"fmt"
 
-	"github.com/hirochachacha/blua/errors"
+	"errors"
+
 	"github.com/hirochachacha/blua/object"
 	"github.com/hirochachacha/blua/position"
 )
@@ -11,8 +12,8 @@ import (
 var protect = new(closure) // just make a stub
 
 var (
-	errDeadCoroutine  = errors.RuntimeError.New("cannot resume dead coroutine")
-	errGoroutineTwice = errors.RuntimeError.New("cannot resume goroutine twice")
+	errDeadCoroutine  = errors.New("runtime: cannot resume dead coroutine")
+	errGoroutineTwice = errors.New("runtime: cannot resume goroutine twice")
 )
 
 func (th *thread) where(msg object.String) object.String {

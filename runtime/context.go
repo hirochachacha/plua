@@ -1,7 +1,8 @@
 package runtime
 
 import (
-	// "fmt"
+	"fmt"
+
 	"github.com/hirochachacha/blua/object"
 )
 
@@ -26,7 +27,9 @@ type context struct {
 
 func (ctx *context) err() error {
 	if ctx.status == object.THREAD_ERROR {
-		return ctx.data.(*object.Error).NewRuntimeError()
+		err := ctx.data.(*object.Error)
+
+		return fmt.Errorf("runtime: %v", err)
 	}
 	return nil
 }

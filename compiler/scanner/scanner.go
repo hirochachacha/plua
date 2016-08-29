@@ -33,13 +33,13 @@ package scanner
 
 import (
 	"bytes"
-	// "fmt"
+	"errors"
+	"fmt"
 	"io"
 	"unicode"
 	"unicode/utf8"
 
 	"github.com/hirochachacha/blua/compiler/token"
-	"github.com/hirochachacha/blua/errors"
 	"github.com/hirochachacha/blua/position"
 )
 
@@ -50,15 +50,14 @@ const (
 )
 
 var (
-	errIllegalCharacter                 = errors.SyntaxError.New("illegal character %c")
-	errInvalidLongStringDelimiter       = errors.SyntaxError.New("invalid long string delimiter")
-	errIllegalHexadecimalNumber         = errors.SyntaxError.New("illegal hexadecimal number")
-	errInvalidEscapeSequence            = errors.SyntaxError.New("escape sequence is invalid Unicode code point")
-	errUnknownEscapeSequence            = errors.SyntaxError.New("unknown escape sequence %c")
-	errMissingBracketInEscapeSequence   = errors.SyntaxError.New("missing bracket in escape sequence")
-	errIllegalCharacterInEscapeSequence = errors.SyntaxError.New("illegal character in escape sequence %c")
-	errUnterminatedString               = errors.SyntaxError.New("unterminated string literal")
-	errUnterminatedLongString           = errors.SyntaxError.New("unterminated long string literal")
+	errInvalidLongStringDelimiter       = errors.New("compiler/scanner: invalid long string delimiter")
+	errIllegalHexadecimalNumber         = errors.New("compiler/scanner: illegal hexadecimal number")
+	errInvalidEscapeSequence            = errors.New("compiler/scanner: escape sequence is invalid Unicode code point")
+	errUnknownEscapeSequence            = errors.New("compiler/scanner: unknown escape sequence")
+	errMissingBracketInEscapeSequence   = errors.New("compiler/scanner: missing bracket in escape sequence")
+	errIllegalCharacterInEscapeSequence = errors.New("compiler/scanner: illegal character in escape sequence")
+	errUnterminatedString               = errors.New("compiler/scanner: unterminated string literal")
+	errUnterminatedLongString           = errors.New("compiler/scanner: unterminated long string literal")
 )
 
 type Mode uint
@@ -340,8 +339,7 @@ scanAgain:
 			typ = token.LEN
 		default:
 			s.next()
-
-			s.error(pos, errIllegalCharacter, ch)
+			s.error(pos, fmt.Errorf("compiler/scanner: illegal character %c", ch))
 			typ = token.ILLEGAL
 			lit = string(ch)
 		}
@@ -600,7 +598,7 @@ func (s *Scanner) skipEscape(quote int) {
 	default:
 		ch := s.ch
 		s.next() // always make progress
-		s.error(pos, errUnknownEscapeSequence, ch)
+		s.error(pos, fmt.Errorf("compiler/scanner: unknown escape sequence %c", ch))
 
 		return
 	}
@@ -612,7 +610,7 @@ func (s *Scanner) skipEscape(quote int) {
 		if d >= base {
 			// if not unicode
 			if max != unicode.MaxRune {
-				s.error(pos, errIllegalCharacterInEscapeSequence, s.ch)
+				s.error(pos, fmt.Errorf("compiler/scanner: illegal character %c in escape sequence", s.ch))
 			}
 
 			break
@@ -620,7 +618,7 @@ func (s *Scanner) skipEscape(quote int) {
 
 		// check overflow
 		if x > (unicode.MaxRune-d)/base {
-			s.error(pos, errInvalidEscapeSequence)
+			s.error(pos, fmt.Errorf("compiler/scanner: escape sequence is invalid Unicode code point %c", s.ch))
 
 			return
 		}
@@ -641,7 +639,7 @@ func (s *Scanner) skipEscape(quote int) {
 		s.next()
 
 		if 0xD800 <= x && x < 0xE000 {
-			s.error(pos, errInvalidEscapeSequence)
+			s.error(pos, fmt.Errorf("compiler/scanner: escape sequence is invalid Unicode code point %c", s.ch))
 		}
 
 		return
@@ -753,18 +751,14 @@ func (s *Scanner) skipSpace() {
 	}
 }
 
-func (s *Scanner) error(pos position.Position, err error, args ...interface{}) {
+func (s *Scanner) error(pos position.Position, err error) {
 	if s.err == nil {
 		pos.Filename = s.Filename
 
-		var e *errors.Error
-		if err, ok := err.(*errors.Error); ok {
-			e = err.With(pos, args...)
-		} else {
-			e = errors.SyntaxError.WrapWith(pos, err)
+		s.err = &Error{
+			Pos: pos,
+			Err: err,
 		}
-
-		s.err = e
 	}
 }
 
@@ -878,7 +872,7 @@ func (s *Scanner) fill() {
 			return
 		}
 		if n < 0 {
-			panic("scanner: reader returned negative count from Read")
+			panic("compiler/scanner: reader returned negative count from Read")
 		}
 		s.end += n
 		if err != nil {
