@@ -1,10 +1,6 @@
 package runtime
 
-import (
-	"fmt"
-
-	"github.com/hirochachacha/blua/object"
-)
+import "github.com/hirochachacha/blua/object"
 
 type context struct {
 	ci    *callInfo
@@ -20,14 +16,14 @@ type context struct {
 	lastLine  int
 
 	status object.ThreadStatus
-	data   interface{} // *errData or []object.Value or nil
+	data   interface{} // *Error or []object.Value or nil
 	errh   object.Value
 	prev   *context
 }
 
 func (ctx *context) err() error {
 	if ctx.status == object.THREAD_ERROR {
-		return fmt.Errorf("runtime: %v", ctx.data)
+		return ctx.data.(error)
 	}
 	return nil
 }

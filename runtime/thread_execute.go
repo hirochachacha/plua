@@ -116,7 +116,7 @@ func (th *thread) execute() {
 				return
 			}
 
-			errData := ctx.data.(*errData)
+			err := ctx.data.(*Error)
 
 			for ctx.errh == nil {
 				ctx.closeUpvals(0) // close all upvalues on this context
@@ -125,7 +125,7 @@ func (th *thread) execute() {
 				if ctx.isRoot() {
 					th.context = ctx
 
-					th.propagate(errData)
+					th.propagate(err)
 
 					return
 				}
@@ -133,7 +133,7 @@ func (th *thread) execute() {
 
 			ctx.closeUpvals(0) // close all upvalues on this context
 
-			val := errData.Value()
+			val := err.RetValue()
 
 			if ctx.errh == protect {
 				rets = []object.Value{val}
@@ -185,12 +185,12 @@ func (th *thread) doExecute(fn, errh object.Value, args []object.Value) (rets []
 
 		return rets, true
 	case object.THREAD_ERROR:
-		errData := ctx.data.(*errData)
+		err := ctx.data.(*Error)
 
 		ctx.closeUpvals(0) // close all upvalues on this context
 
 		if ctx.errh != nil {
-			val := errData.Value()
+			val := err.RetValue()
 
 			if ctx.errh == protect {
 				rets = []object.Value{val}
@@ -201,7 +201,7 @@ func (th *thread) doExecute(fn, errh object.Value, args []object.Value) (rets []
 			return rets, false
 		}
 
-		th.propagate(errData)
+		th.propagate(err)
 
 		return nil, false
 	default:

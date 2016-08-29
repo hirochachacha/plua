@@ -9,27 +9,23 @@ import (
 	"github.com/hirochachacha/blua/position"
 )
 
-type errData struct {
-	val object.Value
-	pos position.Position
+type Error struct {
+	Value object.Value
+	Pos   position.Position
 }
 
-func (err *errData) Value() object.Value {
-	if msg, ok := object.ToGoString(err.val); ok {
-		if err.pos.IsValid() {
-			msg = err.pos.String() + ": " + msg
+func (err *Error) RetValue() object.Value {
+	if msg, ok := object.ToGoString(err.Value); ok {
+		if err.Pos.IsValid() {
+			msg = err.Pos.String() + ": " + msg
 		}
 		return object.String(msg)
 	}
-	return err.val
+	return err.Value
 }
 
-func (err *errData) Error() string {
-	if msg, ok := object.ToGoString(err.val); ok {
-		return msg
-	}
-
-	return fmt.Sprintf("(error object is a %s value)", object.ToType(err.val))
+func (err *Error) Error() string {
+	return fmt.Sprintf("runtime: the error value is raised: %s", object.Repr(err.Value))
 }
 
 var protect = new(closure) // just make a stub
@@ -47,7 +43,7 @@ func (th *thread) varinfo(x object.Value) string {
 	return ""
 }
 
-func (th *thread) propagate(e *errData) {
+func (th *thread) propagate(e *Error) {
 	th.status = object.THREAD_ERROR
 	th.data = e
 }
@@ -62,12 +58,12 @@ func (th *thread) errorLevel(val object.Value, level int) {
 			pos.Line = d.CurrentLine
 		}
 
-		errData := &errData{
-			val: val,
-			pos: pos,
+		err := &Error{
+			Value: val,
+			Pos:   pos,
 		}
 
-		th.propagate(errData)
+		th.propagate(err)
 	}
 }
 

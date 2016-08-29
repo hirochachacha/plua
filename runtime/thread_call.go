@@ -239,12 +239,12 @@ func (th *thread) pcallvGo(fn object.GoFunction, errh object.Value, args ...obje
 	ctx := th.context
 
 	if ctx.status == object.THREAD_ERROR {
-		errData := ctx.data.(*errData)
+		err := ctx.data.(*Error)
 
 		ctx.status = object.THREAD_RUNNING
 		ctx.data = nil
 
-		val := errData.Value()
+		val := err.RetValue()
 
 		if errh == nil {
 			return []object.Value{val}, false
