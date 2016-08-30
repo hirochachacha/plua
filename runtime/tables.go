@@ -1,8 +1,8 @@
 package runtime
 
 import (
-	"github.com/hirochachacha/blua/internal/tables"
-	"github.com/hirochachacha/blua/object"
+	"github.com/hirochachacha/plua/internal/tables"
+	"github.com/hirochachacha/plua/object"
 )
 
 func newTableSize(asize, msize int) object.Table {

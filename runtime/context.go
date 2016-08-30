@@ -1,6 +1,6 @@
 package runtime
 
-import "github.com/hirochachacha/blua/object"
+import "github.com/hirochachacha/plua/object"
 
 type context struct {
 	ci    *callInfo

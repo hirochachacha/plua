@@ -4,12 +4,12 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/hirochachacha/blua/internal/hash/aes"
-	"github.com/hirochachacha/blua/internal/hash/sip"
-	"github.com/hirochachacha/blua/internal/limits"
-	"github.com/hirochachacha/blua/internal/rand"
+	"github.com/hirochachacha/plua/internal/hash/aes"
+	"github.com/hirochachacha/plua/internal/hash/sip"
+	"github.com/hirochachacha/plua/internal/limits"
+	"github.com/hirochachacha/plua/internal/rand"
 
-	"github.com/hirochachacha/blua/object"
+	"github.com/hirochachacha/plua/object"
 )
 
 type iHash interface {

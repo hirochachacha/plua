@@ -1,11 +1,11 @@
 package codegen
 
 import (
-	"github.com/hirochachacha/blua/compiler/ast"
-	"github.com/hirochachacha/blua/compiler/token"
-	"github.com/hirochachacha/blua/internal/arith"
-	"github.com/hirochachacha/blua/object"
-	"github.com/hirochachacha/blua/opcode"
+	"github.com/hirochachacha/plua/compiler/ast"
+	"github.com/hirochachacha/plua/compiler/token"
+	"github.com/hirochachacha/plua/internal/arith"
+	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/opcode"
 )
 
 // constant folding

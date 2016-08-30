@@ -3,7 +3,7 @@ package tables
 import (
 	"sync"
 
-	"github.com/hirochachacha/blua/object"
+	"github.com/hirochachacha/plua/object"
 )
 
 type lockedTable struct {

@@ -1,7 +1,7 @@
 package tables
 
 import (
-	"github.com/hirochachacha/blua/object"
+	"github.com/hirochachacha/plua/object"
 
 	"testing"
 )

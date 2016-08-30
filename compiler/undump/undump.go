@@ -5,10 +5,10 @@ import (
 	"errors"
 	"io"
 
-	"github.com/hirochachacha/blua"
-	"github.com/hirochachacha/blua/internal/limits"
-	"github.com/hirochachacha/blua/object"
-	"github.com/hirochachacha/blua/opcode"
+	"github.com/hirochachacha/plua"
+	"github.com/hirochachacha/plua/internal/limits"
+	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/opcode"
 )
 
 var (
@@ -412,19 +412,19 @@ func (u *undumper) loadHeader() error {
 		return err
 	}
 
-	if string(header[:4]) != blua.LUA_SIGNATURE {
+	if string(header[:4]) != plua.LUA_SIGNATURE {
 		return errSignatureMismatch
 	}
 
-	if header[4] != blua.LUAC_VERSION {
+	if header[4] != plua.LUAC_VERSION {
 		return errVersionMismatch
 	}
 
-	if header[5] != blua.LUAC_FORMAT {
+	if header[5] != plua.LUAC_FORMAT {
 		return errFormatMismatch
 	}
 
-	if string(header[6:]) != blua.LUAC_DATA {
+	if string(header[6:]) != plua.LUAC_DATA {
 		return errDataMismatch
 	}
 
@@ -474,7 +474,7 @@ func (u *undumper) loadHeader() error {
 		return err
 	}
 
-	if i != blua.LUAC_INT {
+	if i != plua.LUAC_INT {
 
 		// guess endian
 		switch u.order {
@@ -500,7 +500,7 @@ func (u *undumper) loadHeader() error {
 		return err
 	}
 
-	if f != blua.LUAC_NUM {
+	if f != plua.LUAC_NUM {
 		return errNumberFormatMismatch
 	}
 

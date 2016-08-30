@@ -4,8 +4,8 @@ import (
 	// "fmt"
 	"unsafe"
 
-	"github.com/hirochachacha/blua/internal/hash"
-	"github.com/hirochachacha/blua/object"
+	"github.com/hirochachacha/plua/internal/hash"
+	"github.com/hirochachacha/plua/object"
 )
 
 const (

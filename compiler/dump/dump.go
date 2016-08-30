@@ -5,10 +5,10 @@ import (
 	"errors"
 	"io"
 
-	"github.com/hirochachacha/blua"
-	"github.com/hirochachacha/blua/internal/limits"
-	"github.com/hirochachacha/blua/object"
-	"github.com/hirochachacha/blua/opcode"
+	"github.com/hirochachacha/plua"
+	"github.com/hirochachacha/plua/internal/limits"
+	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/opcode"
 )
 
 var (
@@ -400,19 +400,19 @@ func (d *dumper) dumpFunction(p *object.Proto, psource string) (err error) {
 }
 
 func (d *dumper) dumpHeader() (err error) {
-	err = d.dumpStr(blua.LUA_SIGNATURE)
+	err = d.dumpStr(plua.LUA_SIGNATURE)
 	if err != nil {
 		return err
 	}
-	err = d.dumpByte(blua.LUAC_VERSION)
+	err = d.dumpByte(plua.LUAC_VERSION)
 	if err != nil {
 		return err
 	}
-	err = d.dumpByte(blua.LUAC_FORMAT)
+	err = d.dumpByte(plua.LUAC_FORMAT)
 	if err != nil {
 		return err
 	}
-	err = d.dumpStr(blua.LUAC_DATA)
+	err = d.dumpStr(plua.LUAC_DATA)
 	if err != nil {
 		return err
 	}
@@ -436,11 +436,11 @@ func (d *dumper) dumpHeader() (err error) {
 	if err != nil {
 		return err
 	}
-	err = d.dumpInteger(blua.LUAC_INT)
+	err = d.dumpInteger(plua.LUAC_INT)
 	if err != nil {
 		return err
 	}
-	err = d.dumpNumber(blua.LUAC_NUM)
+	err = d.dumpNumber(plua.LUAC_NUM)
 
 	return
 }

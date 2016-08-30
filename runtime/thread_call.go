@@ -1,7 +1,7 @@
 package runtime
 
 import (
-	"github.com/hirochachacha/blua/object"
+	"github.com/hirochachacha/plua/object"
 )
 
 // call a closure by stack index.

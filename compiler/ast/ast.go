@@ -34,8 +34,8 @@ package ast
 import (
 	"strings"
 
-	"github.com/hirochachacha/blua/compiler/token"
-	"github.com/hirochachacha/blua/position"
+	"github.com/hirochachacha/plua/compiler/token"
+	"github.com/hirochachacha/plua/position"
 )
 
 // ----------------------------------------------------------------------------

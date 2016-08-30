@@ -3,7 +3,7 @@ package tables
 import (
 	"sort"
 
-	"github.com/hirochachacha/blua/object"
+	"github.com/hirochachacha/plua/object"
 )
 
 type tableSorter struct {

@@ -5,8 +5,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/hirochachacha/blua/compiler/ast"
-	"github.com/hirochachacha/blua/internal/strconv"
+	"github.com/hirochachacha/plua/compiler/ast"
+	"github.com/hirochachacha/plua/internal/strconv"
 )
 
 const treeIndent = "  "

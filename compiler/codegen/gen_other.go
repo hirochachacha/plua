@@ -1,11 +1,11 @@
 package codegen
 
 import (
-	"github.com/hirochachacha/blua"
-	"github.com/hirochachacha/blua/compiler/ast"
-	"github.com/hirochachacha/blua/compiler/token"
-	"github.com/hirochachacha/blua/object"
-	"github.com/hirochachacha/blua/opcode"
+	"github.com/hirochachacha/plua"
+	"github.com/hirochachacha/plua/compiler/ast"
+	"github.com/hirochachacha/plua/compiler/token"
+	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/opcode"
 )
 
 // gen with global scope
@@ -290,7 +290,7 @@ func (g *generator) genConst(val object.Value, typ genType) (rk int) {
 }
 
 func (g *generator) genSetGlobal(name *ast.Name, r int) {
-	env := g.resolve(blua.LUA_ENV)
+	env := g.resolve(plua.LUA_ENV)
 
 	rk := g.markRK(g.constant(object.String(name.Name)))
 
@@ -305,7 +305,7 @@ func (g *generator) genSetGlobal(name *ast.Name, r int) {
 }
 
 func (g *generator) genGetGlobal(name *ast.Name) (r int) {
-	env := g.resolve(blua.LUA_ENV)
+	env := g.resolve(plua.LUA_ENV)
 
 	rk := g.markRK(g.constant(object.String(name.Name)))
 

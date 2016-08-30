@@ -3,8 +3,8 @@ package parser
 import (
 	"os"
 
-	"github.com/hirochachacha/blua/compiler/ast/printer"
-	"github.com/hirochachacha/blua/compiler/scanner"
+	"github.com/hirochachacha/plua/compiler/ast/printer"
+	"github.com/hirochachacha/plua/compiler/scanner"
 )
 
 func ExampleHello() {

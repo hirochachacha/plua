@@ -1,7 +1,7 @@
 package object
 
 import (
-	"github.com/hirochachacha/blua/opcode"
+	"github.com/hirochachacha/plua/opcode"
 )
 
 type Proto struct {

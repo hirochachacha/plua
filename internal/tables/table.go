@@ -1,8 +1,8 @@
 package tables
 
 import (
-	"github.com/hirochachacha/blua/internal/limits"
-	"github.com/hirochachacha/blua/object"
+	"github.com/hirochachacha/plua/internal/limits"
+	"github.com/hirochachacha/plua/object"
 )
 
 type table struct {

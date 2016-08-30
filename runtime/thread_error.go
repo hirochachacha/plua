@@ -5,8 +5,8 @@ import (
 
 	"errors"
 
-	"github.com/hirochachacha/blua/object"
-	"github.com/hirochachacha/blua/position"
+	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/position"
 )
 
 type Error struct {

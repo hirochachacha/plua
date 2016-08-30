@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hirochachacha/blua/compiler/parser"
-	"github.com/hirochachacha/blua/compiler/scanner"
+	"github.com/hirochachacha/plua/compiler/parser"
+	"github.com/hirochachacha/plua/compiler/scanner"
 )
 
 func TestMain(t *testing.T) {

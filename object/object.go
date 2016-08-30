@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/hirochachacha/blua/internal/limits"
-	"github.com/hirochachacha/blua/internal/strconv"
+	"github.com/hirochachacha/plua/internal/limits"
+	"github.com/hirochachacha/plua/internal/strconv"
 )
 
 type SelectCase struct {

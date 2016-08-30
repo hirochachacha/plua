@@ -3,8 +3,8 @@ package tables
 import (
 	"sync"
 
-	"github.com/hirochachacha/blua/internal/limits"
-	"github.com/hirochachacha/blua/object"
+	"github.com/hirochachacha/plua/internal/limits"
+	"github.com/hirochachacha/plua/object"
 )
 
 type concurrentTable struct {

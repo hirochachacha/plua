@@ -4,7 +4,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/hirochachacha/blua/compiler/ast"
+	"github.com/hirochachacha/plua/compiler/ast"
 )
 
 func FprintTree(w io.Writer, node ast.Node) {

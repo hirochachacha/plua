@@ -1,7 +1,7 @@
-package blua
+package plua
 
 import (
-	"github.com/hirochachacha/blua/object"
+	"github.com/hirochachacha/plua/object"
 )
 
 const (

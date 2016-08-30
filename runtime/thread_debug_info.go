@@ -4,9 +4,9 @@ import (
 	// "fmt"
 	"strings"
 
-	"github.com/hirochachacha/blua"
-	"github.com/hirochachacha/blua/object"
-	"github.com/hirochachacha/blua/opcode"
+	"github.com/hirochachacha/plua"
+	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/opcode"
 )
 
 func (th *thread) getInfo(level int, what string) *object.DebugInfo {
@@ -251,7 +251,7 @@ func getObjectName(p *object.Proto, pc, n int) (name, nameWhat string) {
 			key := inst.C()
 			tn := getUpvalName(p, t)
 			name = getRKName(p, pc, key)
-			if tn == blua.LUA_ENV {
+			if tn == plua.LUA_ENV {
 				nameWhat = "global"
 			} else {
 				nameWhat = "field"
@@ -261,7 +261,7 @@ func getObjectName(p *object.Proto, pc, n int) (name, nameWhat string) {
 			key := inst.C()
 			tn := getLocalName(p, pc, t)
 			name = getRKName(p, pc, key)
-			if tn == blua.LUA_ENV {
+			if tn == plua.LUA_ENV {
 				nameWhat = "global"
 			} else {
 				nameWhat = "field"

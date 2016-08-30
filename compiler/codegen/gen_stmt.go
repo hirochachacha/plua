@@ -1,11 +1,11 @@
 package codegen
 
 import (
-	"github.com/hirochachacha/blua"
-	"github.com/hirochachacha/blua/compiler/ast"
-	"github.com/hirochachacha/blua/compiler/token"
-	"github.com/hirochachacha/blua/object"
-	"github.com/hirochachacha/blua/opcode"
+	"github.com/hirochachacha/plua"
+	"github.com/hirochachacha/plua/compiler/ast"
+	"github.com/hirochachacha/plua/compiler/token"
+	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/opcode"
 )
 
 type immBool int
@@ -282,7 +282,7 @@ func (g *generator) genAssign(LHS []ast.Expr, base int) {
 			if l == nil {
 				rk := g.markRK(g.constant(object.String(lhs.Name)))
 
-				env := g.genName(&ast.Name{Name: blua.LUA_ENV}, genR|genMove)
+				env := g.genName(&ast.Name{Name: plua.LUA_ENV}, genR|genMove)
 
 				assigns[i] = opcode.ABC(opcode.SETTABLE, env, rk, r)
 			} else {

@@ -3,12 +3,12 @@ package codegen
 import (
 	// "fmt"
 
-	"github.com/hirochachacha/blua"
-	"github.com/hirochachacha/blua/compiler/ast"
-	"github.com/hirochachacha/blua/compiler/token"
-	"github.com/hirochachacha/blua/object"
-	"github.com/hirochachacha/blua/opcode"
-	"github.com/hirochachacha/blua/position"
+	"github.com/hirochachacha/plua"
+	"github.com/hirochachacha/plua/compiler/ast"
+	"github.com/hirochachacha/plua/compiler/token"
+	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/opcode"
+	"github.com/hirochachacha/plua/position"
 )
 
 type genType uint
@@ -310,7 +310,7 @@ func (g *generator) genTableLit(expr *ast.TableLit) (r int) {
 
 		i := 1
 		for {
-			if len(a) < blua.LUA_FPF {
+			if len(a) < plua.LUA_FPF {
 				if len(a) == 0 {
 					break
 				}
@@ -339,21 +339,21 @@ func (g *generator) genTableLit(expr *ast.TableLit) (r int) {
 				break
 			}
 
-			for _, e := range a[:blua.LUA_FPF] {
+			for _, e := range a[:plua.LUA_FPF] {
 				g.genExpr(e, genMove)
 			}
 
 			if i > opcode.MaxC {
-				g.pushInst(opcode.ABC(opcode.SETLIST, tp, blua.LUA_FPF, 0))
+				g.pushInst(opcode.ABC(opcode.SETLIST, tp, plua.LUA_FPF, 0))
 				g.pushInst(opcode.Ax(opcode.EXTRAARG, i))
 			} else {
-				g.pushInst(opcode.ABC(opcode.SETLIST, tp, blua.LUA_FPF, i))
+				g.pushInst(opcode.ABC(opcode.SETLIST, tp, plua.LUA_FPF, i))
 			}
 
 			// recover sp
 			g.sp = sp
 
-			a = a[blua.LUA_FPF:]
+			a = a[plua.LUA_FPF:]
 			i++
 		}
 

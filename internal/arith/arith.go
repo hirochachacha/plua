@@ -3,7 +3,7 @@ package arith
 import (
 	"math"
 
-	"github.com/hirochachacha/blua/object"
+	"github.com/hirochachacha/plua/object"
 )
 
 func Unm(x object.Value) object.Value {

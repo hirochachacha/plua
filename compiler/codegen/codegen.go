@@ -2,10 +2,10 @@ package codegen
 
 import (
 	// "fmt"
-	"github.com/hirochachacha/blua/compiler/ast"
-	"github.com/hirochachacha/blua/internal/strconv"
-	"github.com/hirochachacha/blua/object"
-	"github.com/hirochachacha/blua/opcode"
+	"github.com/hirochachacha/plua/compiler/ast"
+	"github.com/hirochachacha/plua/internal/strconv"
+	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/opcode"
 )
 
 // assertion flag for debugging

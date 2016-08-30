@@ -35,10 +35,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hirochachacha/blua/compiler/ast"
-	"github.com/hirochachacha/blua/compiler/scanner"
-	"github.com/hirochachacha/blua/compiler/token"
-	"github.com/hirochachacha/blua/position"
+	"github.com/hirochachacha/plua/compiler/ast"
+	"github.com/hirochachacha/plua/compiler/scanner"
+	"github.com/hirochachacha/plua/compiler/token"
+	"github.com/hirochachacha/plua/position"
 )
 
 var (

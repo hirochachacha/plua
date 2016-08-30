@@ -3,7 +3,7 @@ package runtime
 import (
 	"reflect"
 
-	"github.com/hirochachacha/blua/object"
+	"github.com/hirochachacha/plua/object"
 )
 
 type channel chan object.Value

@@ -5,13 +5,13 @@ import (
 	"errors"
 	"io"
 
-	"github.com/hirochachacha/blua"
-	"github.com/hirochachacha/blua/compiler/codegen"
-	"github.com/hirochachacha/blua/compiler/dump"
-	"github.com/hirochachacha/blua/compiler/parser"
-	"github.com/hirochachacha/blua/compiler/scanner"
-	"github.com/hirochachacha/blua/compiler/undump"
-	"github.com/hirochachacha/blua/object"
+	"github.com/hirochachacha/plua"
+	"github.com/hirochachacha/plua/compiler/codegen"
+	"github.com/hirochachacha/plua/compiler/dump"
+	"github.com/hirochachacha/plua/compiler/parser"
+	"github.com/hirochachacha/plua/compiler/scanner"
+	"github.com/hirochachacha/plua/compiler/undump"
+	"github.com/hirochachacha/plua/object"
 )
 
 var errModeMismatch = errors.New("compiler: mode mismatch")
@@ -72,7 +72,7 @@ func (c *Compiler) Compile(r io.Reader, source string) (*object.Proto, error) {
 	}
 
 	// is bytecode?
-	if bs[0] == blua.LUA_SIGNATURE[0] {
+	if bs[0] == plua.LUA_SIGNATURE[0] {
 		if c.u == nil {
 			c.u = bufio.NewReader(c.r)
 		} else {
@@ -124,7 +124,7 @@ func (c *Compiler) CompileText(r io.Reader, source string) (*object.Proto, error
 	}
 
 	// is bytecode?
-	if bs[0] == blua.LUA_SIGNATURE[0] {
+	if bs[0] == plua.LUA_SIGNATURE[0] {
 		return nil, errModeMismatch
 	}
 
@@ -161,7 +161,7 @@ func (c *Compiler) CompileBinary(r io.Reader) (*object.Proto, error) {
 	}
 
 	// is text?
-	if bs[0] != blua.LUA_SIGNATURE[0] {
+	if bs[0] != plua.LUA_SIGNATURE[0] {
 		return nil, errModeMismatch
 	}
 

@@ -32,7 +32,7 @@
 package token
 
 import (
-	"github.com/hirochachacha/blua/position"
+	"github.com/hirochachacha/plua/position"
 )
 
 type Token struct {

@@ -3,7 +3,7 @@ package scanner
 import (
 	"fmt"
 
-	"github.com/hirochachacha/blua/position"
+	"github.com/hirochachacha/plua/position"
 )
 
 type Error struct {

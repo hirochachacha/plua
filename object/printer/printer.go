@@ -5,10 +5,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/hirochachacha/blua"
-	"github.com/hirochachacha/blua/internal/strconv"
-	"github.com/hirochachacha/blua/object"
-	"github.com/hirochachacha/blua/opcode"
+	"github.com/hirochachacha/plua"
+	"github.com/hirochachacha/plua/internal/strconv"
+	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/opcode"
 )
 
 func Fprint(w io.Writer, x interface{}) {
@@ -73,7 +73,7 @@ func (pr printer) printHeader(p *object.Proto) {
 
 	if s[0] == '@' || s[0] == '=' {
 		s = s[1:]
-	} else if s[:len(blua.LUA_SIGNATURE)] == blua.LUA_SIGNATURE {
+	} else if s[:len(plua.LUA_SIGNATURE)] == plua.LUA_SIGNATURE {
 		s = "(bstring)"
 	} else {
 		s = "(string)"

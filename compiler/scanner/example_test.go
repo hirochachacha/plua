@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hirochachacha/blua/compiler/token"
+	"github.com/hirochachacha/plua/compiler/token"
 )
 
 func ExampleHello() {

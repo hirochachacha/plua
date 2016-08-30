@@ -1,7 +1,7 @@
 package runtime
 
 import (
-	"github.com/hirochachacha/blua/object"
+	"github.com/hirochachacha/plua/object"
 )
 
 type process struct {

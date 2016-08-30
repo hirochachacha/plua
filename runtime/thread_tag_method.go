@@ -2,8 +2,8 @@ package runtime
 
 import (
 	// "fmt"
-	"github.com/hirochachacha/blua/object"
-	"github.com/hirochachacha/blua/opcode"
+	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/opcode"
 )
 
 const MaxTagType = TM_CALL + 1
