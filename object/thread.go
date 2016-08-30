@@ -33,6 +33,15 @@ type Thread interface {
 
 	Select(cases []SelectCase) (chosen int, recv Value, recvOK bool)
 
+	// aux APIs
+
+	CallMetaField(val Value, field string) (res []Value, done bool)
+	GetMetaField(val Value, field string) Value
+	GetMetatableName(tname string) Table
+	NewMetatableNameSize(tname string, alen, mlen int) Table
+	Repr(val Value) string
+	Require(name string, open GoFunction) (Value, bool)
+
 	// ↓ thread specific APIs
 
 	// ↓ intended to be called from vm loop

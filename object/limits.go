@@ -1,6 +1,8 @@
 package object
 
-import "github.com/hirochachacha/plua/internal/limits"
+import (
+	"github.com/hirochachacha/plua/internal/limits"
+)
 
 const (
 	MaxInteger = Integer(limits.MaxInt)
