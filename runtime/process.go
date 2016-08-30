@@ -21,7 +21,11 @@ func (p *process) Fork() object.Process {
 }
 
 func (p *process) Exec(proto *object.Proto, args ...object.Value) (rets []object.Value, err error) {
-	p.Load(proto)
+	th := p.Thread.(*thread)
+
+	cl := th.newClosure(proto)
+
+	th.loadfn(cl)
 
 	return p.Resume(args...)
 }

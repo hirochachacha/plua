@@ -13,6 +13,8 @@ const (
 type Thread interface {
 	Value
 
+	// common APIs
+
 	NewTableSize(asize, msize int) Table
 	NewTableArray(a []Value) Table
 	NewThread() Thread
@@ -33,18 +35,12 @@ type Thread interface {
 
 	// ↓ thread specific APIs
 
-	Func() Value // return closure or go function
+	// ↓ intended to be called from vm loop
 
-	Load(p *Proto)
-	LoadFunc(fn Value)
-	Resume(args ...Value) (rets []Value, err error)
+	Call(fn Value, args ...Value) ([]Value, bool)
+	PCall(fn Value, errh Value, args ...Value) ([]Value, bool)
 
-	IsYieldable() bool
-	IsMainThread() bool
-
-	Status() ThreadStatus
-
-	// ↓ intended to call from vm loop
+	// ↓ for debug support
 
 	GetInfo(level int, what string) *DebugInfo
 	GetInfoByFunc(fn Value, what string) *DebugInfo
@@ -55,8 +51,17 @@ type Thread interface {
 	GetHook() (hook Value, mask string, count int)
 	SetHook(hook Value, mask string, count int)
 
-	Call(fn Value, args ...Value) ([]Value, bool)
-	PCall(fn Value, errh Value, args ...Value) ([]Value, bool)
+	// ↓ for coroutine & goroutine support
+
+	LoadFunc(fn Value)
+	Resume(args ...Value) (rets []Value, err error)
+
+	// ↓ for coroutine support
 
 	Yield(args ...Value) (rets []Value)
+
+	IsYieldable() bool
+	IsMainThread() bool
+
+	Status() ThreadStatus
 }

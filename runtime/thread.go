@@ -222,12 +222,6 @@ func (th *thread) SetHook(hook object.Value, mask string, count int) {
 	th.hookMask = bitmask
 }
 
-func (th *thread) Load(p *object.Proto) {
-	cl := th.newClosure(p)
-
-	th.loadfn(cl)
-}
-
 func (th *thread) LoadFunc(fn object.Value) {
 	switch fn := fn.(type) {
 	case object.GoFunction:

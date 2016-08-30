@@ -21,4 +21,6 @@ type Process interface {
 
 	GetMetatable(val Value) Table
 	SetMetatable(val Value, mt Table)
+
+	Select(cases []SelectCase) (chosen int, recv Value, recvOK bool)
 }
