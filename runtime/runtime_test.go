@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hirochachacha/blua/compiler"
-	"github.com/hirochachacha/blua/object"
-	"github.com/hirochachacha/blua/runtime"
+	"github.com/hirochachacha/plua/compiler"
+	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/runtime"
 )
 
 var testExec = []struct {
