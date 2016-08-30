@@ -265,7 +265,5 @@ func newMainThread() *thread {
 
 	go th.execute()
 
-	th.env.registry.ISet(1, th)
-
 	return th
 }

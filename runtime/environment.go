@@ -5,7 +5,6 @@ import (
 )
 
 type environment struct {
-	registry   object.Table
 	loaded     object.Table
 	preload    object.Table
 	globals    object.Table                     // default _ENV (_G)
@@ -13,20 +12,14 @@ type environment struct {
 }
 
 func newEnvironment() *environment {
-	registry := newLockedTableSize(2, 2)
 	loaded := newLockedTableSize(0, 0)
 	preload := newLockedTableSize(0, 0)
 	globals := newConcurrentTableSize(0, 0)
 
-	registry.ISet(2, globals)
-	registry.Set(object.String("_LOADED"), loaded)
-	registry.Set(object.String("_PRELOAD"), preload)
-
 	return &environment{
-		registry: registry,
-		loaded:   loaded,
-		preload:  preload,
-		globals:  globals,
+		loaded:  loaded,
+		preload: preload,
+		globals: globals,
 	}
 }
 
