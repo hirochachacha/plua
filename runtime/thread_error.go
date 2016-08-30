@@ -25,7 +25,11 @@ func (err *Error) RetValue() object.Value {
 }
 
 func (err *Error) Error() string {
-	return fmt.Sprintf("runtime: the error value is raised: %s", object.Repr(err.Value))
+	msg := object.Repr(err.Value)
+	if err.Pos.IsValid() {
+		msg = msg + " raised from " + err.Pos.String()
+	}
+	return fmt.Sprintf("runtime: %s", msg)
 }
 
 var protect = new(closure) // just make a stub

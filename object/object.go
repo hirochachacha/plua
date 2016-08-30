@@ -49,7 +49,7 @@ func Repr(val Value) string {
 		s, _ := ToGoString(val)
 		return s
 	case String:
-		return string(val)
+		return strconv.Quote(string(val))
 	case Boolean:
 		if val {
 			return "true"
