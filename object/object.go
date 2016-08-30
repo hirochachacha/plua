@@ -60,10 +60,10 @@ func Repr(val Value) string {
 		return fmt.Sprintf("userdata: %p", val.Pointer)
 	case GoFunction:
 		return fmt.Sprintf("function: %p", &val)
+	case *Userdata:
+		return fmt.Sprintf("userdata: %p", val)
 	case Table:
 		return fmt.Sprintf("table: %p", val)
-	case Userdata:
-		return fmt.Sprintf("userdata: %p", val)
 	case Closure:
 		return fmt.Sprintf("function: %p", val)
 	case Thread:
@@ -195,9 +195,9 @@ func ValueOf(x interface{}) (Value, bool) {
 		return String(x), true
 	case unsafe.Pointer:
 		return LightUserdata{x}, true
-	case Table:
+	case *Userdata:
 		return x, true
-	case Userdata:
+	case Table:
 		return x, true
 	case Closure:
 		return x, true

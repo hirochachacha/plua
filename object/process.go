@@ -10,7 +10,6 @@ type Process interface {
 	NewTableArray(a []Value) Table
 	NewThread() Thread
 	NewGoThread() Thread
-	NewUserdata(x interface{}) Userdata
 	NewClosure(p *Proto) Closure
 	NewChannel(capacity int) Channel
 

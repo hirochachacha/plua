@@ -118,10 +118,6 @@ func (th *thread) NewTableArray(a []object.Value) object.Table {
 	return newTableArray(a)
 }
 
-func (th *thread) NewUserdata(x interface{}) object.Userdata {
-	return newUserdata(x)
-}
-
 func (th *thread) NewClosure(p *object.Proto) object.Closure {
 	return th.newClosure(p)
 }

@@ -1015,11 +1015,9 @@ func (th *thread) eq(rb, rc object.Value) (b bool, tm object.Value) {
 				return true, nil
 			}
 
-			mt := rb.Metatable()
-			tm := th.fasttm(mt, TM_EQ)
+			tm := th.fasttm(rb.Metatable(), TM_EQ)
 			if tm == nil {
-				mt = rc.Metatable()
-				tm = th.fasttm(mt, TM_EQ)
+				tm = th.fasttm(rc.Metatable(), TM_EQ)
 				if tm == nil {
 					return false, nil
 				}
@@ -1029,17 +1027,15 @@ func (th *thread) eq(rb, rc object.Value) (b bool, tm object.Value) {
 		}
 
 		return false, nil
-	case object.Userdata:
-		if rc, ok := rc.(object.Userdata); ok {
+	case *object.Userdata:
+		if rc, ok := rc.(*object.Userdata); ok {
 			if rb == rc {
 				return true, nil
 			}
 
-			ud := rb.(*userdata)
-			tm := th.fasttm(ud.mt, TM_EQ)
+			tm := th.fasttm(rb.Metatable, TM_EQ)
 			if tm == nil {
-				ud = rc.(*userdata)
-				tm = th.fasttm(ud.mt, TM_EQ)
+				tm = th.fasttm(rc.Metatable, TM_EQ)
 				if tm == nil {
 					return false, nil
 				}

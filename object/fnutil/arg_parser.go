@@ -129,9 +129,9 @@ func (ac *ArgParser) CheckUserdata(n int, tname string) (object.Value, string) {
 	switch ud := arg.(type) {
 	case object.LightUserdata:
 		return ud, ""
-	case object.Userdata:
+	case *object.Userdata:
 		if tname != "" {
-			if ud.Metatable() != ac.th.GetMetatableName(tname) {
+			if ud.Metatable != ac.th.GetMetatableName(tname) {
 				return nil, ac.TypeError(n, tname)
 			}
 		}
@@ -285,13 +285,13 @@ func (ac *ArgParser) ToTable(n int) (object.Table, string) {
 	return t, ""
 }
 
-func (ac *ArgParser) ToFullUserdata(n int) (object.Userdata, string) {
+func (ac *ArgParser) ToFullUserdata(n int) (*object.Userdata, string) {
 	arg, ok := ac.Get(n)
 	if !ok {
 		return nil, ac.ArgError(n, "full userdata expected, got no value")
 	}
 
-	ud, ok := arg.(object.Userdata)
+	ud, ok := arg.(*object.Userdata)
 	if !ok {
 		return nil, ac.TypeError(n, "full userdata")
 	}

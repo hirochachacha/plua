@@ -60,6 +60,15 @@ func (fn GoFunction) Type() Type {
 	return TFUNCTION
 }
 
+type Userdata struct {
+	Value     interface{}
+	Metatable Table
+}
+
+func (ud *Userdata) Type() Type {
+	return TUSERDATA
+}
+
 type none struct{}
 
 func (n none) Type() Type {
