@@ -120,7 +120,7 @@ func (ac *ArgParser) CheckAny(n int) (object.Value, string) {
 	return arg, ""
 }
 
-func (ac *ArgParser) CheckUserdata(n int, tname string) (object.Value, string) {
+func (ac *ArgParser) CheckUserdata(n int) (object.Value, string) {
 	arg, ok := ac.Get(n)
 	if !ok {
 		return nil, ac.ArgError(n, "userdata expected, got no value")
@@ -130,12 +130,6 @@ func (ac *ArgParser) CheckUserdata(n int, tname string) (object.Value, string) {
 	case object.LightUserdata:
 		return ud, ""
 	case *object.Userdata:
-		if tname != "" {
-			if ud.Metatable != ac.th.GetMetatableName(tname) {
-				return nil, ac.TypeError(n, tname)
-			}
-		}
-
 		return ud, ""
 	}
 

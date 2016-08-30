@@ -22,7 +22,6 @@ type Thread interface {
 	NewClosure(p *Proto) Closure
 	NewChannel(capacity int) Channel
 
-	Registry() Table
 	Globals() Table
 	Loaded() Table
 	Preload() Table
@@ -36,8 +35,6 @@ type Thread interface {
 
 	CallMetaField(val Value, field string) (res []Value, done bool)
 	GetMetaField(val Value, field string) Value
-	GetMetatableName(tname string) Table
-	NewMetatableNameSize(tname string, alen, mlen int) Table
 	Repr(val Value) string
 	Require(name string, open GoFunction) (Value, bool)
 

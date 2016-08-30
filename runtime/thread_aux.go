@@ -36,31 +36,6 @@ func (th *thread) Repr(val object.Value) string {
 	return object.Repr(val)
 }
 
-func (th *thread) NewMetatableNameSize(tname string, alen, mlen int) object.Table {
-	reg := th.Registry()
-
-	if mt := reg.Get(object.String(tname)); mt != nil {
-		return nil
-	}
-
-	mt := th.NewTableSize(alen, mlen)
-	mt.Set(object.String("__name"), object.String(tname))
-	reg.Set(object.String(tname), mt)
-
-	return mt
-}
-
-func (th *thread) GetMetatableName(tname string) object.Table {
-	reg := th.Registry()
-
-	mt, ok := reg.Get(object.String(tname)).(object.Table)
-	if !ok {
-		return nil
-	}
-
-	return mt
-}
-
 func (th *thread) GetMetaField(val object.Value, field string) object.Value {
 	mt := th.GetMetatable(val)
 	if mt == nil {

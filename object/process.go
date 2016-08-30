@@ -13,7 +13,6 @@ type Process interface {
 	NewClosure(p *Proto) Closure
 	NewChannel(capacity int) Channel
 
-	Registry() Table
 	Globals() Table
 	Loaded() Table
 	Preload() Table

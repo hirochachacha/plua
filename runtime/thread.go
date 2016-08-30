@@ -130,10 +130,6 @@ func (th *thread) Func() object.Value {
 	return th.fn()
 }
 
-func (th *thread) Registry() object.Table {
-	return th.env.registry
-}
-
 func (th *thread) Globals() object.Table {
 	return th.env.globals
 }
