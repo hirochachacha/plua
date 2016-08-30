@@ -46,16 +46,16 @@ func (ac *ArgParser) Args() []object.Value {
 	return ac.args[ac.offset:]
 }
 
-func (ac *ArgParser) GetThread() (object.Thread, bool) {
+func (ac *ArgParser) GetThread() object.Thread {
 	if len(ac.args) > ac.offset {
 		if th, ok := ac.args[ac.offset].(object.Thread); ok {
 			ac.offset++
 
-			return th, true
+			return th
 		}
 	}
 
-	return nil, false
+	return ac.th
 }
 
 func (ac *ArgParser) ArgError(n int, extramsg string) string {
