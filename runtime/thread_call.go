@@ -148,7 +148,7 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 	}
 
 	rets, err := fn(th, args...)
-	if err != nil {
+	if err != object.NoErr {
 		th.error(err)
 	}
 
@@ -211,7 +211,7 @@ func (th *thread) callvGo(fn object.GoFunction, args ...object.Value) (rets []ob
 	ctx.stack[1] = fn
 
 	rets, err := fn(th, args...)
-	if err != nil {
+	if err != object.NoErr {
 		th.error(err)
 	}
 

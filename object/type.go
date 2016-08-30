@@ -7,7 +7,8 @@ func (t Type) String() string {
 }
 
 const (
-	TNIL Type = iota
+	TNONE Type = iota - 1
+	TNIL
 	TBOOLEAN
 	TLIGHTUSERDATA
 	TNUMBER
@@ -30,6 +31,7 @@ const (
 )
 
 var typeNames = [...]string{
+	TNONE + 1:          "none",
 	TNIL + 1:           "nil",
 	TBOOLEAN + 1:       "boolean",
 	TLIGHTUSERDATA + 1: "userdata",

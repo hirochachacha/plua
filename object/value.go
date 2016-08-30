@@ -15,6 +15,8 @@ var (
 
 	Infinity = Number(math.Inf(0))
 	NaN      = Number(math.NaN())
+
+	NoErr = none{}
 )
 
 type Integer int64
@@ -41,7 +43,6 @@ func (b Boolean) Type() Type {
 	return TBOOLEAN
 }
 
-// see https://code.google.com/p/go/issues/detail?id=6116
 type LightUserdata struct {
 	Pointer unsafe.Pointer
 }
@@ -50,8 +51,17 @@ func (lud LightUserdata) Type() Type {
 	return TUSERDATA
 }
 
+// GoFunction represents functions that can be called by Lua VM.
+// Because of nil is a valid value, you cannot use nil as 'no error'.
+// If error is none, you must return NoErr instead of nil.
 type GoFunction func(th Thread, args ...Value) (rets []Value, err Value)
 
 func (fn GoFunction) Type() Type {
 	return TFUNCTION
+}
+
+type none struct{}
+
+func (n none) Type() Type {
+	return TNONE
 }

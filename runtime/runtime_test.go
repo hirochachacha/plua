@@ -61,7 +61,7 @@ func Error(th object.Thread, args ...object.Value) (rets []object.Value, err obj
 func PCall(th object.Thread, args ...object.Value) (rets []object.Value, err object.Value) {
 	rets, ok := th.PCall(args[0], nil, args[1:]...)
 
-	return append([]object.Value{object.Boolean(ok)}, rets...), nil
+	return append([]object.Value{object.Boolean(ok)}, rets...), object.NoErr
 }
 
 var testExecError = []struct {
@@ -69,6 +69,7 @@ var testExecError = []struct {
 
 	ErrValue object.Value
 }{
+	{`error(nil)`, nil},
 	{`error("error")`, object.String("error")},
 	{`error(1); error(2)`, object.Integer(1)},
 	{`function x() error(1) end; return x()`, object.Integer(1)},
