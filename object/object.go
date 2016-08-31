@@ -3,7 +3,6 @@ package object
 import (
 	"fmt"
 	"reflect"
-	"unsafe"
 
 	"github.com/hirochachacha/plua/internal/limits"
 	"github.com/hirochachacha/plua/internal/strconv"
@@ -159,55 +158,6 @@ func ToGoString(val Value) (string, bool) {
 
 func ToGoBool(val Value) bool {
 	return bool(ToBoolean(val))
-}
-
-func ValueOf(x interface{}) (Value, bool) {
-	switch x := x.(type) {
-	case Boolean:
-		return x, true
-	case Integer:
-		return x, true
-	case Number:
-		return x, true
-	case String:
-		return x, true
-	case LightUserdata:
-		return x, true
-	case GoFunction:
-		return x, true
-	case nil:
-		return nil, true
-	case bool:
-		return Boolean(x), true
-	case int:
-		return Integer(x), true
-	case int8:
-		return Integer(x), true
-	case int32:
-		return Integer(x), true
-	case int64:
-		return Integer(x), true
-	case float32:
-		return Number(x), true
-	case float64:
-		return Number(x), true
-	case string:
-		return String(x), true
-	case unsafe.Pointer:
-		return LightUserdata{x}, true
-	case *Userdata:
-		return x, true
-	case Table:
-		return x, true
-	case Closure:
-		return x, true
-	case Thread:
-		return x, true
-	case Channel:
-		return x, true
-	}
-
-	return nil, false
 }
 
 func integerToString(i Integer) String {
