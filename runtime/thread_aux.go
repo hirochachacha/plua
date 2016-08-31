@@ -12,7 +12,7 @@ func (th *thread) Require(name string, open object.GoFunction) (object.Value, bo
 	}
 
 	rets, err := open(th, object.String(name))
-	if len(rets) == 0 || err != object.NoErr {
+	if len(rets) == 0 || err != nil {
 		return nil, false
 	}
 

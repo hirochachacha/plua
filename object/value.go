@@ -16,7 +16,7 @@ var (
 	Infinity = Number(math.Inf(0))
 	NaN      = Number(math.NaN())
 
-	NoErr = none{}
+	ErrNil = none{}
 )
 
 type Integer int64
@@ -52,8 +52,8 @@ func (lud LightUserdata) Type() Type {
 }
 
 // GoFunction represents functions that can be called by Lua VM.
-// Because of nil is a valid value, you cannot use nil as 'no error'.
-// If error is none, you must return NoErr instead of nil.
+// nil is used for representing no error.
+// If you want use nil as an error, you must return ErrNil instead.
 type GoFunction func(th Thread, args ...Value) (rets []Value, err Value)
 
 func (fn GoFunction) Type() Type {

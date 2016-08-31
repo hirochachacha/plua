@@ -55,13 +55,17 @@ func TestExec(t *testing.T) {
 }
 
 func Error(th object.Thread, args ...object.Value) (rets []object.Value, err object.Value) {
+	if args[0] == nil {
+		return nil, object.ErrNil
+	}
+
 	return nil, args[0]
 }
 
 func PCall(th object.Thread, args ...object.Value) (rets []object.Value, err object.Value) {
 	rets, ok := th.PCall(args[0], nil, args[1:]...)
 
-	return append([]object.Value{object.Boolean(ok)}, rets...), object.NoErr
+	return append([]object.Value{object.Boolean(ok)}, rets...), nil
 }
 
 var testExecError = []struct {

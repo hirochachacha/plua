@@ -62,6 +62,10 @@ func (th *thread) errorLevel(val object.Value, level int) {
 			pos.Line = d.CurrentLine
 		}
 
+		if val == object.ErrNil {
+			val = nil
+		}
+
 		err := &Error{
 			Value: val,
 			Pos:   pos,
