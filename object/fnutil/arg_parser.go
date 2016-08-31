@@ -20,6 +20,10 @@ func NewArgParser(th object.Thread, args []object.Value) *ArgParser {
 	}
 }
 
+func (ap *ArgParser) Args() []object.Value {
+	return ap.args[ap.offset:]
+}
+
 func (ap *ArgParser) Get(n int) (object.Value, bool) {
 	n = n + ap.offset
 
@@ -42,10 +46,6 @@ func (ap *ArgParser) Set(n int, val object.Value) bool {
 	return true
 }
 
-func (ap *ArgParser) Args() []object.Value {
-	return ap.args[ap.offset:]
-}
-
 func (ap *ArgParser) GetThread() object.Thread {
 	if len(ap.args) > ap.offset {
 		if th, ok := ap.args[ap.offset].(object.Thread); ok {
@@ -56,59 +56,6 @@ func (ap *ArgParser) GetThread() object.Thread {
 	}
 
 	return ap.th
-}
-
-func (ap *ArgParser) ArgError(n int, extramsg string) object.Value {
-	n = n + ap.offset
-
-	n++
-
-	d := ap.th.GetInfo(0, "n")
-	if d == nil {
-		return object.String(fmt.Sprintf("bad argument #%d (%s)", n, extramsg))
-	}
-
-	if d.NameWhat == "method" {
-		n--
-		if n == 0 {
-			return object.String(fmt.Sprintf("calling '%s' on bad self (%s)", d.Name, extramsg))
-		}
-	}
-
-	return object.String(fmt.Sprintf("bad argument #%d to '%s' (%s)", n, d.Name, extramsg))
-}
-
-func (ap *ArgParser) TypeError(n int, tname string) object.Value {
-	arg, ok := ap.Get(n)
-	if !ok {
-		return ap.ArgError(n, fmt.Sprintf("%s expected, got no value", tname))
-	}
-
-	var typearg string
-
-	if field := ap.th.GetMetaField(arg, "__name"); field != nil {
-		if _name, ok := field.(object.String); ok {
-			typearg = string(_name)
-		} else {
-			if _, ok := arg.(object.LightUserdata); ok {
-				typearg = "light userdata"
-			} else {
-				typearg = object.ToType(arg).String()
-			}
-		}
-	} else {
-		if _, ok := arg.(object.LightUserdata); ok {
-			typearg = "light userdata"
-		} else {
-			typearg = object.ToType(arg).String()
-		}
-	}
-
-	return ap.ArgError(n, fmt.Sprintf("%s expected, got %s", tname, typearg))
-}
-
-func (ap *ArgParser) OptionError(n int, opt string) object.Value {
-	return ap.ArgError(n, fmt.Sprintf("invalid option '%s'", opt))
 }
 
 func (ap *ArgParser) CheckAny(n int) (object.Value, object.Value) {
@@ -471,4 +418,57 @@ func (ap *ArgParser) OptGoBool(n int, b bool) bool {
 	}
 
 	return object.ToGoBool(arg)
+}
+
+func (ap *ArgParser) ArgError(n int, extramsg string) object.Value {
+	n = n + ap.offset
+
+	n++
+
+	d := ap.th.GetInfo(0, "n")
+	if d == nil {
+		return object.String(fmt.Sprintf("bad argument #%d (%s)", n, extramsg))
+	}
+
+	if d.NameWhat == "method" {
+		n--
+		if n == 0 {
+			return object.String(fmt.Sprintf("calling '%s' on bad self (%s)", d.Name, extramsg))
+		}
+	}
+
+	return object.String(fmt.Sprintf("bad argument #%d to '%s' (%s)", n, d.Name, extramsg))
+}
+
+func (ap *ArgParser) TypeError(n int, tname string) object.Value {
+	arg, ok := ap.Get(n)
+	if !ok {
+		return ap.ArgError(n, fmt.Sprintf("%s expected, got no value", tname))
+	}
+
+	var typearg string
+
+	if field := ap.th.GetMetaField(arg, "__name"); field != nil {
+		if _name, ok := field.(object.String); ok {
+			typearg = string(_name)
+		} else {
+			if _, ok := arg.(object.LightUserdata); ok {
+				typearg = "light userdata"
+			} else {
+				typearg = object.ToType(arg).String()
+			}
+		}
+	} else {
+		if _, ok := arg.(object.LightUserdata); ok {
+			typearg = "light userdata"
+		} else {
+			typearg = object.ToType(arg).String()
+		}
+	}
+
+	return ap.ArgError(n, fmt.Sprintf("%s expected, got %s", tname, typearg))
+}
+
+func (ap *ArgParser) OptionError(n int, opt string) object.Value {
+	return ap.ArgError(n, fmt.Sprintf("invalid option '%s'", opt))
 }
