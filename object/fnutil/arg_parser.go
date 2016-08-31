@@ -20,50 +20,50 @@ func NewArgParser(th object.Thread, args []object.Value) *ArgParser {
 	}
 }
 
-func (ac *ArgParser) Get(n int) (object.Value, bool) {
-	n = n + ac.offset
+func (ap *ArgParser) Get(n int) (object.Value, bool) {
+	n = n + ap.offset
 
-	if len(ac.args) <= n {
+	if len(ap.args) <= n {
 		return nil, false
 	}
 
-	return ac.args[n], true
+	return ap.args[n], true
 }
 
-func (ac *ArgParser) Set(n int, val object.Value) bool {
-	n = n + ac.offset
+func (ap *ArgParser) Set(n int, val object.Value) bool {
+	n = n + ap.offset
 
-	if len(ac.args) <= n {
+	if len(ap.args) <= n {
 		return false
 	}
 
-	ac.args[n] = val
+	ap.args[n] = val
 
 	return true
 }
 
-func (ac *ArgParser) Args() []object.Value {
-	return ac.args[ac.offset:]
+func (ap *ArgParser) Args() []object.Value {
+	return ap.args[ap.offset:]
 }
 
-func (ac *ArgParser) GetThread() object.Thread {
-	if len(ac.args) > ac.offset {
-		if th, ok := ac.args[ac.offset].(object.Thread); ok {
-			ac.offset++
+func (ap *ArgParser) GetThread() object.Thread {
+	if len(ap.args) > ap.offset {
+		if th, ok := ap.args[ap.offset].(object.Thread); ok {
+			ap.offset++
 
 			return th
 		}
 	}
 
-	return ac.th
+	return ap.th
 }
 
-func (ac *ArgParser) ArgError(n int, extramsg string) string {
-	n = n + ac.offset
+func (ap *ArgParser) ArgError(n int, extramsg string) string {
+	n = n + ap.offset
 
 	n++
 
-	d := ac.th.GetInfo(0, "n")
+	d := ap.th.GetInfo(0, "n")
 	if d == nil {
 		return fmt.Sprintf("bad argument #%d (%s)", n, extramsg)
 	}
@@ -78,15 +78,15 @@ func (ac *ArgParser) ArgError(n int, extramsg string) string {
 	return fmt.Sprintf("bad argument #%d to '%s' (%s)", n, d.Name, extramsg)
 }
 
-func (ac *ArgParser) TypeError(n int, tname string) string {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) TypeError(n int, tname string) string {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return ac.ArgError(n, fmt.Sprintf("%s expected, got no value", tname))
+		return ap.ArgError(n, fmt.Sprintf("%s expected, got no value", tname))
 	}
 
 	var typearg string
 
-	if field := ac.th.GetMetaField(arg, "__name"); field != nil {
+	if field := ap.th.GetMetaField(arg, "__name"); field != nil {
 		if _name, ok := field.(object.String); ok {
 			typearg = string(_name)
 		} else {
@@ -104,26 +104,26 @@ func (ac *ArgParser) TypeError(n int, tname string) string {
 		}
 	}
 
-	return ac.ArgError(n, fmt.Sprintf("%s expected, got %s", tname, typearg))
+	return ap.ArgError(n, fmt.Sprintf("%s expected, got %s", tname, typearg))
 }
 
-func (ac *ArgParser) OptionError(n int, opt string) string {
-	return ac.ArgError(n, fmt.Sprintf("invalid option '%s'", opt))
+func (ap *ArgParser) OptionError(n int, opt string) string {
+	return ap.ArgError(n, fmt.Sprintf("invalid option '%s'", opt))
 }
 
-func (ac *ArgParser) CheckAny(n int) (object.Value, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) CheckAny(n int) (object.Value, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return nil, ac.ArgError(n, "value expected")
+		return nil, ap.ArgError(n, "value expected")
 	}
 
 	return arg, ""
 }
 
-func (ac *ArgParser) CheckUserdata(n int) (object.Value, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) CheckUserdata(n int) (object.Value, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return nil, ac.ArgError(n, "userdata expected, got no value")
+		return nil, ap.ArgError(n, "userdata expected, got no value")
 	}
 
 	switch ud := arg.(type) {
@@ -133,24 +133,24 @@ func (ac *ArgParser) CheckUserdata(n int) (object.Value, string) {
 		return ud, ""
 	}
 
-	return nil, ac.TypeError(n, "userdata")
+	return nil, ap.TypeError(n, "userdata")
 }
 
-func (ac *ArgParser) CheckFunction(n int) (object.Value, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) CheckFunction(n int) (object.Value, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return nil, ac.ArgError(n, "function expected, got no value")
+		return nil, ap.ArgError(n, "function expected, got no value")
 	}
 
 	if typ := object.ToType(arg); typ != object.TFUNCTION {
-		return nil, ac.TypeError(n, "function")
+		return nil, ap.TypeError(n, "function")
 	}
 
 	return arg, ""
 }
 
-func (ac *ArgParser) CheckTypes(n int, typs ...object.Type) (object.Value, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) CheckTypes(n int, typs ...object.Type) (object.Value, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
 		typss := ""
 		for _, typ := range typs[:len(typs)-1] {
@@ -158,7 +158,7 @@ func (ac *ArgParser) CheckTypes(n int, typs ...object.Type) (object.Value, strin
 		}
 		typss += typs[len(typs)-1].String()
 
-		return nil, ac.ArgError(n, typss+" expected, got no value")
+		return nil, ap.ArgError(n, typss+" expected, got no value")
 	}
 
 	ok = false
@@ -180,253 +180,253 @@ func (ac *ArgParser) CheckTypes(n int, typs ...object.Type) (object.Value, strin
 		}
 		typss += typs[len(typs)-1].String()
 
-		return nil, ac.TypeError(n, typss)
+		return nil, ap.TypeError(n, typss)
 	}
 
 	return arg, ""
 }
 
-func (ac *ArgParser) ToInteger(n int) (object.Integer, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToInteger(n int) (object.Integer, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return 0, ac.ArgError(n, "integer expected, got no value")
+		return 0, ap.ArgError(n, "integer expected, got no value")
 	}
 
 	i, ok := object.ToInteger(arg)
 	if !ok {
-		return 0, ac.TypeError(n, "integer")
+		return 0, ap.TypeError(n, "integer")
 	}
 
 	return i, ""
 }
 
-func (ac *ArgParser) ToNumber(n int) (object.Number, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToNumber(n int) (object.Number, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return 0, ac.ArgError(n, "number expected, got no value")
+		return 0, ap.ArgError(n, "number expected, got no value")
 	}
 
 	f, ok := object.ToNumber(arg)
 	if !ok {
-		return 0, ac.TypeError(n, "number")
+		return 0, ap.TypeError(n, "number")
 	}
 
 	return f, ""
 }
 
-func (ac *ArgParser) ToString(n int) (object.String, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToString(n int) (object.String, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return "", ac.ArgError(n, "string expected, got no value")
+		return "", ap.ArgError(n, "string expected, got no value")
 	}
 
 	s, ok := object.ToString(arg)
 	if !ok {
-		return "", ac.TypeError(n, "string")
+		return "", ap.TypeError(n, "string")
 	}
 
 	return s, ""
 }
 
-func (ac *ArgParser) ToBoolean(n int) (object.Boolean, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToBoolean(n int) (object.Boolean, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return object.False, ac.ArgError(n, "boolean expected, got no value")
+		return object.False, ap.ArgError(n, "boolean expected, got no value")
 	}
 
 	return object.ToBoolean(arg), ""
 }
 
-func (ac *ArgParser) ToLightUserdata(n int) (object.LightUserdata, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToLightUserdata(n int) (object.LightUserdata, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return object.LightUserdata{}, ac.ArgError(n, "light userdata expected, got no value")
+		return object.LightUserdata{}, ap.ArgError(n, "light userdata expected, got no value")
 	}
 
 	lud, ok := arg.(object.LightUserdata)
 	if !ok {
-		return object.LightUserdata{}, ac.TypeError(n, "light userdata")
+		return object.LightUserdata{}, ap.TypeError(n, "light userdata")
 	}
 
 	return lud, ""
 }
 
-func (ac *ArgParser) ToGoFunction(n int) (object.GoFunction, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToGoFunction(n int) (object.GoFunction, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return nil, ac.ArgError(n, "go function expected, got no value")
+		return nil, ap.ArgError(n, "go function expected, got no value")
 	}
 
 	fn, ok := arg.(object.GoFunction)
 	if !ok {
-		return nil, ac.TypeError(n, "go function")
+		return nil, ap.TypeError(n, "go function")
 	}
 
 	return fn, ""
 }
 
-func (ac *ArgParser) ToTable(n int) (object.Table, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToTable(n int) (object.Table, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return nil, ac.ArgError(n, "table expected, got no value")
+		return nil, ap.ArgError(n, "table expected, got no value")
 	}
 
 	t, ok := arg.(object.Table)
 	if !ok {
-		return nil, ac.TypeError(n, "table")
+		return nil, ap.TypeError(n, "table")
 	}
 
 	return t, ""
 }
 
-func (ac *ArgParser) ToFullUserdata(n int) (*object.Userdata, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToFullUserdata(n int) (*object.Userdata, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return nil, ac.ArgError(n, "full userdata expected, got no value")
+		return nil, ap.ArgError(n, "full userdata expected, got no value")
 	}
 
 	ud, ok := arg.(*object.Userdata)
 	if !ok {
-		return nil, ac.TypeError(n, "full userdata")
+		return nil, ap.TypeError(n, "full userdata")
 	}
 
 	return ud, ""
 }
 
-func (ac *ArgParser) ToClosure(n int) (object.Closure, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToClosure(n int) (object.Closure, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return nil, ac.ArgError(n, "lua function expected, got no value")
+		return nil, ap.ArgError(n, "lua function expected, got no value")
 	}
 
 	cl, ok := arg.(object.Closure)
 	if !ok {
-		return nil, ac.TypeError(n, "lua function")
+		return nil, ap.TypeError(n, "lua function")
 	}
 
 	return cl, ""
 }
 
-func (ac *ArgParser) ToThread(n int) (object.Thread, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToThread(n int) (object.Thread, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return nil, ac.ArgError(n, "thread expected, got no value")
+		return nil, ap.ArgError(n, "thread expected, got no value")
 	}
 
 	th, ok := arg.(object.Thread)
 	if !ok {
-		return nil, ac.TypeError(n, "thread")
+		return nil, ap.TypeError(n, "thread")
 	}
 
 	return th, ""
 }
 
-func (ac *ArgParser) ToChannel(n int) (object.Channel, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToChannel(n int) (object.Channel, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return nil, ac.ArgError(n, "channel expected, got no value")
+		return nil, ap.ArgError(n, "channel expected, got no value")
 	}
 
 	ch, ok := arg.(object.Channel)
 	if !ok {
-		return nil, ac.TypeError(n, "channel")
+		return nil, ap.TypeError(n, "channel")
 	}
 
 	return ch, ""
 }
 
-func (ac *ArgParser) ToGoInt(n int) (int, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToGoInt(n int) (int, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return 0, ac.ArgError(n, "integer expected, got no value")
+		return 0, ap.ArgError(n, "integer expected, got no value")
 	}
 
 	i, ok := object.ToGoInt64(arg)
 	if !ok {
-		return 0, ac.TypeError(n, "integer")
+		return 0, ap.TypeError(n, "integer")
 	}
 
 	if i < limits.MinInt || i > limits.MaxInt {
-		return 0, ac.ArgError(n, "integer overflow")
+		return 0, ap.ArgError(n, "integer overflow")
 	}
 
 	return int(i), ""
 }
 
-func (ac *ArgParser) ToGoInt64(n int) (int64, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToGoInt64(n int) (int64, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return 0, ac.ArgError(n, "integer expected, got no value")
+		return 0, ap.ArgError(n, "integer expected, got no value")
 	}
 
 	i, ok := object.ToGoInt64(arg)
 	if !ok {
-		return 0, ac.TypeError(n, "integer")
+		return 0, ap.TypeError(n, "integer")
 	}
 
 	return i, ""
 }
 
-func (ac *ArgParser) ToGoFloat64(n int) (float64, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToGoFloat64(n int) (float64, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return 0, ac.ArgError(n, "number expected, got no value")
+		return 0, ap.ArgError(n, "number expected, got no value")
 	}
 
 	f, ok := object.ToGoFloat64(arg)
 	if !ok {
-		return 0, ac.TypeError(n, "number")
+		return 0, ap.TypeError(n, "number")
 	}
 
 	return f, ""
 }
 
-func (ac *ArgParser) ToGoString(n int) (string, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToGoString(n int) (string, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return "", ac.ArgError(n, "string expected, got no value")
+		return "", ap.ArgError(n, "string expected, got no value")
 	}
 
 	s, ok := object.ToGoString(arg)
 	if !ok {
-		return "", ac.TypeError(n, "string")
+		return "", ap.TypeError(n, "string")
 	}
 
 	return s, ""
 }
 
-func (ac *ArgParser) ToGoBool(n int) (bool, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) ToGoBool(n int) (bool, string) {
+	arg, ok := ap.Get(n)
 	if !ok {
-		return false, ac.ArgError(n, "boolean expected, got no value")
+		return false, ap.ArgError(n, "boolean expected, got no value")
 	}
 
 	return object.ToGoBool(arg), ""
 }
 
-func (ac *ArgParser) OptGoInt64(n int, i int64) (int64, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) OptGoInt64(n int, i int64) (int64, string) {
+	arg, ok := ap.Get(n)
 	if !ok || arg == nil {
 		return i, ""
 	}
 
 	i64, ok := object.ToGoInt64(arg)
 	if !ok {
-		return 0, ac.TypeError(n, "integer")
+		return 0, ap.TypeError(n, "integer")
 	}
 
 	return i64, ""
 }
 
-func (ac *ArgParser) OptGoInt(n int, i int) (int, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) OptGoInt(n int, i int) (int, string) {
+	arg, ok := ap.Get(n)
 	if !ok || arg == nil {
 		return i, ""
 	}
 
 	i64, ok := object.ToGoInt64(arg)
 	if !ok {
-		return 0, ac.TypeError(n, "integer")
+		return 0, ap.TypeError(n, "integer")
 	}
 
 	if i64 < limits.MinInt || i64 > limits.MaxInt {
@@ -436,36 +436,36 @@ func (ac *ArgParser) OptGoInt(n int, i int) (int, string) {
 	return int(i64), ""
 }
 
-func (ac *ArgParser) OptGoFloat64(n int, f float64) (float64, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) OptGoFloat64(n int, f float64) (float64, string) {
+	arg, ok := ap.Get(n)
 	if !ok || arg == nil {
 		return f, ""
 	}
 
 	f64, ok := object.ToGoFloat64(arg)
 	if !ok {
-		return 0, ac.TypeError(n, "number")
+		return 0, ap.TypeError(n, "number")
 	}
 
 	return f64, ""
 }
 
-func (ac *ArgParser) OptGoString(n int, s string) (string, string) {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) OptGoString(n int, s string) (string, string) {
+	arg, ok := ap.Get(n)
 	if !ok || arg == nil {
 		return s, ""
 	}
 
 	gs, ok := object.ToGoString(arg)
 	if !ok {
-		return "", ac.TypeError(n, "string")
+		return "", ap.TypeError(n, "string")
 	}
 
 	return gs, ""
 }
 
-func (ac *ArgParser) OptGoBool(n int, b bool) bool {
-	arg, ok := ac.Get(n)
+func (ap *ArgParser) OptGoBool(n int, b bool) bool {
+	arg, ok := ap.Get(n)
 	if !ok || arg == nil {
 		return b
 	}
