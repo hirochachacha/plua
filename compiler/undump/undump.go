@@ -5,8 +5,8 @@ import (
 	"errors"
 	"io"
 
-	"github.com/hirochachacha/plua"
 	"github.com/hirochachacha/plua/internal/limits"
+	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/opcode"
 )
@@ -412,19 +412,19 @@ func (u *undumper) loadHeader() error {
 		return err
 	}
 
-	if string(header[:4]) != plua.LUA_SIGNATURE {
+	if string(header[:4]) != version.LUA_SIGNATURE {
 		return errSignatureMismatch
 	}
 
-	if header[4] != plua.LUAC_VERSION {
+	if header[4] != version.LUAC_VERSION {
 		return errVersionMismatch
 	}
 
-	if header[5] != plua.LUAC_FORMAT {
+	if header[5] != version.LUAC_FORMAT {
 		return errFormatMismatch
 	}
 
-	if string(header[6:]) != plua.LUAC_DATA {
+	if string(header[6:]) != version.LUAC_DATA {
 		return errDataMismatch
 	}
 
@@ -474,7 +474,7 @@ func (u *undumper) loadHeader() error {
 		return err
 	}
 
-	if i != plua.LUAC_INT {
+	if i != version.LUAC_INT {
 
 		// guess endian
 		switch u.order {
@@ -500,7 +500,7 @@ func (u *undumper) loadHeader() error {
 		return err
 	}
 
-	if f != plua.LUAC_NUM {
+	if f != version.LUAC_NUM {
 		return errNumberFormatMismatch
 	}
 

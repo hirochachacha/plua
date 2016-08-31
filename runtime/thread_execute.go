@@ -28,8 +28,9 @@ package runtime
 
 import (
 	// "fmt"
-	"github.com/hirochachacha/plua"
+
 	"github.com/hirochachacha/plua/internal/arith"
+	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/opcode"
 )
@@ -215,7 +216,7 @@ func (th *thread) execute0() (rets []object.Value) {
 
 	// defer func() { fmt.Println("exit execute0", rets) }()
 
-	if th.depth >= plua.MAX_VM_RECURSION {
+	if th.depth >= version.MAX_VM_RECURSION {
 		th.throwStackOverflowError()
 
 		return nil
@@ -845,7 +846,7 @@ func (th *thread) execute0() (rets []object.Value) {
 				c = extra.Ax()
 			}
 
-			base := (c - 1) * plua.LUA_FPF
+			base := (c - 1) * version.LUA_FPF
 
 			t := ctx.getR(a).(object.Table)
 
@@ -889,7 +890,7 @@ func (th *thread) execute0() (rets []object.Value) {
 }
 
 func (th *thread) gettable(t, key object.Value) (val object.Value, tm object.Value, ok bool) {
-	for i := 0; i < plua.MAX_TAG_LOOP; i++ {
+	for i := 0; i < version.MAX_TAG_LOOP; i++ {
 		if t, ok := t.(object.Table); ok {
 			val := t.Get(key)
 			mt := t.Metatable()
@@ -918,7 +919,7 @@ func (th *thread) gettable(t, key object.Value) (val object.Value, tm object.Val
 }
 
 func (th *thread) settable(t, key, val object.Value) (tm object.Value, ok bool) {
-	for i := 0; i < plua.MAX_TAG_LOOP; i++ {
+	for i := 0; i < version.MAX_TAG_LOOP; i++ {
 		if t, ok := t.(object.Table); ok {
 			old := t.Get(key)
 			mt := t.Metatable()

@@ -1,9 +1,9 @@
 package codegen
 
 import (
-	"github.com/hirochachacha/plua"
 	"github.com/hirochachacha/plua/compiler/ast"
 	"github.com/hirochachacha/plua/compiler/token"
+	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/opcode"
 )
@@ -290,7 +290,7 @@ func (g *generator) genConst(val object.Value, typ genType) (rk int) {
 }
 
 func (g *generator) genSetGlobal(name *ast.Name, r int) {
-	env := g.resolve(plua.LUA_ENV)
+	env := g.resolve(version.LUA_ENV)
 
 	rk := g.markRK(g.constant(object.String(name.Name)))
 
@@ -305,7 +305,7 @@ func (g *generator) genSetGlobal(name *ast.Name, r int) {
 }
 
 func (g *generator) genGetGlobal(name *ast.Name) (r int) {
-	env := g.resolve(plua.LUA_ENV)
+	env := g.resolve(version.LUA_ENV)
 
 	rk := g.markRK(g.constant(object.String(name.Name)))
 

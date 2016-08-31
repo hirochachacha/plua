@@ -4,7 +4,7 @@ import (
 	// "fmt"
 	"strings"
 
-	"github.com/hirochachacha/plua"
+	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/opcode"
 )
@@ -251,7 +251,7 @@ func getObjectName(p *object.Proto, pc, n int) (name, nameWhat string) {
 			key := inst.C()
 			tn := getUpvalName(p, t)
 			name = getRKName(p, pc, key)
-			if tn == plua.LUA_ENV {
+			if tn == version.LUA_ENV {
 				nameWhat = "global"
 			} else {
 				nameWhat = "field"
@@ -261,7 +261,7 @@ func getObjectName(p *object.Proto, pc, n int) (name, nameWhat string) {
 			key := inst.C()
 			tn := getLocalName(p, pc, t)
 			name = getRKName(p, pc, key)
-			if tn == plua.LUA_ENV {
+			if tn == version.LUA_ENV {
 				nameWhat = "global"
 			} else {
 				nameWhat = "field"

@@ -3,9 +3,9 @@ package codegen
 import (
 	// "fmt"
 
-	"github.com/hirochachacha/plua"
 	"github.com/hirochachacha/plua/compiler/ast"
 	"github.com/hirochachacha/plua/compiler/token"
+	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/opcode"
 	"github.com/hirochachacha/plua/position"
@@ -310,7 +310,7 @@ func (g *generator) genTableLit(expr *ast.TableLit) (r int) {
 
 		i := 1
 		for {
-			if len(a) < plua.LUA_FPF {
+			if len(a) < version.LUA_FPF {
 				if len(a) == 0 {
 					break
 				}
@@ -339,21 +339,21 @@ func (g *generator) genTableLit(expr *ast.TableLit) (r int) {
 				break
 			}
 
-			for _, e := range a[:plua.LUA_FPF] {
+			for _, e := range a[:version.LUA_FPF] {
 				g.genExpr(e, genMove)
 			}
 
 			if i > opcode.MaxC {
-				g.pushInst(opcode.ABC(opcode.SETLIST, tp, plua.LUA_FPF, 0))
+				g.pushInst(opcode.ABC(opcode.SETLIST, tp, version.LUA_FPF, 0))
 				g.pushInst(opcode.Ax(opcode.EXTRAARG, i))
 			} else {
-				g.pushInst(opcode.ABC(opcode.SETLIST, tp, plua.LUA_FPF, i))
+				g.pushInst(opcode.ABC(opcode.SETLIST, tp, version.LUA_FPF, i))
 			}
 
 			// recover sp
 			g.sp = sp
 
-			a = a[plua.LUA_FPF:]
+			a = a[version.LUA_FPF:]
 			i++
 		}
 

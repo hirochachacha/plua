@@ -5,8 +5,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/hirochachacha/plua"
 	"github.com/hirochachacha/plua/internal/strconv"
+	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/opcode"
 )
@@ -73,7 +73,7 @@ func (pr printer) printHeader(p *object.Proto) {
 
 	if s[0] == '@' || s[0] == '=' {
 		s = s[1:]
-	} else if s[:len(plua.LUA_SIGNATURE)] == plua.LUA_SIGNATURE {
+	} else if s[:len(version.LUA_SIGNATURE)] == version.LUA_SIGNATURE {
 		s = "(bstring)"
 	} else {
 		s = "(string)"
