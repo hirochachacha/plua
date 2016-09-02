@@ -12,6 +12,4 @@ var (
 
 	Infinity = Number(math.Inf(0))
 	NaN      = Number(math.NaN())
-
-	ErrNil = none{}
 )

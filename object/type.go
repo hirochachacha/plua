@@ -50,12 +50,6 @@ func (ud *Userdata) Type() Type {
 	return TUSERDATA
 }
 
-type none struct{}
-
-func (n none) Type() Type {
-	return TNONE
-}
-
 type Type int
 
 func (t Type) String() string {
@@ -63,8 +57,7 @@ func (t Type) String() string {
 }
 
 const (
-	TNONE Type = iota - 1
-	TNIL
+	TNIL Type = iota
 	TBOOLEAN
 	TLIGHTUSERDATA
 	TNUMBER
@@ -87,7 +80,6 @@ const (
 )
 
 var typeNames = [...]string{
-	TNONE + 1:          "none",
 	TNIL + 1:           "nil",
 	TBOOLEAN + 1:       "boolean",
 	TLIGHTUSERDATA + 1: "userdata",
