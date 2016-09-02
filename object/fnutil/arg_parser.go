@@ -58,7 +58,7 @@ func (ap *ArgParser) GetThread() object.Thread {
 	return ap.th
 }
 
-func (ap *ArgParser) CheckAny(n int) (object.Value, *object.RuntimeError) {
+func (ap *ArgParser) ToValue(n int) (object.Value, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return nil, ap.ArgError(n, "value expected")
@@ -67,7 +67,7 @@ func (ap *ArgParser) CheckAny(n int) (object.Value, *object.RuntimeError) {
 	return arg, nil
 }
 
-func (ap *ArgParser) CheckUserdata(n int) (object.Value, *object.RuntimeError) {
+func (ap *ArgParser) ToUserdata(n int) (object.Value, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return nil, ap.ArgError(n, "userdata expected, got no value")
@@ -83,7 +83,7 @@ func (ap *ArgParser) CheckUserdata(n int) (object.Value, *object.RuntimeError) {
 	return nil, ap.TypeError(n, "userdata")
 }
 
-func (ap *ArgParser) CheckFunction(n int) (object.Value, *object.RuntimeError) {
+func (ap *ArgParser) ToFunction(n int) (object.Value, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return nil, ap.ArgError(n, "function expected, got no value")
@@ -96,7 +96,7 @@ func (ap *ArgParser) CheckFunction(n int) (object.Value, *object.RuntimeError) {
 	return arg, nil
 }
 
-func (ap *ArgParser) CheckTypes(n int, typs ...object.Type) (object.Value, *object.RuntimeError) {
+func (ap *ArgParser) ToTypes(n int, typs ...object.Type) (object.Value, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		typss := ""
