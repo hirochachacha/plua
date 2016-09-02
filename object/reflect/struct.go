@@ -23,7 +23,7 @@ func buildStructMT() {
 	structMT = mt
 }
 
-func sindex(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func sindex(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -37,7 +37,7 @@ func sindex(th object.Thread, args ...object.Value) ([]object.Value, object.Valu
 	}
 
 	if !isPublic(name) {
-		return nil, object.String(fmt.Sprintf("%s is not public method or field", name))
+		return nil, object.NewRuntimeError(fmt.Sprintf("%s is not public method or field", name))
 	}
 
 	if self, ok := self.Value.(reflect.Value); ok {
@@ -55,20 +55,20 @@ func sindex(th object.Thread, args ...object.Value) ([]object.Value, object.Valu
 			if !method.IsValid() {
 				field := self.FieldByName(name)
 				if !field.IsValid() {
-					return nil, object.String(fmt.Sprintf("type %s has no field or method %s", self.Type(), name))
+					return nil, object.NewRuntimeError(fmt.Sprintf("type %s has no field or method %s", self.Type(), name))
 				}
 				return []object.Value{valueOfReflect(field, false)}, nil
 			}
-			return nil, object.String(fmt.Sprintf("type %s has no method %s", self.Type(), name))
+			return nil, object.NewRuntimeError(fmt.Sprintf("type %s has no method %s", self.Type(), name))
 		}
 
 		return []object.Value{valueOfReflect(method, false)}, nil
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }
 
-func snewindex(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func snewindex(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -87,7 +87,7 @@ func snewindex(th object.Thread, args ...object.Value) ([]object.Value, object.V
 	}
 
 	if !isPublic(name) {
-		return nil, object.String(fmt.Sprintf("%s is not public method or field", name))
+		return nil, object.NewRuntimeError(fmt.Sprintf("%s is not public method or field", name))
 	}
 
 	if self, ok := self.Value.(reflect.Value); ok {
@@ -103,11 +103,11 @@ func snewindex(th object.Thread, args ...object.Value) ([]object.Value, object.V
 				return nil, nil
 			}
 
-			return nil, object.String(fmt.Sprintf("cannot use %v (type %s) as type %s in field assignment", val, reflect.TypeOf(val), field.Type()))
+			return nil, object.NewRuntimeError(fmt.Sprintf("cannot use %v (type %s) as type %s in field assignment", val, reflect.TypeOf(val), field.Type()))
 		}
 
-		return nil, object.String(fmt.Sprintf("type %s has no field %s", self.Type(), name))
+		return nil, object.NewRuntimeError(fmt.Sprintf("type %s has no field %s", self.Type(), name))
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }

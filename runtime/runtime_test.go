@@ -54,15 +54,11 @@ func TestExec(t *testing.T) {
 	}
 }
 
-func Error(th object.Thread, args ...object.Value) (rets []object.Value, err object.Value) {
-	if args[0] == nil {
-		return nil, object.ErrNil
-	}
-
-	return nil, args[0]
+func Error(th object.Thread, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
+	return nil, &object.RuntimeError{Value: args[0]}
 }
 
-func PCall(th object.Thread, args ...object.Value) (rets []object.Value, err object.Value) {
+func PCall(th object.Thread, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	rets, ok := th.PCall(args[0], nil, args[1:]...)
 
 	return append([]object.Value{object.Boolean(ok)}, rets...), nil
@@ -99,13 +95,13 @@ func TestExecError(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected err, got nil")
 		}
-		rerr, ok := err.(*runtime.Error)
+		oerr, ok := err.(*object.RuntimeError)
 		if !ok {
-			t.Fatalf("expected *Error, got %T: %v", err, err)
+			t.Fatalf("expected *object.Error, got %T: %v", err, err)
 		}
 
-		if !object.Equal(rerr.Value, test.ErrValue) {
-			t.Errorf("code: %s: expected %v, got %v", test.Code, test.ErrValue, rerr.Value)
+		if !object.Equal(oerr.Value, test.ErrValue) {
+			t.Errorf("code: %s: expected %v, got %v", test.Code, test.ErrValue, oerr.Value)
 		}
 	}
 }

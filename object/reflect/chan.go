@@ -30,7 +30,7 @@ func buildChanMT() {
 	chanMT = mt
 }
 
-func csend(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func csend(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -53,13 +53,13 @@ func csend(th object.Thread, args ...object.Value) ([]object.Value, object.Value
 			return nil, nil
 		}
 
-		return nil, object.String(fmt.Sprintf("cannot use %v (type %s) as type %s in send", x, reflect.TypeOf(x), vtyp))
+		return nil, object.NewRuntimeError(fmt.Sprintf("cannot use %v (type %s) as type %s in send", x, reflect.TypeOf(x), vtyp))
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }
 
-func crecv(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func crecv(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -76,10 +76,10 @@ func crecv(th object.Thread, args ...object.Value) ([]object.Value, object.Value
 		return []object.Value{valueOfReflect(rval, false), object.True}, nil
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }
 
-func cclose(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func cclose(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -93,10 +93,10 @@ func cclose(th object.Thread, args ...object.Value) ([]object.Value, object.Valu
 		return nil, nil
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }
 
-func cpairs(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func cpairs(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -107,7 +107,7 @@ func cpairs(th object.Thread, args ...object.Value) ([]object.Value, object.Valu
 	return []object.Value{object.GoFunction(cnext), self}, nil
 }
 
-func cnext(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func cnext(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -124,5 +124,5 @@ func cnext(th object.Thread, args ...object.Value) ([]object.Value, object.Value
 		return []object.Value{object.True, valueOfReflect(rval, false)}, nil
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }

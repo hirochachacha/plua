@@ -10,6 +10,10 @@ import (
 )
 
 func (th *thread) getInfo(level int, what string) *object.DebugInfo {
+	if level <= 0 {
+		return nil
+	}
+
 	var ci *callInfo
 	var cl *closure
 

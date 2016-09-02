@@ -23,7 +23,7 @@ func buildPtrMT() {
 	ptrMT = mt
 }
 
-func pindex(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func pindex(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -37,7 +37,7 @@ func pindex(th object.Thread, args ...object.Value) ([]object.Value, object.Valu
 	}
 
 	if !isPublic(name) {
-		return nil, object.String(fmt.Sprintf("%s is not public method or field", name))
+		return nil, object.NewRuntimeError(fmt.Sprintf("%s is not public method or field", name))
 	}
 
 	if self, ok := self.Value.(reflect.Value); ok {
@@ -55,17 +55,17 @@ func pindex(th object.Thread, args ...object.Value) ([]object.Value, object.Valu
 						return []object.Value{valueOfReflect(field, false)}, nil
 					}
 				}
-				return nil, object.String(fmt.Sprintf("type %s has no field or method %s", self.Type(), name))
+				return nil, object.NewRuntimeError(fmt.Sprintf("type %s has no field or method %s", self.Type(), name))
 			}
 		}
 
 		return []object.Value{valueOfReflect(method, false)}, nil
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }
 
-func pnewindex(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func pnewindex(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -84,7 +84,7 @@ func pnewindex(th object.Thread, args ...object.Value) ([]object.Value, object.V
 	}
 
 	if !isPublic(name) {
-		return nil, object.String(fmt.Sprintf("%s is not public method or field", name))
+		return nil, object.NewRuntimeError(fmt.Sprintf("%s is not public method or field", name))
 	}
 
 	if self, ok := self.Value.(reflect.Value); ok {
@@ -102,12 +102,12 @@ func pnewindex(th object.Thread, args ...object.Value) ([]object.Value, object.V
 					return nil, nil
 				}
 
-				return nil, object.String(fmt.Sprintf("cannot use %v (type %s) as type %s in field assignment", val, reflect.TypeOf(val), field.Type()))
+				return nil, object.NewRuntimeError(fmt.Sprintf("cannot use %v (type %s) as type %s in field assignment", val, reflect.TypeOf(val), field.Type()))
 			}
 		}
 
-		return nil, object.String(fmt.Sprintf("type %s has no field or method %s", self.Type(), name))
+		return nil, object.NewRuntimeError(fmt.Sprintf("type %s has no field or method %s", self.Type(), name))
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }

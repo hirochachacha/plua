@@ -22,25 +22,25 @@ func buildFloatMT() {
 
 	mt.Set(object.String("__unm"), unary(func(x reflect.Value) reflect.Value { return reflect.ValueOf(-x.Float()) }, mt))
 
-	mt.Set(object.String("__add"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__add"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Float() + y.Float()), nil
 	}, mt))
-	mt.Set(object.String("__sub"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__sub"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Float() - y.Float()), nil
 	}, mt))
-	mt.Set(object.String("__mul"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__mul"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Float() * y.Float()), nil
 	}, mt))
-	mt.Set(object.String("__mod"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__mod"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(fmod(x.Float(), y.Float())), nil
 	}, mt))
-	mt.Set(object.String("__pow"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__pow"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(math.Pow(x.Float(), y.Float())), nil
 	}, mt))
-	mt.Set(object.String("__div"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__div"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Float() / y.Float()), nil
 	}, mt))
-	mt.Set(object.String("__idiv"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__idiv"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(fidiv(x.Float(), y.Float())), nil
 	}, mt))
 

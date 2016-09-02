@@ -25,7 +25,7 @@ func buildMapMT() {
 	mapMT = mt
 }
 
-func mindex(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func mindex(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -47,13 +47,13 @@ func mindex(th object.Thread, args ...object.Value) ([]object.Value, object.Valu
 			return []object.Value{valueOfReflect(rval, false)}, nil
 		}
 
-		return nil, object.String(fmt.Sprintf("cannot use %v (type %s) as type %s in map index", key, reflect.TypeOf(key), ktyp))
+		return nil, object.NewRuntimeError(fmt.Sprintf("cannot use %v (type %s) as type %s in map index", key, reflect.TypeOf(key), ktyp))
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }
 
-func mnewindex(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func mnewindex(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -83,16 +83,16 @@ func mnewindex(th object.Thread, args ...object.Value) ([]object.Value, object.V
 				return nil, nil
 			}
 
-			return nil, object.String(fmt.Sprintf("cannot use %v (type %s) as type %s in map assignment", val, reflect.TypeOf(val), vtyp))
+			return nil, object.NewRuntimeError(fmt.Sprintf("cannot use %v (type %s) as type %s in map assignment", val, reflect.TypeOf(val), vtyp))
 		}
 
-		return nil, object.String(fmt.Sprintf("cannot use %v (type %s) as type %s in map index", key, reflect.TypeOf(key), ktyp))
+		return nil, object.NewRuntimeError(fmt.Sprintf("cannot use %v (type %s) as type %s in map index", key, reflect.TypeOf(key), ktyp))
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }
 
-func mpairs(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func mpairs(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -106,7 +106,7 @@ func mpairs(th object.Thread, args ...object.Value) ([]object.Value, object.Valu
 
 		i := 0
 
-		next := func(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+		next := func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 			if i == length {
 				return nil, nil
 			}
@@ -122,5 +122,5 @@ func mpairs(th object.Thread, args ...object.Value) ([]object.Value, object.Valu
 		return []object.Value{object.GoFunction(next)}, nil
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }

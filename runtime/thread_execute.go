@@ -117,7 +117,7 @@ func (th *thread) execute() {
 				return
 			}
 
-			err := ctx.data.(*Error)
+			err := ctx.data.(*object.RuntimeError)
 
 			for ctx.errh == nil {
 				ctx.closeUpvals(0) // close all upvalues on this context
@@ -134,7 +134,7 @@ func (th *thread) execute() {
 
 			ctx.closeUpvals(0) // close all upvalues on this context
 
-			val := err.RetValue()
+			val := err.Positioned()
 
 			if ctx.errh == protect {
 				rets = []object.Value{val}
@@ -186,12 +186,12 @@ func (th *thread) doExecute(fn, errh object.Value, args []object.Value) (rets []
 
 		return rets, true
 	case object.THREAD_ERROR:
-		err := ctx.data.(*Error)
+		err := ctx.data.(*object.RuntimeError)
 
 		ctx.closeUpvals(0) // close all upvalues on this context
 
 		if ctx.errh != nil {
-			val := err.RetValue()
+			val := err.Positioned()
 
 			if ctx.errh == protect {
 				rets = []object.Value{val}

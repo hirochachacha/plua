@@ -372,7 +372,9 @@ func toReflectValue(typ reflect.Type, val object.Value) reflect.Value {
 	return reflect.ValueOf(nil)
 }
 
-func index(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+var errInvalidUserdata = object.NewRuntimeError("invalid userdata")
+
+func index(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -386,7 +388,7 @@ func index(th object.Thread, args ...object.Value) ([]object.Value, object.Value
 	}
 
 	if !isPublic(name) {
-		return nil, object.String(fmt.Sprintf("%s is not public method or field", name))
+		return nil, object.NewRuntimeError(fmt.Sprintf("%s is not public method or field", name))
 	}
 
 	if self, ok := self.Value.(reflect.Value); ok {
@@ -402,17 +404,17 @@ func index(th object.Thread, args ...object.Value) ([]object.Value, object.Value
 			}
 
 			if !method.IsValid() {
-				return nil, object.String(fmt.Sprintf("type %s has no method %s", self.Type(), name))
+				return nil, object.NewRuntimeError(fmt.Sprintf("type %s has no method %s", self.Type(), name))
 			}
 		}
 
 		return []object.Value{valueOfReflect(method, false)}, nil
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }
 
-func tostring(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func tostring(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -424,11 +426,11 @@ func tostring(th object.Thread, args ...object.Value) ([]object.Value, object.Va
 		return []object.Value{object.String(fmt.Sprintf("go %s: %v", self.Type(), self.Interface()))}, nil
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }
 
 func cmp(op func(x, y reflect.Value) bool) object.GoFunction {
-	return func(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+	return func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		ap := fnutil.NewArgParser(th, args)
 
 		x, err := ap.ToFullUserdata(0)
@@ -450,16 +452,16 @@ func cmp(op func(x, y reflect.Value) bool) object.GoFunction {
 					return []object.Value{object.Boolean(op(xval, yval))}, nil
 				}
 
-				return nil, object.String(fmt.Sprintf("mismatched types %s and %s", xtyp, ytyp))
+				return nil, object.NewRuntimeError(fmt.Sprintf("mismatched types %s and %s", xtyp, ytyp))
 			}
 		}
 
-		return nil, object.String("mismatched types")
+		return nil, object.NewRuntimeError("mismatched types")
 	}
 }
 
 func unary(op func(x reflect.Value) reflect.Value, mt object.Table) object.GoFunction {
-	return func(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+	return func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		ap := fnutil.NewArgParser(th, args)
 
 		x, err := ap.ToFullUserdata(0)
@@ -475,12 +477,12 @@ func unary(op func(x reflect.Value) reflect.Value, mt object.Table) object.GoFun
 			return []object.Value{ud}, nil
 		}
 
-		return nil, object.String("invalid userdata")
+		return nil, errInvalidUserdata
 	}
 }
 
-func binary(op func(x, y reflect.Value) (reflect.Value, object.Value), mt object.Table) object.GoFunction {
-	return func(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func binary(op func(x, y reflect.Value) (reflect.Value, *object.RuntimeError), mt object.Table) object.GoFunction {
+	return func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		ap := fnutil.NewArgParser(th, args)
 
 		x, err := ap.ToFullUserdata(0)
@@ -509,13 +511,13 @@ func binary(op func(x, y reflect.Value) (reflect.Value, object.Value), mt object
 					return []object.Value{ud}, nil
 				}
 
-				return nil, object.String(fmt.Sprintf("mismatched types %s and %s", xtyp, ytyp))
+				return nil, object.NewRuntimeError(fmt.Sprintf("mismatched types %s and %s", xtyp, ytyp))
 			}
 
-			return nil, object.String("mismatched types")
+			return nil, object.NewRuntimeError("mismatched types")
 		}
 
-		return nil, object.String("invalid userdata")
+		return nil, errInvalidUserdata
 	}
 }
 

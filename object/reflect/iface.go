@@ -22,7 +22,7 @@ func buildIfaceMT() {
 	ifaceMT = mt
 }
 
-func iindex(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func iindex(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -36,7 +36,7 @@ func iindex(th object.Thread, args ...object.Value) ([]object.Value, object.Valu
 	}
 
 	if !isPublic(name) {
-		return nil, object.String(fmt.Sprintf("%s is not public method or field", name))
+		return nil, object.NewRuntimeError(fmt.Sprintf("%s is not public method or field", name))
 	}
 
 	if self, ok := self.Value.(reflect.Value); ok {
@@ -46,8 +46,8 @@ func iindex(th object.Thread, args ...object.Value) ([]object.Value, object.Valu
 			return []object.Value{valueOfReflect(method, false)}, nil
 		}
 
-		return nil, object.String(fmt.Sprintf("type %s has no method %s", self.Type(), name))
+		return nil, object.NewRuntimeError(fmt.Sprintf("type %s has no method %s", self.Type(), name))
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }

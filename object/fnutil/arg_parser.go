@@ -58,7 +58,7 @@ func (ap *ArgParser) GetThread() object.Thread {
 	return ap.th
 }
 
-func (ap *ArgParser) CheckAny(n int) (object.Value, object.Value) {
+func (ap *ArgParser) CheckAny(n int) (object.Value, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return nil, ap.ArgError(n, "value expected")
@@ -67,7 +67,7 @@ func (ap *ArgParser) CheckAny(n int) (object.Value, object.Value) {
 	return arg, nil
 }
 
-func (ap *ArgParser) CheckUserdata(n int) (object.Value, object.Value) {
+func (ap *ArgParser) CheckUserdata(n int) (object.Value, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return nil, ap.ArgError(n, "userdata expected, got no value")
@@ -83,7 +83,7 @@ func (ap *ArgParser) CheckUserdata(n int) (object.Value, object.Value) {
 	return nil, ap.TypeError(n, "userdata")
 }
 
-func (ap *ArgParser) CheckFunction(n int) (object.Value, object.Value) {
+func (ap *ArgParser) CheckFunction(n int) (object.Value, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return nil, ap.ArgError(n, "function expected, got no value")
@@ -96,7 +96,7 @@ func (ap *ArgParser) CheckFunction(n int) (object.Value, object.Value) {
 	return arg, nil
 }
 
-func (ap *ArgParser) CheckTypes(n int, typs ...object.Type) (object.Value, object.Value) {
+func (ap *ArgParser) CheckTypes(n int, typs ...object.Type) (object.Value, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		typss := ""
@@ -133,7 +133,7 @@ func (ap *ArgParser) CheckTypes(n int, typs ...object.Type) (object.Value, objec
 	return arg, nil
 }
 
-func (ap *ArgParser) ToInteger(n int) (object.Integer, object.Value) {
+func (ap *ArgParser) ToInteger(n int) (object.Integer, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return 0, ap.ArgError(n, "integer expected, got no value")
@@ -147,7 +147,7 @@ func (ap *ArgParser) ToInteger(n int) (object.Integer, object.Value) {
 	return i, nil
 }
 
-func (ap *ArgParser) ToNumber(n int) (object.Number, object.Value) {
+func (ap *ArgParser) ToNumber(n int) (object.Number, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return 0, ap.ArgError(n, "number expected, got no value")
@@ -161,7 +161,7 @@ func (ap *ArgParser) ToNumber(n int) (object.Number, object.Value) {
 	return f, nil
 }
 
-func (ap *ArgParser) ToString(n int) (object.String, object.Value) {
+func (ap *ArgParser) ToString(n int) (object.String, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return "", ap.ArgError(n, "string expected, got no value")
@@ -175,7 +175,7 @@ func (ap *ArgParser) ToString(n int) (object.String, object.Value) {
 	return s, nil
 }
 
-func (ap *ArgParser) ToBoolean(n int) (object.Boolean, object.Value) {
+func (ap *ArgParser) ToBoolean(n int) (object.Boolean, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return object.False, ap.ArgError(n, "boolean expected, got no value")
@@ -184,7 +184,7 @@ func (ap *ArgParser) ToBoolean(n int) (object.Boolean, object.Value) {
 	return object.ToBoolean(arg), nil
 }
 
-func (ap *ArgParser) ToLightUserdata(n int) (object.LightUserdata, object.Value) {
+func (ap *ArgParser) ToLightUserdata(n int) (object.LightUserdata, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return object.LightUserdata{}, ap.ArgError(n, "light userdata expected, got no value")
@@ -198,7 +198,7 @@ func (ap *ArgParser) ToLightUserdata(n int) (object.LightUserdata, object.Value)
 	return lud, nil
 }
 
-func (ap *ArgParser) ToGoFunction(n int) (object.GoFunction, object.Value) {
+func (ap *ArgParser) ToGoFunction(n int) (object.GoFunction, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return nil, ap.ArgError(n, "go function expected, got no value")
@@ -212,7 +212,7 @@ func (ap *ArgParser) ToGoFunction(n int) (object.GoFunction, object.Value) {
 	return fn, nil
 }
 
-func (ap *ArgParser) ToTable(n int) (object.Table, object.Value) {
+func (ap *ArgParser) ToTable(n int) (object.Table, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return nil, ap.ArgError(n, "table expected, got no value")
@@ -226,7 +226,7 @@ func (ap *ArgParser) ToTable(n int) (object.Table, object.Value) {
 	return t, nil
 }
 
-func (ap *ArgParser) ToFullUserdata(n int) (*object.Userdata, object.Value) {
+func (ap *ArgParser) ToFullUserdata(n int) (*object.Userdata, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return nil, ap.ArgError(n, "full userdata expected, got no value")
@@ -240,7 +240,7 @@ func (ap *ArgParser) ToFullUserdata(n int) (*object.Userdata, object.Value) {
 	return ud, nil
 }
 
-func (ap *ArgParser) ToClosure(n int) (object.Closure, object.Value) {
+func (ap *ArgParser) ToClosure(n int) (object.Closure, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return nil, ap.ArgError(n, "lua function expected, got no value")
@@ -254,7 +254,7 @@ func (ap *ArgParser) ToClosure(n int) (object.Closure, object.Value) {
 	return cl, nil
 }
 
-func (ap *ArgParser) ToThread(n int) (object.Thread, object.Value) {
+func (ap *ArgParser) ToThread(n int) (object.Thread, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return nil, ap.ArgError(n, "thread expected, got no value")
@@ -268,7 +268,7 @@ func (ap *ArgParser) ToThread(n int) (object.Thread, object.Value) {
 	return th, nil
 }
 
-func (ap *ArgParser) ToChannel(n int) (object.Channel, object.Value) {
+func (ap *ArgParser) ToChannel(n int) (object.Channel, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return nil, ap.ArgError(n, "channel expected, got no value")
@@ -282,7 +282,7 @@ func (ap *ArgParser) ToChannel(n int) (object.Channel, object.Value) {
 	return ch, nil
 }
 
-func (ap *ArgParser) ToGoInt(n int) (int, object.Value) {
+func (ap *ArgParser) ToGoInt(n int) (int, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return 0, ap.ArgError(n, "integer expected, got no value")
@@ -300,7 +300,7 @@ func (ap *ArgParser) ToGoInt(n int) (int, object.Value) {
 	return int(i), nil
 }
 
-func (ap *ArgParser) ToGoInt64(n int) (int64, object.Value) {
+func (ap *ArgParser) ToGoInt64(n int) (int64, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return 0, ap.ArgError(n, "integer expected, got no value")
@@ -314,7 +314,7 @@ func (ap *ArgParser) ToGoInt64(n int) (int64, object.Value) {
 	return i, nil
 }
 
-func (ap *ArgParser) ToGoFloat64(n int) (float64, object.Value) {
+func (ap *ArgParser) ToGoFloat64(n int) (float64, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return 0, ap.ArgError(n, "number expected, got no value")
@@ -328,7 +328,7 @@ func (ap *ArgParser) ToGoFloat64(n int) (float64, object.Value) {
 	return f, nil
 }
 
-func (ap *ArgParser) ToGoString(n int) (string, object.Value) {
+func (ap *ArgParser) ToGoString(n int) (string, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return "", ap.ArgError(n, "string expected, got no value")
@@ -342,7 +342,7 @@ func (ap *ArgParser) ToGoString(n int) (string, object.Value) {
 	return s, nil
 }
 
-func (ap *ArgParser) ToGoBool(n int) (bool, object.Value) {
+func (ap *ArgParser) ToGoBool(n int) (bool, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return false, ap.ArgError(n, "boolean expected, got no value")
@@ -351,7 +351,7 @@ func (ap *ArgParser) ToGoBool(n int) (bool, object.Value) {
 	return object.ToGoBool(arg), nil
 }
 
-func (ap *ArgParser) OptGoInt64(n int, i int64) (int64, object.Value) {
+func (ap *ArgParser) OptGoInt64(n int, i int64) (int64, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok || arg == nil {
 		return i, nil
@@ -365,7 +365,7 @@ func (ap *ArgParser) OptGoInt64(n int, i int64) (int64, object.Value) {
 	return i64, nil
 }
 
-func (ap *ArgParser) OptGoInt(n int, i int) (int, object.Value) {
+func (ap *ArgParser) OptGoInt(n int, i int) (int, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok || arg == nil {
 		return i, nil
@@ -383,7 +383,7 @@ func (ap *ArgParser) OptGoInt(n int, i int) (int, object.Value) {
 	return int(i64), nil
 }
 
-func (ap *ArgParser) OptGoFloat64(n int, f float64) (float64, object.Value) {
+func (ap *ArgParser) OptGoFloat64(n int, f float64) (float64, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok || arg == nil {
 		return f, nil
@@ -397,7 +397,7 @@ func (ap *ArgParser) OptGoFloat64(n int, f float64) (float64, object.Value) {
 	return f64, nil
 }
 
-func (ap *ArgParser) OptGoString(n int, s string) (string, object.Value) {
+func (ap *ArgParser) OptGoString(n int, s string) (string, *object.RuntimeError) {
 	arg, ok := ap.Get(n)
 	if !ok || arg == nil {
 		return s, nil
@@ -420,27 +420,27 @@ func (ap *ArgParser) OptGoBool(n int, b bool) bool {
 	return object.ToGoBool(arg)
 }
 
-func (ap *ArgParser) ArgError(n int, extramsg string) object.Value {
+func (ap *ArgParser) ArgError(n int, extramsg string) *object.RuntimeError {
 	n = n + ap.offset
 
 	n++
 
 	d := ap.th.GetInfo(0, "n")
 	if d == nil {
-		return object.String(fmt.Sprintf("bad argument #%d (%s)", n, extramsg))
+		return object.NewRuntimeError(fmt.Sprintf("bad argument #%d (%s)", n, extramsg))
 	}
 
 	if d.NameWhat == "method" {
 		n--
 		if n == 0 {
-			return object.String(fmt.Sprintf("calling '%s' on bad self (%s)", d.Name, extramsg))
+			return object.NewRuntimeError(fmt.Sprintf("calling '%s' on bad self (%s)", d.Name, extramsg))
 		}
 	}
 
-	return object.String(fmt.Sprintf("bad argument #%d to '%s' (%s)", n, d.Name, extramsg))
+	return object.NewRuntimeError(fmt.Sprintf("bad argument #%d to '%s' (%s)", n, d.Name, extramsg))
 }
 
-func (ap *ArgParser) TypeError(n int, tname string) object.Value {
+func (ap *ArgParser) TypeError(n int, tname string) *object.RuntimeError {
 	arg, ok := ap.Get(n)
 	if !ok {
 		return ap.ArgError(n, fmt.Sprintf("%s expected, got no value", tname))
@@ -469,6 +469,6 @@ func (ap *ArgParser) TypeError(n int, tname string) object.Value {
 	return ap.ArgError(n, fmt.Sprintf("%s expected, got %s", tname, typearg))
 }
 
-func (ap *ArgParser) OptionError(n int, opt string) object.Value {
+func (ap *ArgParser) OptionError(n int, opt string) *object.RuntimeError {
 	return ap.ArgError(n, fmt.Sprintf("invalid option '%s'", opt))
 }

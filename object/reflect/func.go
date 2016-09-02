@@ -24,7 +24,7 @@ func buildFuncMT() {
 	funcMT = mt
 }
 
-func call(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func call(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -52,7 +52,7 @@ func call(th object.Thread, args ...object.Value) ([]object.Value, object.Value)
 				if rarg := toReflectValue(styp.In(i), args[1+i]); rarg.IsValid() {
 					rargs[i] = rarg
 				} else {
-					return nil, object.String(fmt.Sprintf("mismatched types %s and %s", styp.In(i), reflect.TypeOf(args[1+i])))
+					return nil, object.NewRuntimeError(fmt.Sprintf("mismatched types %s and %s", styp.In(i), reflect.TypeOf(args[1+i])))
 				}
 			}
 		} else {
@@ -60,7 +60,7 @@ func call(th object.Thread, args ...object.Value) ([]object.Value, object.Value)
 				if rarg := toReflectValue(styp.In(i), arg); rarg.IsValid() {
 					rargs[i] = rarg
 				} else {
-					return nil, object.String(fmt.Sprintf("mismatched types %s and %s", styp.In(i), reflect.TypeOf(arg)))
+					return nil, object.NewRuntimeError(fmt.Sprintf("mismatched types %s and %s", styp.In(i), reflect.TypeOf(arg)))
 				}
 			}
 
@@ -68,7 +68,7 @@ func call(th object.Thread, args ...object.Value) ([]object.Value, object.Value)
 				if rarg := toReflectValue(styp.In(i), nil); rarg.IsValid() {
 					rargs[i] = rarg
 				} else {
-					return nil, object.String(fmt.Sprintf("mismatched types %s and %s", styp.In(i), reflect.TypeOf(nil)))
+					return nil, object.NewRuntimeError(fmt.Sprintf("mismatched types %s and %s", styp.In(i), reflect.TypeOf(nil)))
 				}
 			}
 		}
@@ -83,5 +83,5 @@ func call(th object.Thread, args ...object.Value) ([]object.Value, object.Value)
 		return rets, nil
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }

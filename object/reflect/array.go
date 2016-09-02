@@ -41,7 +41,7 @@ func buildSliceMT() {
 	sliceMT = mt
 }
 
-func length(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func length(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -53,7 +53,7 @@ func length(th object.Thread, args ...object.Value) ([]object.Value, object.Valu
 		return []object.Value{object.Integer(self.Len())}, nil
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }
 
 func aeq(x, y reflect.Value) bool {
@@ -72,7 +72,7 @@ func aeq(x, y reflect.Value) bool {
 	return false
 }
 
-func aindex(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func aindex(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -94,13 +94,13 @@ func aindex(th object.Thread, args ...object.Value) ([]object.Value, object.Valu
 			return []object.Value{valueOfReflect(rval, false)}, nil
 		}
 
-		return nil, object.String(fmt.Sprintf("invalid array index %d (out of bounds for %d-element array)", index, self.Len()))
+		return nil, object.NewRuntimeError(fmt.Sprintf("invalid array index %d (out of bounds for %d-element array)", index, self.Len()))
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }
 
-func anewindex(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func anewindex(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -131,16 +131,16 @@ func anewindex(th object.Thread, args ...object.Value) ([]object.Value, object.V
 				return nil, nil
 			}
 
-			return nil, object.String(fmt.Sprintf("non-%s array index %q", vtyp, reflect.TypeOf(val)))
+			return nil, object.NewRuntimeError(fmt.Sprintf("non-%s array index %q", vtyp, reflect.TypeOf(val)))
 		}
 
-		return nil, object.String(fmt.Sprintf("invalid array index %d (out of bounds for %d-element array)", index, self.Len()))
+		return nil, object.NewRuntimeError(fmt.Sprintf("invalid array index %d (out of bounds for %d-element array)", index, self.Len()))
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }
 
-func apairs(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func apairs(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -151,7 +151,7 @@ func apairs(th object.Thread, args ...object.Value) ([]object.Value, object.Valu
 	return []object.Value{object.GoFunction(anext), self, object.Integer(0)}, nil
 }
 
-func anext(th object.Thread, args ...object.Value) ([]object.Value, object.Value) {
+func anext(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	self, err := ap.ToFullUserdata(0)
@@ -176,5 +176,5 @@ func anext(th object.Thread, args ...object.Value) ([]object.Value, object.Value
 		return []object.Value{object.Integer(index), valueOfReflect(rval, false)}, nil
 	}
 
-	return nil, object.String("invalid userdata")
+	return nil, errInvalidUserdata
 }

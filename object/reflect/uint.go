@@ -23,43 +23,43 @@ func buildUintMT() {
 	mt.Set(object.String("__unm"), unary(func(x reflect.Value) reflect.Value { return reflect.ValueOf(-x.Uint()) }, mt))
 	mt.Set(object.String("__bnot"), unary(func(x reflect.Value) reflect.Value { return reflect.ValueOf(^x.Uint()) }, mt))
 
-	mt.Set(object.String("__add"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__add"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Uint() + y.Uint()), nil
 	}, mt))
-	mt.Set(object.String("__sub"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__sub"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Uint() - y.Uint()), nil
 	}, mt))
-	mt.Set(object.String("__mul"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__mul"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Uint() * y.Uint()), nil
 	}, mt))
-	mt.Set(object.String("__mod"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__mod"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		z, err := umod(x.Uint(), y.Uint())
 		return reflect.ValueOf(z), err
 	}, mt))
-	mt.Set(object.String("__pow"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__pow"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(upow(x.Uint(), y.Uint())), nil
 	}, mt))
-	mt.Set(object.String("__div"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__div"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		z, err := udiv(x.Uint(), y.Uint())
 		return reflect.ValueOf(z), err
 	}, mt))
-	mt.Set(object.String("__idiv"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__idiv"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		z, err := udiv(x.Uint(), y.Uint())
 		return reflect.ValueOf(z), err
 	}, mt))
-	mt.Set(object.String("__band"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__band"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Uint() & y.Uint()), nil
 	}, mt))
-	mt.Set(object.String("__bor"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__bor"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Uint() | y.Uint()), nil
 	}, mt))
-	mt.Set(object.String("__bxor"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__bxor"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Uint() ^ y.Uint()), nil
 	}, mt))
-	mt.Set(object.String("__shl"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__shl"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Uint() << y.Uint()), nil
 	}, mt))
-	mt.Set(object.String("__shr"), binary(func(x, y reflect.Value) (reflect.Value, object.Value) {
+	mt.Set(object.String("__shr"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Uint() >> y.Uint()), nil
 	}, mt))
 
@@ -78,9 +78,11 @@ func upow(x, y uint64) uint64 {
 	return prod
 }
 
-func umod(x, y uint64) (uint64, object.Value) {
+func umod(x, y uint64) (uint64, *object.RuntimeError) {
 	if y == 0 {
-		return 0, object.String("integer divide by zero")
+		return 0, &object.RuntimeError{
+			Value: object.String("integer divide by zero"),
+		}
 	}
 
 	rem := x % y
@@ -88,9 +90,11 @@ func umod(x, y uint64) (uint64, object.Value) {
 	return rem, nil
 }
 
-func udiv(x, y uint64) (uint64, object.Value) {
+func udiv(x, y uint64) (uint64, *object.RuntimeError) {
 	if y == 0 {
-		return 0, object.String("integer divide by zero")
+		return 0, &object.RuntimeError{
+			Value: object.String("integer divide by zero"),
+		}
 	}
 
 	return x / y, nil
