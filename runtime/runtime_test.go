@@ -7,6 +7,7 @@ import (
 	"github.com/hirochachacha/plua/compiler"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/runtime"
+	"github.com/hirochachacha/plua/stdlib/base"
 )
 
 var testExec = []struct {
@@ -54,16 +55,6 @@ func TestExec(t *testing.T) {
 	}
 }
 
-func Error(th object.Thread, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
-	return nil, &object.RuntimeError{Value: args[0]}
-}
-
-func PCall(th object.Thread, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
-	rets, ok := th.PCall(args[0], nil, args[1:]...)
-
-	return append([]object.Value{object.Boolean(ok)}, rets...), nil
-}
-
 var testExecError = []struct {
 	Code string
 
@@ -87,9 +78,7 @@ func TestExecError(t *testing.T) {
 
 		p := runtime.NewProcess()
 
-		g := p.Globals()
-		g.Set(object.String("error"), object.GoFunction(Error))
-		g.Set(object.String("pcall"), object.GoFunction(PCall))
+		p.Require("_G", base.Open)
 
 		_, err = p.Exec(proto)
 		if err == nil {
