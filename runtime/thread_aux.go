@@ -24,18 +24,6 @@ func (th *thread) Require(name string, open object.GoFunction) (object.Value, bo
 	return rets[0], true
 }
 
-func (th *thread) Repr(val object.Value) string {
-	if rets, done := th.CallMetaField(val, "__tostring"); done {
-		if len(rets) == 0 {
-			return ""
-		}
-
-		return object.Repr(rets[0])
-	}
-
-	return object.Repr(val)
-}
-
 func (th *thread) GetMetaField(val object.Value, field string) object.Value {
 	mt := th.GetMetatable(val)
 	if mt == nil {
