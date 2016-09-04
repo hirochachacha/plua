@@ -41,8 +41,7 @@ type Thread interface {
 
 	// ↓ intended to be called from vm loop
 
-	Call(fn Value, args ...Value) ([]Value, *RuntimeError)
-	PCall(fn Value, errh Value, args ...Value) ([]Value, bool)
+	Call(fn, errh Value, args ...Value) ([]Value, *RuntimeError)
 
 	// ↓ for debug support
 

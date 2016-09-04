@@ -47,24 +47,8 @@ func (th *thread) callLua(c object.Closure, f, nargs, nrets int) (err *object.Ru
 }
 
 // call a closure by values, immediately return values.
-func (th *thread) docallvLua(c object.Closure, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
-	return th.doExecute(c, nil, args)
-}
-
-// call a closure by values with error handler, immediately return values.
-func (th *thread) dopcallvLua(c object.Closure, errh object.Value, args ...object.Value) (rets []object.Value, ok bool) {
-	if errh == nil {
-		rets, err := th.doExecute(c, protect, args)
-		if err != nil {
-			return nil, false
-		}
-		return rets, true
-	}
-	rets, err := th.doExecute(c, errh, args)
-	if err != nil {
-		return nil, false
-	}
-	return rets, true
+func (th *thread) docallvLua(c object.Closure, errh object.Value, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
+	return th.doExecute(c, errh, args)
 }
 
 // tail call a closure by stack index.
@@ -156,6 +140,15 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 	}
 
 	rets, err := fn(th, args...)
+	if err != nil {
+		if err.Level > 0 {
+			d := th.getInfo(err.Level, "Sl")
+			if d != nil {
+				err.Pos.Filename = "@" + d.ShortSource
+				err.Pos.Line = d.CurrentLine
+			}
+		}
+	}
 
 	ctx.stackEnsure(len(rets))
 
@@ -216,6 +209,15 @@ func (th *thread) callvGo(fn object.GoFunction, args ...object.Value) (rets []ob
 	ctx.stack[1] = fn
 
 	rets, err = fn(th, args...)
+	if err != nil {
+		if err.Level > 0 {
+			d := th.getInfo(err.Level, "Sl")
+			if d != nil {
+				err.Pos.Filename = "@" + d.ShortSource
+				err.Pos.Line = d.CurrentLine
+			}
+		}
+	}
 
 	ctx.stack[1] = old
 
@@ -232,22 +234,6 @@ func (th *thread) callvGo(fn object.GoFunction, args ...object.Value) (rets []ob
 	}
 
 	return rets, nil
-}
-
-// call a go function by values with error handler, immediately return values.
-func (th *thread) pcallvGo(fn object.GoFunction, errh object.Value, args ...object.Value) (rets []object.Value, ok bool) {
-	rets, err := th.callvGo(fn, args...)
-	if err != nil {
-		val := err.Positioned()
-
-		if errh == nil {
-			return []object.Value{val}, false
-		}
-
-		return th.dohandle(errh, val), false
-	}
-
-	return rets, true
 }
 
 // call a callable by stack index.
@@ -283,56 +269,49 @@ func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
 }
 
 // call a callable by values, immediately return values.
-func (th *thread) docallv(fn object.Value, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
+func (th *thread) docallv(fn, errh object.Value, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	switch fn := fn.(type) {
 	case nil:
-		return nil, th.callError(fn)
+		return th.dohandle(errh, th.callError(fn))
 	case object.GoFunction:
-		return th.callvGo(fn, args...)
+		rets, err := th.callvGo(fn, args...)
+		if err != nil {
+			if errh == nil {
+				return nil, err
+			}
+
+			return th.dohandle(errh, err)
+		}
+
+		return rets, nil
 	case object.Closure:
-		return th.docallvLua(fn, args...)
+		return th.docallvLua(fn, errh, args...)
 	}
 
 	tm := th.gettmbyobj(fn, TM_CALL)
 
-	return th.docallv(tm, append([]object.Value{fn}, args...)...)
-}
-
-// call a callable by values with error handler, immediately return values.
-func (th *thread) dopcallv(fn object.Value, errh object.Value, args ...object.Value) (rets []object.Value, ok bool) {
-	switch fn := fn.(type) {
-	case nil:
-		return th.dohandle(errh, object.String("attempt to call a nil value")), false
-	case object.GoFunction:
-		return th.pcallvGo(fn, errh, args...)
-	case object.Closure:
-		return th.dopcallvLua(fn, errh, args...)
-	}
-
-	tm := th.gettmbyobj(fn, TM_CALL)
-
-	return th.dopcallv(tm, errh, append([]object.Value{fn}, args...)...)
+	return th.docallv(tm, errh, append([]object.Value{fn}, args...)...)
 }
 
 // call a error handler.
-func (th *thread) dohandle(errh object.Value, arg object.Value) (rets []object.Value) {
+func (th *thread) dohandle(errh object.Value, err *object.RuntimeError) ([]object.Value, *object.RuntimeError) {
 	switch errh := errh.(type) {
 	case nil:
-		return []object.Value{object.String("error in error handling")}
+		return nil, errInErrorHandling
 	case object.GoFunction:
-		rets, err := th.callvGo(errh, arg)
+		rets, err := th.callvGo(errh, err.Positioned())
 		if err != nil {
-			return []object.Value{object.String("error in error handling")}
+			return nil, errInErrorHandling
 		}
 
-		return rets
+		return rets, nil
 	case object.Closure:
-		rets, ok := th.dopcallvLua(errh, nil, arg)
-		if !ok {
-			return []object.Value{object.String("error in error handling")}
+		rets, err := th.docallvLua(errh, nil, err.Positioned())
+		if err != nil {
+			return nil, errInErrorHandling
 		}
 
-		return rets
+		return rets, nil
 	default:
 		panic("unexpected")
 	}
@@ -392,7 +371,7 @@ func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 	case object.Closure:
 		args := ctx.stack[f+1 : f+3]
 
-		rets, err := th.docallvLua(fn, args...)
+		rets, err := th.docallvLua(fn, nil, args...)
 		if err != nil {
 			return err
 		}

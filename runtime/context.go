@@ -16,7 +16,7 @@ type context struct {
 	lastLine  int
 
 	status object.ThreadStatus
-	data   interface{} // *object.Error or []object.Value or nil
+	data   interface{} // *object.RuntimeError or []object.Value or nil
 	errh   object.Value
 	prev   *context
 }

@@ -95,7 +95,7 @@ func DoFile(th object.Thread, args ...object.Value) (rets []object.Value, err *o
 		return []object.Value{nil, object.String(e.Error())}, nil
 	}
 
-	rets, err = th.Call(th.NewClosure(p))
+	rets, err = th.Call(th.NewClosure(p), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func makeINext(tm object.Value) object.GoFunction {
 			return nil, err
 		}
 
-		rets, err := th.Call(tm, t, object.Integer(key+1))
+		rets, err := th.Call(tm, nil, t, object.Integer(key+1))
 		if err != nil {
 			return nil, err
 		}
@@ -255,7 +255,7 @@ func Pairs(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 	}
 
 	if fn := th.GetMetaField(t, "__pairs"); fn != nil {
-		rets, err := th.Call(fn, args...)
+		rets, err := th.Call(fn, nil, args...)
 		if err != nil {
 			return nil, err
 		}
@@ -327,23 +327,10 @@ func Load(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	case object.String:
 		chunk = string(s)
 	case object.GoFunction, object.Closure:
-		var errmsg object.String
-
-		errh := object.GoFunction(func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-			if len(args) == 0 {
-				return nil, nil
-			}
-			if msg, ok := object.ToString(args[0]); ok {
-				errmsg = msg
-			}
-
-			return nil, nil
-		})
-
 		for {
-			rets, ok := th.PCall(s, errh)
-			if !ok {
-				return []object.Value{nil, errmsg}, nil
+			rets, err := th.Call(s, nil)
+			if err != nil {
+				return []object.Value{nil, err.Value}, nil
 			}
 			if len(rets) == 0 || rets[0] == nil {
 				break
@@ -405,7 +392,7 @@ func Print(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 	tostring := th.Globals().Get(object.String("tostring"))
 
 	for _, arg := range args[:len(args)-1] {
-		rets, err := th.Call(tostring, arg)
+		rets, err := th.Call(tostring, nil, arg)
 		if err != nil {
 			return nil, err
 		}
@@ -423,7 +410,7 @@ func Print(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 		fmt.Print("\t")
 	}
 
-	rets, err := th.Call(tostring, args[len(args)-1])
+	rets, err := th.Call(tostring, nil, args[len(args)-1])
 	if err != nil {
 		return nil, err
 	}
@@ -450,9 +437,12 @@ func PCall(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 		return nil, err
 	}
 
-	rets, ok := th.PCall(fn, nil, args[1:]...)
+	rets, err := th.Call(fn, nil, args[1:]...)
+	if err != nil {
+		return []object.Value{object.False, err.Positioned()}, nil
+	}
 
-	return append([]object.Value{object.Boolean(ok)}, rets...), nil
+	return append([]object.Value{object.True}, rets...), nil
 }
 
 func RawEqual(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -651,9 +641,12 @@ func XPCall(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	rets, ok := th.PCall(f, msgh, args[2:]...)
+	rets, err := th.Call(f, msgh, args[2:]...)
+	if err != nil {
+		return []object.Value{object.False, err.Positioned()}, nil
+	}
 
-	return append([]object.Value{object.Boolean(ok)}, rets...), nil
+	return append([]object.Value{object.True}, rets...), nil
 }
 
 func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {

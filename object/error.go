@@ -13,11 +13,11 @@ func NewRuntimeError(msg string) *RuntimeError {
 }
 
 func (err *RuntimeError) Positioned() Value {
-	if msg, ok := ToGoString(err.Value); ok {
+	if msg, ok := err.Value.(String); ok {
 		if err.Pos.IsValid() {
-			msg = err.Pos.String() + ": " + msg
+			msg = String(err.Pos.String()) + ": " + msg
 		}
-		return String(msg)
+		return msg
 	}
 	return err.Value
 }

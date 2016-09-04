@@ -20,6 +20,7 @@ var (
 	errNaNIndex         = object.NewRuntimeError("table index is nan")
 	errZeroDivision     = object.NewRuntimeError("attempt to divide by zero")
 	errModuloByZero     = object.NewRuntimeError("attempt to modulo by zero")
+	errInErrorHandling  = object.NewRuntimeError("error in error handling")
 )
 
 func (th *thread) forLoopError(elem string) *object.RuntimeError {
@@ -115,8 +116,6 @@ func (th *thread) concatError(x, y object.Value) *object.RuntimeError {
 	return th.typeError("concatenate", x)
 }
 
-var protect = new(closure)
-
 func (th *thread) varinfo(x object.Value) string {
 	// TODO? INCOMPATIBLE
 	// Current implementation uses value instead of pointer everywhere.
@@ -125,21 +124,9 @@ func (th *thread) varinfo(x object.Value) string {
 	return ""
 }
 
-func (th *thread) propagate(e *object.RuntimeError) {
-	th.status = object.THREAD_ERROR
-	th.data = e
-}
-
 func (th *thread) error(err *object.RuntimeError) {
 	if th.status != object.THREAD_ERROR {
-		if err.Level > 0 {
-			d := th.getInfo(err.Level, "Sl")
-			if d != nil {
-				err.Pos.Filename = "@" + d.ShortSource
-				err.Pos.Line = d.CurrentLine
-			}
-		}
-
-		th.propagate(err)
+		th.status = object.THREAD_ERROR
+		th.data = err
 	}
 }

@@ -231,12 +231,8 @@ func (th *thread) LoadFunc(fn object.Value) {
 	}
 }
 
-func (th *thread) Call(fn object.Value, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	return th.docallv(fn, args...)
-}
-
-func (th *thread) PCall(fn object.Value, errh object.Value, args ...object.Value) ([]object.Value, bool) {
-	return th.dopcallv(fn, errh, args...)
+func (th *thread) Call(fn object.Value, errh object.Value, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	return th.docallv(fn, errh, args...)
 }
 
 func (th *thread) newThreadWith(typ threadType, env *environment, stackSize int) *thread {

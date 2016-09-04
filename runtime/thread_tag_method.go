@@ -90,7 +90,7 @@ func (th *thread) gettmbyobj(val object.Value, tag tagType) object.Value {
 }
 
 func (th *thread) calltm(a int, tm object.Value, args ...object.Value) (err *object.RuntimeError) {
-	rets, err := th.docallv(tm, args...)
+	rets, err := th.docallv(tm, nil, args...)
 	if err != nil {
 		return err
 	}

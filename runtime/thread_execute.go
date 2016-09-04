@@ -126,7 +126,7 @@ func (th *thread) execute() {
 				if ctx.isRoot() {
 					th.context = ctx
 
-					th.propagate(err)
+					th.error(err)
 
 					return
 				}
@@ -134,12 +134,9 @@ func (th *thread) execute() {
 
 			ctx.closeUpvals(0) // close all upvalues on this context
 
-			val := err.Positioned()
-
-			if ctx.errh == protect {
-				rets = []object.Value{val}
-			} else {
-				rets = th.dohandle(ctx.errh, val)
+			rets, err = th.dohandle(ctx.errh, err)
+			if err != nil {
+				rets = []object.Value{err.Positioned()}
 			}
 
 			args = rets
@@ -191,12 +188,9 @@ func (th *thread) doExecute(fn, errh object.Value, args []object.Value) (rets []
 		ctx.closeUpvals(0) // close all upvalues on this context
 
 		if ctx.errh != nil {
-			val := err.Positioned()
-
-			if ctx.errh == protect {
-				rets = []object.Value{val}
-			} else {
-				rets = th.dohandle(ctx.errh, val)
+			rets, err = th.dohandle(ctx.errh, err)
+			if err != nil {
+				return nil, err
 			}
 
 			return rets, nil
