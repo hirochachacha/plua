@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/hirochachacha/plua/object"
@@ -14,6 +15,10 @@ func newChannel(capacity int) object.Channel {
 
 func (ch channel) Type() object.Type {
 	return object.TCHANNEL
+}
+
+func (ch channel) String() string {
+	return fmt.Sprintf("channel: %p", ch)
 }
 
 func (ch channel) Send(val object.Value) {

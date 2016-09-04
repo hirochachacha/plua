@@ -1,11 +1,21 @@
 package object
 
-import "unsafe"
+import (
+	"fmt"
+	"unsafe"
+
+	"github.com/hirochachacha/plua/internal/strconv"
+)
 
 type Integer int64
 
 func (i Integer) Type() Type {
 	return TNUMBER
+}
+
+func (i Integer) String() string {
+	s, _ := ToGoString(i)
+	return s
 }
 
 type Number float64
@@ -14,16 +24,33 @@ func (n Number) Type() Type {
 	return TNUMBER
 }
 
+func (n Number) String() string {
+	s, _ := ToGoString(n)
+	return s
+}
+
 type String string
 
 func (s String) Type() Type {
 	return TSTRING
 }
 
+func (s String) String() string {
+	return strconv.Quote(string(s))
+}
+
 type Boolean bool
 
 func (b Boolean) Type() Type {
 	return TBOOLEAN
+}
+
+func (b Boolean) String() string {
+	if b {
+		return "true"
+	}
+
+	return "false"
 }
 
 type LightUserdata struct {
@@ -34,11 +61,19 @@ func (lud LightUserdata) Type() Type {
 	return TUSERDATA
 }
 
+func (lud LightUserdata) String() string {
+	return fmt.Sprintf("userdata: %p", lud.Pointer)
+}
+
 // GoFunction represents functions that can be called by Lua VM.
 type GoFunction func(th Thread, args ...Value) (rets []Value, err *RuntimeError)
 
 func (fn GoFunction) Type() Type {
 	return TFUNCTION
+}
+
+func (fn GoFunction) String() string {
+	return fmt.Sprintf("function: %p", fn)
 }
 
 type Userdata struct {
@@ -48,6 +83,10 @@ type Userdata struct {
 
 func (ud *Userdata) Type() Type {
 	return TUSERDATA
+}
+
+func (ud *Userdata) String() string {
+	return fmt.Sprintf("userdata: %p", ud)
 }
 
 type Type int

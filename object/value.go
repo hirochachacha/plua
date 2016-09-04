@@ -4,6 +4,7 @@ import "math"
 
 type Value interface {
 	Type() Type
+	String() string
 }
 
 var (

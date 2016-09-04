@@ -1,11 +1,9 @@
 package object
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/hirochachacha/plua/internal/limits"
-	"github.com/hirochachacha/plua/internal/strconv"
 )
 
 type SelectCase struct {
@@ -38,40 +36,11 @@ func Equal(x, y Value) bool {
 }
 
 func Repr(val Value) string {
-	switch val := val.(type) {
-	case nil:
+	if val == nil {
 		return "nil"
-	case Integer:
-		s, _ := ToGoString(val)
-		return s
-	case Number:
-		s, _ := ToGoString(val)
-		return s
-	case String:
-		return strconv.Quote(string(val))
-	case Boolean:
-		if val {
-			return "true"
-		}
-
-		return "false"
-	case LightUserdata:
-		return fmt.Sprintf("userdata: %p", val.Pointer)
-	case GoFunction:
-		return fmt.Sprintf("function: %p", &val)
-	case *Userdata:
-		return fmt.Sprintf("userdata: %p", val)
-	case Table:
-		return fmt.Sprintf("table: %p", val)
-	case Closure:
-		return fmt.Sprintf("function: %p", val)
-	case Thread:
-		return fmt.Sprintf("thread: %p", val)
-	case Channel:
-		return fmt.Sprintf("channel: %p", val)
 	}
 
-	return fmt.Sprintf("unknown type: %v", val)
+	return val.String()
 }
 
 func ToType(val Value) Type {

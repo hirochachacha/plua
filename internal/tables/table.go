@@ -1,6 +1,8 @@
 package tables
 
 import (
+	"fmt"
+
 	"github.com/hirochachacha/plua/internal/limits"
 	"github.com/hirochachacha/plua/object"
 )
@@ -31,6 +33,10 @@ func NewTableArray(a []object.Value) object.Table {
 
 func (t *table) Type() object.Type {
 	return object.TTABLE
+}
+
+func (t *table) String() string {
+	return fmt.Sprintf("table: %p", t)
 }
 
 func (t *table) Len() int {

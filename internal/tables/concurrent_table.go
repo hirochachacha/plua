@@ -1,6 +1,7 @@
 package tables
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/hirochachacha/plua/internal/limits"
@@ -27,6 +28,10 @@ func NewConcurrentTableSize(asize, msize int) object.Table {
 
 func (t *concurrentTable) Type() object.Type {
 	return object.TTABLE
+}
+
+func (t *concurrentTable) String() string {
+	return fmt.Sprintf("table: %p", t)
 }
 
 func (t *concurrentTable) Len() int {

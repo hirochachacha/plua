@@ -1,6 +1,8 @@
 package runtime
 
 import (
+	"fmt"
+
 	"github.com/hirochachacha/plua/object"
 )
 
@@ -36,6 +38,10 @@ func (th *thread) err() error {
 
 func (th *thread) Type() object.Type {
 	return object.TTHREAD
+}
+
+func (th *thread) String() string {
+	return fmt.Sprintf("thread: %p", th)
 }
 
 func (th *thread) Yield(args ...object.Value) (rets []object.Value) {

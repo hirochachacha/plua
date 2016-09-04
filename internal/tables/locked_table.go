@@ -1,6 +1,7 @@
 package tables
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/hirochachacha/plua/object"
@@ -19,6 +20,10 @@ func NewLockedTableSize(asize, msize int) object.Table {
 
 func (t *lockedTable) Type() object.Type {
 	return object.TTABLE
+}
+
+func (t *lockedTable) String() string {
+	return fmt.Sprintf("table: %p", t)
 }
 
 func (t *lockedTable) Len() int {

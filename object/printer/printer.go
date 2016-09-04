@@ -30,7 +30,7 @@ func (pr printer) print(x interface{}) {
 	case *object.DebugInfo:
 		pr.printDebug(x)
 	case object.Value:
-		fmt.Fprintf(pr.w, "%s value = %s", object.ToType(x), object.Repr(x))
+		fmt.Fprintf(pr.w, "%s value = %v", object.ToType(x), x)
 		pr.printValue(x)
 		fmt.Fprintln(pr.w)
 	case object.Process:
@@ -52,7 +52,7 @@ func (pr printer) printDebug(d *object.DebugInfo) {
 	fmt.Fprintf(pr.w, "\tIsVararg        =\t%t\n", d.IsVararg)
 	fmt.Fprintf(pr.w, "\tIsTailCall      =\t%t\n", d.IsTailCall)
 	fmt.Fprintf(pr.w, "\tShortSource     =\t%s\n", d.ShortSource)
-	fmt.Fprintf(pr.w, "\tFunc            =\t%s\n", object.Repr(d.Func))
+	fmt.Fprintf(pr.w, "\tFunc            =\t%v\n", d.Func)
 	fmt.Fprintf(pr.w, "}\n")
 }
 
@@ -117,7 +117,7 @@ func (pr printer) printValue(val object.Value) {
 		return
 	}
 
-	fmt.Fprint(pr.w, object.Repr(val))
+	fmt.Fprint(pr.w, val)
 }
 
 func (pr printer) printCode(p *object.Proto) {

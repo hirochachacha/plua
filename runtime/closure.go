@@ -2,6 +2,7 @@ package runtime
 
 import (
 	// "fmt"
+	"fmt"
 	"unsafe"
 
 	"github.com/hirochachacha/plua/object"
@@ -46,6 +47,10 @@ type closure struct {
 
 func (cl *closure) Type() object.Type {
 	return object.TFUNCTION
+}
+
+func (cl *closure) String() string {
+	return fmt.Sprintf("function: %p", cl)
 }
 
 func (cl *closure) Prototype() *object.Proto {

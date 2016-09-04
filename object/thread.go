@@ -35,7 +35,6 @@ type Thread interface {
 
 	CallMetaField(val Value, field string) (res []Value, done bool)
 	GetMetaField(val Value, field string) Value
-	Repr(val Value) string
 	Require(name string, open GoFunction) (Value, bool)
 
 	// ↓ thread specific APIs
