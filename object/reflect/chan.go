@@ -38,7 +38,7 @@ func csend(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 		return nil, err
 	}
 
-	x, err := ap.CheckAny(1)
+	x, err := ap.ToValue(1)
 	if err != nil {
 		return nil, err
 	}

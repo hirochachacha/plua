@@ -78,7 +78,7 @@ func pnewindex(th object.Thread, args ...object.Value) ([]object.Value, *object.
 		return nil, err
 	}
 
-	val, err := ap.CheckAny(2)
+	val, err := ap.ToValue(2)
 	if err != nil {
 		return nil, err
 	}

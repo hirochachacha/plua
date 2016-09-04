@@ -33,7 +33,7 @@ func mindex(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	key, err := ap.CheckAny(1)
+	key, err := ap.ToValue(1)
 	if err != nil {
 		return nil, err
 	}
@@ -61,12 +61,12 @@ func mnewindex(th object.Thread, args ...object.Value) ([]object.Value, *object.
 		return nil, err
 	}
 
-	key, err := ap.CheckAny(1)
+	key, err := ap.ToValue(1)
 	if err != nil {
 		return nil, err
 	}
 
-	val, err := ap.CheckAny(2)
+	val, err := ap.ToValue(2)
 	if err != nil {
 		return nil, err
 	}
