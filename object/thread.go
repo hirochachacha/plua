@@ -41,7 +41,7 @@ type Thread interface {
 
 	// ↓ intended to be called from vm loop
 
-	Call(fn Value, args ...Value) ([]Value, bool)
+	Call(fn Value, args ...Value) ([]Value, *RuntimeError)
 	PCall(fn Value, errh Value, args ...Value) ([]Value, bool)
 
 	// ↓ for debug support
@@ -62,7 +62,7 @@ type Thread interface {
 
 	// ↓ for coroutine support
 
-	Yield(args ...Value) (rets []Value)
+	Yield(args ...Value) (rets []Value, err *RuntimeError)
 
 	IsYieldable() bool
 	IsMainThread() bool

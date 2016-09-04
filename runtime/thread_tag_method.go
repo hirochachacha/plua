@@ -89,10 +89,10 @@ func (th *thread) gettmbyobj(val object.Value, tag tagType) object.Value {
 	return th.gettm(mt, tag)
 }
 
-func (th *thread) calltm(a int, tm object.Value, args ...object.Value) (ok bool) {
-	rets, ok := th.docallv(tm, args...)
-	if !ok {
-		return false
+func (th *thread) calltm(a int, tm object.Value, args ...object.Value) (err *object.RuntimeError) {
+	rets, err := th.docallv(tm, args...)
+	if err != nil {
+		return err
 	}
 
 	if len(rets) == 0 {
@@ -101,13 +101,13 @@ func (th *thread) calltm(a int, tm object.Value, args ...object.Value) (ok bool)
 		th.stack[th.ci.base+a] = rets[0]
 	}
 
-	return true
+	return nil
 }
 
-func (th *thread) callcmptm(not bool, tm object.Value, x, y object.Value) (ok bool) {
-	rets, ok := th.docallv(tm, x, y)
-	if !ok {
-		return false
+func (th *thread) callcmptm(not bool, tm object.Value, x, y object.Value) (err *object.RuntimeError) {
+	rets, err := th.docallv(tm, x, y)
+	if err != nil {
+		return err
 	}
 
 	var ret object.Value
@@ -124,7 +124,7 @@ func (th *thread) callcmptm(not bool, tm object.Value, x, y object.Value) (ok bo
 		jmp := ci.Code[ci.pc]
 
 		if jmp.OpCode() != opcode.JMP {
-			panic("unexpected")
+			return errInvalidByteCode
 		}
 
 		ci.pc++
@@ -132,37 +132,33 @@ func (th *thread) callcmptm(not bool, tm object.Value, x, y object.Value) (ok bo
 		th.dojmp(jmp)
 	}
 
-	return true
+	return nil
 }
 
-func (th *thread) calluntm(a int, x object.Value, tag tagType) (ok bool) {
+func (th *thread) calluntm(a int, x object.Value, tag tagType) (err *object.RuntimeError) {
 	tm := th.gettmbyobj(x, tag)
 
 	if tm == nil {
-		th.throwUnaryError(tag, x)
-
-		return false
+		return th.unaryError(tag, x)
 	}
 
 	return th.calltm(a, tm, x)
 }
 
-func (th *thread) callbintm(a int, x, y object.Value, tag tagType) (ok bool) {
+func (th *thread) callbintm(a int, x, y object.Value, tag tagType) (err *object.RuntimeError) {
 	tm := th.gettmbyobj(x, tag)
 	if tm == nil {
 		tm = th.gettmbyobj(y, tag)
 
 		if tm == nil {
-			th.throwBinaryError(tag, x, y)
-
-			return false
+			return th.binaryError(tag, x, y)
 		}
 	}
 
 	return th.calltm(a, tm, x, y)
 }
 
-func (th *thread) callordertm(not bool, x, y object.Value, tag tagType) (ok bool) {
+func (th *thread) callordertm(not bool, x, y object.Value, tag tagType) (err *object.RuntimeError) {
 	tm := th.gettmbyobj(x, tag)
 	if tm == nil {
 		tm = th.gettmbyobj(y, tag)
@@ -175,9 +171,7 @@ func (th *thread) callordertm(not bool, x, y object.Value, tag tagType) (ok bool
 					tm = th.gettmbyobj(y, TM_LE)
 
 					if tm == nil {
-						th.throwCompareError(x, y)
-
-						return false
+						return th.compareError(x, y)
 					}
 				}
 
@@ -190,9 +184,7 @@ func (th *thread) callordertm(not bool, x, y object.Value, tag tagType) (ok bool
 					tm = th.gettmbyobj(y, TM_LT)
 
 					if tm == nil {
-						th.throwCompareError(x, y)
-
-						return false
+						return th.compareError(x, y)
 					}
 				}
 

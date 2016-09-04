@@ -44,10 +44,10 @@ func (th *thread) String() string {
 	return fmt.Sprintf("thread: %p", th)
 }
 
-func (th *thread) Yield(args ...object.Value) (rets []object.Value) {
+func (th *thread) Yield(args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	switch th.typ {
 	case threadMain:
-		th.throwYieldMainThreadError()
+		return nil, errYieldMainThread
 	case threadCo:
 		if th.status == object.THREAD_RUNNING {
 			th.status = object.THREAD_SUSPENDED
@@ -58,15 +58,15 @@ func (th *thread) Yield(args ...object.Value) (rets []object.Value) {
 
 			th.status = object.THREAD_RUNNING
 		} else {
-			th.throwYieldFromOutsideError()
+			return nil, errYieldFromOutside
 		}
 	case threadGo:
-		th.throwYieldGoThreadError()
+		return nil, errYieldGoThread
 	default:
 		panic("unreachable")
 	}
 
-	return
+	return nil, nil
 }
 
 func (th *thread) Resume(args ...object.Value) (rets []object.Value, err error) {
@@ -231,7 +231,7 @@ func (th *thread) LoadFunc(fn object.Value) {
 	}
 }
 
-func (th *thread) Call(fn object.Value, args ...object.Value) ([]object.Value, bool) {
+func (th *thread) Call(fn object.Value, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	return th.docallv(fn, args...)
 }
 

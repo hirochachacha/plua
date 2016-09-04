@@ -5,7 +5,7 @@ import (
 )
 
 // call a closure by stack index.
-func (th *thread) callLua(c object.Closure, f, nargs, nrets int) bool {
+func (th *thread) callLua(c object.Closure, f, nargs, nrets int) (err *object.RuntimeError) {
 	ctx := th.context
 
 	cl := c.(*closure)
@@ -43,24 +43,32 @@ func (th *thread) callLua(c object.Closure, f, nargs, nrets int) bool {
 		return th.onCall()
 	}
 
-	return true
+	return nil
 }
 
 // call a closure by values, immediately return values.
-func (th *thread) docallvLua(c object.Closure, args ...object.Value) (rets []object.Value, ok bool) {
+func (th *thread) docallvLua(c object.Closure, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	return th.doExecute(c, nil, args)
 }
 
 // call a closure by values with error handler, immediately return values.
 func (th *thread) dopcallvLua(c object.Closure, errh object.Value, args ...object.Value) (rets []object.Value, ok bool) {
 	if errh == nil {
-		return th.doExecute(c, protect, args)
+		rets, err := th.doExecute(c, protect, args)
+		if err != nil {
+			return nil, false
+		}
+		return rets, true
 	}
-	return th.doExecute(c, errh, args)
+	rets, err := th.doExecute(c, errh, args)
+	if err != nil {
+		return nil, false
+	}
+	return rets, true
 }
 
 // tail call a closure by stack index.
-func (th *thread) tailcallLua(c object.Closure, f, nargs int) bool {
+func (th *thread) tailcallLua(c object.Closure, f, nargs int) (err *object.RuntimeError) {
 	ctx := th.context
 
 	cl := c.(*closure)
@@ -111,11 +119,11 @@ func (th *thread) tailcallLua(c object.Closure, f, nargs int) bool {
 		return th.onTailCall()
 	}
 
-	return true
+	return nil
 }
 
 // call a go function by stack index, immediately store values.
-func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall bool) bool {
+func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall bool) (err *object.RuntimeError) {
 	ctx := th.context
 
 	sp := f + 1 + nargs
@@ -137,27 +145,24 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 
 	if ctx.hookMask != 0 {
 		if isTailCall {
-			if !th.onTailCall() {
-				return false
+			if err := th.onTailCall(); err != nil {
+				return err
 			}
 		} else {
-			if !th.onCall() {
-				return false
+			if err := th.onCall(); err != nil {
+				return err
 			}
 		}
 	}
 
 	rets, err := fn(th, args...)
-	if err != nil {
-		th.error(err)
-	}
 
 	ctx.stackEnsure(len(rets))
 
 	ctx.ci = ctx.ci.prev
 
-	if th.status == object.THREAD_ERROR {
-		return false
+	if err != nil {
+		return err
 	}
 
 	if nrets != -1 && nrets < len(rets) {
@@ -178,11 +183,11 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 		return th.onReturn()
 	}
 
-	return true
+	return nil
 }
 
 // call a go function by values, immediately return values.
-func (th *thread) callvGo(fn object.GoFunction, args ...object.Value) (rets []object.Value, ok bool) {
+func (th *thread) callvGo(fn object.GoFunction, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	ctx := th.context
 
 	ci := &callInfo{
@@ -199,8 +204,8 @@ func (th *thread) callvGo(fn object.GoFunction, args ...object.Value) (rets []ob
 	ctx.ci = ci
 
 	if ctx.hookMask != 0 {
-		if !th.onCall() {
-			return nil, false
+		if err := th.onCall(); err != nil {
+			return nil, err
 		}
 	}
 
@@ -210,40 +215,29 @@ func (th *thread) callvGo(fn object.GoFunction, args ...object.Value) (rets []ob
 
 	ctx.stack[1] = fn
 
-	rets, err := fn(th, args...)
-	if err != nil {
-		th.error(err)
-	}
+	rets, err = fn(th, args...)
 
 	ctx.stack[1] = old
 
 	ctx.ci = ctx.ci.prev
 
-	if th.status == object.THREAD_ERROR {
-		return nil, false
+	if err != nil {
+		return nil, err
 	}
 
 	if ctx.hookMask != 0 {
-		if !th.onReturn() {
-			return nil, false
+		if err := th.onReturn(); err != nil {
+			return nil, err
 		}
 	}
 
-	return rets, true
+	return rets, nil
 }
 
 // call a go function by values with error handler, immediately return values.
 func (th *thread) pcallvGo(fn object.GoFunction, errh object.Value, args ...object.Value) (rets []object.Value, ok bool) {
-	rets, ok = th.callvGo(fn, args...)
-
-	ctx := th.context
-
-	if ctx.status == object.THREAD_ERROR {
-		err := ctx.data.(*object.RuntimeError)
-
-		ctx.status = object.THREAD_RUNNING
-		ctx.data = nil
-
+	rets, err := th.callvGo(fn, args...)
+	if err != nil {
 		val := err.Positioned()
 
 		if errh == nil {
@@ -253,11 +247,11 @@ func (th *thread) pcallvGo(fn object.GoFunction, errh object.Value, args ...obje
 		return th.dohandle(errh, val), false
 	}
 
-	return
+	return rets, true
 }
 
 // call a callable by stack index.
-func (th *thread) call(a, nargs, nrets int) (ok bool) {
+func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
 	ctx := th.context
 
 	f := ctx.ci.base + a
@@ -266,9 +260,7 @@ func (th *thread) call(a, nargs, nrets int) (ok bool) {
 
 	switch fn := fn.(type) {
 	case nil:
-		th.throwCallError(fn)
-
-		return false
+		return th.callError(fn)
 	case object.GoFunction:
 		return th.callGo(fn, f, nargs, nrets, false)
 	case object.Closure:
@@ -278,9 +270,7 @@ func (th *thread) call(a, nargs, nrets int) (ok bool) {
 	tm := th.gettmbyobj(fn, TM_CALL)
 
 	if !isfunction(tm) {
-		th.throwCallError(fn)
-
-		return false
+		return th.callError(fn)
 	}
 
 	ctx.stackEnsure(1)
@@ -293,12 +283,10 @@ func (th *thread) call(a, nargs, nrets int) (ok bool) {
 }
 
 // call a callable by values, immediately return values.
-func (th *thread) docallv(fn object.Value, args ...object.Value) (rets []object.Value, ok bool) {
+func (th *thread) docallv(fn object.Value, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	switch fn := fn.(type) {
 	case nil:
-		th.throwCallError(fn)
-
-		return nil, false
+		return nil, th.callError(fn)
 	case object.GoFunction:
 		return th.callvGo(fn, args...)
 	case object.Closure:
@@ -332,11 +320,8 @@ func (th *thread) dohandle(errh object.Value, arg object.Value) (rets []object.V
 	case nil:
 		return []object.Value{object.String("error in error handling")}
 	case object.GoFunction:
-		rets, ok := th.callvGo(errh, arg)
-		if !ok {
-			th.status = object.THREAD_RUNNING
-			th.data = nil
-
+		rets, err := th.callvGo(errh, arg)
+		if err != nil {
 			return []object.Value{object.String("error in error handling")}
 		}
 
@@ -354,7 +339,7 @@ func (th *thread) dohandle(errh object.Value, arg object.Value) (rets []object.V
 }
 
 // tail call a callable by stack index.
-func (th *thread) tailcall(a, nargs int) (ok bool) {
+func (th *thread) tailcall(a, nargs int) (err *object.RuntimeError) {
 	ctx := th.context
 
 	th.closeUpvals(ctx.ci.base) // closing upvalues
@@ -365,9 +350,7 @@ func (th *thread) tailcall(a, nargs int) (ok bool) {
 
 	switch fn := ctx.stack[f].(type) {
 	case nil:
-		th.throwCallError(fn)
-
-		return false
+		return th.callError(fn)
 	case object.GoFunction:
 		return th.callGo(fn, f, nargs, -1, true)
 	case object.Closure:
@@ -377,9 +360,7 @@ func (th *thread) tailcall(a, nargs int) (ok bool) {
 	tm := th.gettmbyobj(fn, TM_CALL)
 
 	if !isfunction(tm) {
-		th.throwCallError(fn)
-
-		return false
+		return th.callError(fn)
 	}
 
 	ctx.stackEnsure(1)
@@ -394,7 +375,7 @@ func (th *thread) tailcall(a, nargs int) (ok bool) {
 }
 
 // tforcall a callable by stack index.
-func (th *thread) tforcall(a, nrets int) (ok bool) {
+func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 	ctx := th.context
 
 	f := ctx.ci.base + a
@@ -403,9 +384,7 @@ func (th *thread) tforcall(a, nrets int) (ok bool) {
 
 	switch fn := fn.(type) {
 	case nil:
-		th.throwCallError(fn)
-
-		return false
+		return th.callError(fn)
 	case object.GoFunction:
 		copy(ctx.stack[f+3:], ctx.stack[f:f+3])
 
@@ -413,10 +392,9 @@ func (th *thread) tforcall(a, nrets int) (ok bool) {
 	case object.Closure:
 		args := ctx.stack[f+1 : f+3]
 
-		rets, ok := th.docallvLua(fn, args...)
-
-		if !ok {
-			return false
+		rets, err := th.docallvLua(fn, args...)
+		if err != nil {
+			return err
 		}
 
 		if nrets != -1 && nrets < len(rets) {
@@ -429,15 +407,13 @@ func (th *thread) tforcall(a, nrets int) (ok bool) {
 			copy(ctx.stack[f+3:], rets)
 		}
 
-		return true
+		return nil
 	}
 
 	tm := th.gettmbyobj(fn, TM_CALL)
 
 	if !isfunction(tm) {
-		th.throwCallError(fn)
-
-		return false
+		return th.callError(fn)
 	}
 
 	ctx.stackEnsure(1)
@@ -469,7 +445,7 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 
 	if prev.isBase() {
 		if ctx.hookMask != 0 {
-			if !th.onReturn() {
+			if err := th.onReturn(); err != nil {
 				return nil, true
 			}
 		}
@@ -497,7 +473,7 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 	ctx.ci.sp = retbase + len(rets)
 
 	if ctx.hookMask != 0 {
-		if !th.onReturn() {
+		if err := th.onReturn(); err != nil {
 			return nil, true
 		}
 	}

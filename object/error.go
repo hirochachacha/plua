@@ -27,5 +27,5 @@ func (err *RuntimeError) Error() string {
 	if err.Pos.IsValid() {
 		msg = msg + " raised from " + err.Pos.String()
 	}
-	return "object: " + msg
+	return "runtime: " + msg
 }

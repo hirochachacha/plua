@@ -95,9 +95,9 @@ func DoFile(th object.Thread, args ...object.Value) (rets []object.Value, err *o
 		return []object.Value{nil, object.String(e.Error())}, nil
 	}
 
-	rets, ok := th.Call(th.NewClosure(p))
-	if !ok {
-		return nil, nil
+	rets, err = th.Call(th.NewClosure(p))
+	if err != nil {
+		return nil, err
 	}
 
 	return rets, nil
@@ -117,8 +117,8 @@ func Error(th object.Thread, args ...object.Value) (rets []object.Value, err *ob
 		return nil, err
 	}
 
-	if msg, ok := val.(object.String); ok && level > 0 {
-		return nil, &object.RuntimeError{Value: msg, Level: level}
+	if _, ok := val.(object.String); ok && level > 0 {
+		return nil, &object.RuntimeError{Value: val, Level: level}
 	}
 
 	return nil, &object.RuntimeError{Value: val}
@@ -182,9 +182,9 @@ func makeINext(tm object.Value) object.GoFunction {
 			return nil, err
 		}
 
-		rets, ok := th.Call(tm, t, object.Integer(key+1))
-		if !ok {
-			return nil, nil
+		rets, err := th.Call(tm, t, object.Integer(key+1))
+		if err != nil {
+			return nil, err
 		}
 
 		return rets, nil
@@ -255,9 +255,9 @@ func Pairs(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 	}
 
 	if fn := th.GetMetaField(t, "__pairs"); fn != nil {
-		rets, ok := th.Call(fn, args...)
-		if !ok {
-			return nil, nil
+		rets, err := th.Call(fn, args...)
+		if err != nil {
+			return nil, err
 		}
 
 		return rets, nil
@@ -405,9 +405,9 @@ func Print(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 	tostring := th.Globals().Get(object.String("tostring"))
 
 	for _, arg := range args[:len(args)-1] {
-		rets, ok := th.Call(tostring, arg)
-		if !ok {
-			return nil, nil
+		rets, err := th.Call(tostring, arg)
+		if err != nil {
+			return nil, err
 		}
 
 		if len(rets) == 0 {
@@ -423,9 +423,9 @@ func Print(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 		fmt.Print("\t")
 	}
 
-	rets, ok := th.Call(tostring, args[len(args)-1])
-	if !ok {
-		return nil, nil
+	rets, err := th.Call(tostring, args[len(args)-1])
+	if err != nil {
+		return nil, err
 	}
 
 	if len(rets) == 0 {

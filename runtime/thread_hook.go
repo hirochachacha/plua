@@ -35,22 +35,22 @@ var hookNames = [...]string{
 	hookTailCall: "tail call",
 }
 
-func (th *thread) onInstruction() bool {
+func (th *thread) onInstruction() *object.RuntimeError {
 	ctx := th.context
 
 	if ctx.inHook {
-		return true
+		return nil
 	}
 	if ctx.hookFunc == nil {
-		return true
+		return nil
 	}
 
 	if ctx.hookMask&maskCount != 0 && ctx.hookCount > 0 {
 		ctx.instCount++
 
 		if ctx.instCount%ctx.hookCount == 0 {
-			if !th.callHook(hookCount, nil) {
-				return false
+			if err := th.callHook(hookCount, nil); err != nil {
+				return err
 			}
 		}
 	}
@@ -58,57 +58,57 @@ func (th *thread) onInstruction() bool {
 	if ctx.hookMask&maskLine != 0 {
 		line := ctx.ci.LineInfo[ctx.ci.pc]
 		if line == ctx.lastLine {
-			return true
+			return nil
 		}
 		ctx.lastLine = line
 
 		return th.callHook(hookLine, object.Integer(line))
 	}
 
-	return true
+	return nil
 }
 
-func (th *thread) onReturn() bool {
+func (th *thread) onReturn() *object.RuntimeError {
 	ctx := th.context
 
 	if ctx.inHook {
-		return true
+		return nil
 	}
 	if ctx.hookMask&maskReturn != 0 && ctx.hookFunc != nil {
 		return th.callHook(hookReturn, nil)
 	}
 
-	return true
+	return nil
 }
 
-func (th *thread) onCall() bool {
+func (th *thread) onCall() *object.RuntimeError {
 	ctx := th.context
 
 	if ctx.inHook {
-		return true
+		return nil
 	}
 	if ctx.hookMask&maskCall != 0 && ctx.hookFunc != nil {
 		return th.callHook(hookCall, nil)
 	}
-	return true
+	return nil
 }
 
-func (th *thread) onTailCall() bool {
+func (th *thread) onTailCall() *object.RuntimeError {
 	ctx := th.context
 
 	if ctx.inHook {
-		return true
+		return nil
 	}
 	if ctx.hookMask&maskCall != 0 && ctx.hookFunc != nil {
 		return th.callHook(hookTailCall, nil)
 	}
-	return true
+	return nil
 }
 
-func (th *thread) callHook(typ hookType, arg object.Value) bool {
+func (th *thread) callHook(typ hookType, arg object.Value) *object.RuntimeError {
 	ctx := th.context
 
-	_, ok := th.docallv(ctx.hookFunc, object.String(typ.String()), arg)
+	_, err := th.docallv(ctx.hookFunc, object.String(typ.String()), arg)
 
-	return ok
+	return err
 }
