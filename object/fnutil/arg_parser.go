@@ -96,41 +96,82 @@ func (ap *ArgParser) ToFunction(n int) (object.Value, *object.RuntimeError) {
 	return arg, nil
 }
 
-func (ap *ArgParser) ToTypes(n int, typs ...object.Type) (object.Value, *object.RuntimeError) {
-	arg, ok := ap.Get(n)
+func (ap *ArgParser) ToTypes(n int, types ...object.Type) (object.Value, *object.RuntimeError) {
+	val, ok := ap.Get(n)
 	if !ok {
-		typss := ""
-		for _, typ := range typs[:len(typs)-1] {
-			typss += typ.String() + " or "
+		typess := ""
+		for _, typ := range types[:len(types)-1] {
+			typess += typ.String() + " or "
 		}
-		typss += typs[len(typs)-1].String()
+		typess += types[len(types)-1].String()
 
-		return nil, ap.ArgError(n, typss+" expected, got no value")
+		return nil, ap.ArgError(n, typess+" expected, got no value")
 	}
 
-	ok = false
-
-	typ1 := object.ToType(arg)
-
-	for _, typ := range typs {
-		if typ == typ1 {
-			ok = true
-
-			break
+	{
+		for _, typ := range types {
+			switch val.(type) {
+			case nil:
+				if typ == object.TNIL {
+					goto Found
+				}
+			case object.Integer:
+				if typ == object.TNUMINT || typ == object.TNUMBER {
+					goto Found
+				}
+			case object.Number:
+				if typ == object.TNUMBER {
+					goto Found
+				}
+			case object.String:
+				if typ == object.TSTRING {
+					goto Found
+				}
+			case object.Boolean:
+				if typ == object.TBOOLEAN {
+					goto Found
+				}
+			case object.LightUserdata:
+				if typ == object.TUSERDATA {
+					goto Found
+				}
+			case object.GoFunction:
+				if typ == object.TFUNCTION {
+					goto Found
+				}
+			case *object.Userdata:
+				if typ == object.TUSERDATA {
+					goto Found
+				}
+			case object.Table:
+				if typ == object.TTABLE {
+					goto Found
+				}
+			case object.Closure:
+				if typ == object.TFUNCTION {
+					goto Found
+				}
+			case object.Thread:
+				if typ == object.TTHREAD {
+					goto Found
+				}
+			case object.Channel:
+				if typ == object.TCHANNEL {
+					goto Found
+				}
+			}
 		}
-	}
 
-	if !ok {
-		typss := ""
-		for _, typ := range typs[:len(typs)-1] {
-			typss += typ.String() + " or "
+		typess := ""
+		for _, typ := range types[:len(types)-1] {
+			typess += typ.String() + " or "
 		}
-		typss += typs[len(typs)-1].String()
+		typess += types[len(types)-1].String()
 
-		return nil, ap.TypeError(n, typss)
+		return nil, ap.TypeError(n, typess)
 	}
-
-	return arg, nil
+Found:
+	return val, nil
 }
 
 func (ap *ArgParser) ToInteger(n int) (object.Integer, *object.RuntimeError) {

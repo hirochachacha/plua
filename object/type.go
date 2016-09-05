@@ -128,4 +128,5 @@ var typeNames = [...]string{
 	TFUNCTION + 1:      "function",
 	TUSERDATA + 1:      "userdata",
 	TTHREAD + 1:        "thread",
+	TNUMINT + 1:        "integer",
 }
