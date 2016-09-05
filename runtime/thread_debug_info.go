@@ -10,32 +10,25 @@ import (
 )
 
 func (th *thread) getInfo(level int, what string) *object.DebugInfo {
-	if level <= 0 {
+	if level < 0 {
 		return nil
 	}
-
-	var ci *callInfo
-	var cl *closure
 
 	ctx := th.context
 
-	ci = ctx.ci
-
-	if ci.isBase() {
-		return nil
-	}
+	ci := ctx.ci
 
 	for i := level; i > 0; i-- {
 		ci = ci.prev
 
-		if ci.isBase() {
+		if ci == nil {
 			return nil
 		}
 	}
 
-	cl = ci.closure
-
 	d := &object.DebugInfo{Func: ctx.fn(), CallInfo: ci}
+
+	cl := ci.closure
 
 	for _, r := range what {
 		switch r {
@@ -46,16 +39,17 @@ func (th *thread) getInfo(level int, what string) *object.DebugInfo {
 		case 'u':
 			setUpInfo(d, cl)
 		case 't':
-			if ci != nil {
-				d.IsTailCall = ci.isTailCall
-			}
+			d.IsTailCall = ci.isTailCall
 		case 'n':
 			if ctx.hookMask != 0 {
 				d.Name = "?"
 				d.NameWhat = "hook"
 			} else {
-				if ci != nil && !ci.isTailCall && !ci.prev.isGoFunction() {
-					setFuncName(d, ci.prev)
+				if !ci.isTailCall {
+					prev := ci.prev
+					if prev != nil && !prev.isGoFunction() {
+						setFuncName(d, prev)
+					}
 				}
 			}
 		case 'L':
@@ -198,6 +192,7 @@ func getRKName(p *object.Proto, pc, rk int) (name string) {
 func setFuncInfo(d *object.DebugInfo, cl *closure) {
 	if cl == nil {
 		d.Source = "=[Go]"
+		d.ShortSource = "[Go]"
 		d.LineDefined = -1
 		d.LastLineDefined = -1
 		d.What = "Go"
