@@ -7,7 +7,7 @@ import (
 	"github.com/hirochachacha/plua/compiler"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/runtime"
-	"github.com/hirochachacha/plua/stdlib/base"
+	"github.com/hirochachacha/plua/stdlib"
 )
 
 var testExec = []struct {
@@ -78,7 +78,7 @@ func TestExecError(t *testing.T) {
 
 		p := runtime.NewProcess()
 
-		p.Require("_G", base.Open)
+		p.Require("", stdlib.Open)
 
 		_, err = p.Exec(proto)
 		if err == nil {

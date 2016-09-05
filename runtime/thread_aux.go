@@ -1,8 +1,6 @@
 package runtime
 
-import (
-	"github.com/hirochachacha/plua/object"
-)
+import "github.com/hirochachacha/plua/object"
 
 func (th *thread) Require(name string, open object.GoFunction) (object.Value, bool) {
 	loaded := th.Loaded()
