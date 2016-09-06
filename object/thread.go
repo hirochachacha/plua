@@ -57,7 +57,7 @@ type Thread interface {
 	// ↓ for coroutine & goroutine support
 
 	LoadFunc(fn Value)
-	Resume(args ...Value) (rets []Value, err error)
+	Resume(args ...Value) (rets []Value, err *RuntimeError)
 
 	// ↓ for coroutine support
 

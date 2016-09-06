@@ -27,5 +27,9 @@ func (p *process) Exec(proto *object.Proto, args ...object.Value) (rets []object
 
 	th.loadfn(cl)
 
-	return p.Resume(args...)
+	rets, e := p.Resume(args...)
+	if e != nil {
+		return nil, e
+	}
+	return rets, nil
 }

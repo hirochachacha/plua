@@ -26,7 +26,7 @@ type thread struct {
 	depth int
 }
 
-func (th *thread) err() error {
+func (th *thread) err() *object.RuntimeError {
 	ctx := th.context
 
 	if ctx.isRoot() {
@@ -69,7 +69,7 @@ func (th *thread) Yield(args ...object.Value) (rets []object.Value, err *object.
 	return nil, nil
 }
 
-func (th *thread) Resume(args ...object.Value) (rets []object.Value, err error) {
+func (th *thread) Resume(args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	switch th.typ {
 	case threadMain, threadCo:
 		if !(th.status == object.THREAD_INIT || th.status == object.THREAD_SUSPENDED) {
@@ -93,7 +93,7 @@ func (th *thread) Resume(args ...object.Value) (rets []object.Value, err error) 
 		panic("unreachable")
 	}
 
-	return
+	return nil, nil
 }
 
 func (th *thread) IsYieldable() bool {

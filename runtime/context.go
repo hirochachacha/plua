@@ -21,7 +21,7 @@ type context struct {
 	prev   *context
 }
 
-func (ctx *context) err() error {
+func (ctx *context) err() *object.RuntimeError {
 	if ctx.status == object.THREAD_ERROR {
 		return ctx.data.(*object.RuntimeError)
 	}
