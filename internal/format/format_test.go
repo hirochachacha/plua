@@ -3,7 +3,7 @@ package format
 import (
 	"testing"
 
-	"github.com/blua/blua/object"
+	"github.com/hirochachacha/plua/object"
 )
 
 func TestMain(t *testing.T) {
