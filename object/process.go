@@ -7,9 +7,6 @@ type Process interface {
 	Exec(p *Proto, args ...Value) (rets []Value, err error)
 
 	NewTableSize(asize, msize int) Table
-	NewTableArray(a []Value) Table
-	NewThread() Thread
-	NewGoThread() Thread
 	NewClosure(p *Proto) Closure
 	NewChannel(capacity int) Channel
 
