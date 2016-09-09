@@ -460,7 +460,7 @@ func TraceBack(th object.Thread, args ...object.Value) ([]object.Value, *object.
 
 	// return nil, err
 
-	return nil, nil
+	return nil, object.NewRuntimeError("not implemented")
 }
 
 // level, err := ap.OptGoInt(1, 1)
