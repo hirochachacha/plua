@@ -296,17 +296,17 @@ func (p *Pattern) Replace(pat, repl []byte, n int) ([]byte, error) {
 				buf.Write(repl[start:end])
 
 				if len(repl) == end {
-					return nil, ErrMalformedPattern
+					return nil, errMalformedPattern
 				}
 
 				d := repl[end+1]
 				if !('1' <= d && d <= '9') {
-					return nil, ErrInvalidCapture
+					return nil, errInvalidCapture
 				}
 
 				i := int(d - '0')
 				if i >= len(indices) {
-					return nil, ErrInvalidCapture
+					return nil, errInvalidCapture
 				}
 
 				buf.Write(pat[indices[i][0]:indices[i][1]])
@@ -373,17 +373,17 @@ func (p *Pattern) ReplaceString(pat, repl string, n int) (string, error) {
 				buf.WriteString(repl[start:end])
 
 				if len(repl) == end {
-					return "", ErrMalformedPattern
+					return "", errMalformedPattern
 				}
 
 				d := repl[end+1]
 				if !('1' <= d && d <= '9') {
-					return "", ErrInvalidCapture
+					return "", errInvalidCapture
 				}
 
 				i := int(d - '0')
 				if i >= len(indices) {
-					return "", ErrInvalidCapture
+					return "", errInvalidCapture
 				}
 
 				buf.WriteString(pat[indices[i][0]:indices[i][1]])

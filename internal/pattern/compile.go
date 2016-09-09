@@ -5,19 +5,15 @@ import (
 )
 
 var (
-	ErrInvalidRange    = errors.New("invalid character range")
-	ErrInvalidEscape   = errors.New("invalid escape")
-	ErrInvalidBalance  = errors.New("invalid balance")
-	ErrInvalidFrontier = errors.New("invalid frontier")
-	ErrInvalidCapture  = errors.New("invalid capture")
-	ErrMissingBracket  = errors.New("missing closing ]")
-	// ErrMissingParen    = errors.New("missing closing )")
-	// ErrMissingRepeatArgument = errors.New("missing argument to repetition operator")
-	ErrUnexpectedParen = errors.New("unexpected )")
-	// ErrUnexpectedBracket = errors.New("unexpected ]")
-	// ErrUnexpectedCharAfterEnd = errors.New("unexpected char after $")
-	ErrUnexpectedRange  = errors.New("unexpected -")
-	ErrMalformedPattern = errors.New("malformed pattern (ends with '%')")
+	errInvalidRange     = errors.New("invalid character range")
+	errInvalidEscape    = errors.New("invalid escape")
+	errInvalidBalance   = errors.New("invalid balance")
+	errInvalidFrontier  = errors.New("invalid frontier")
+	errInvalidCapture   = errors.New("invalid capture")
+	errMissingBracket   = errors.New("missing closing ]")
+	errUnexpectedParen  = errors.New("unexpected )")
+	errUnexpectedRange  = errors.New("unexpected -")
+	errMalformedPattern = errors.New("malformed pattern (ends with '%')")
 )
 
 type matchType uint8
@@ -203,24 +199,24 @@ L2:
 	for {
 		switch c.r {
 		case endOfText:
-			err = ErrMissingBracket
+			err = errMissingBracket
 			return
 		case ']':
 			break L2
 		case '-':
-			err = ErrUnexpectedRange
+			err = errUnexpectedRange
 			return
 		case '%':
 			c.next()
 
 			if c.r == endOfText {
-				err = ErrInvalidEscape
+				err = errInvalidEscape
 				return
 			}
 
 			c.r, isSingle = c.escape(c.r)
 			if !isSingle {
-				err = ErrInvalidEscape
+				err = errInvalidEscape
 				return
 			}
 		default:
@@ -232,10 +228,10 @@ L2:
 
 				switch c.r {
 				case ']':
-					err = ErrInvalidRange
+					err = errInvalidRange
 					return
 				case endOfText:
-					err = ErrMissingBracket
+					err = errMissingBracket
 					return
 				default:
 					set.r32 = append(set.r32, [2]rune{r, c.r})
@@ -423,7 +419,7 @@ L:
 
 			depth--
 			if depth < 0 {
-				err = ErrUnexpectedParen
+				err = errUnexpectedParen
 				return
 			}
 			c.nparens++
@@ -456,7 +452,7 @@ L:
 			c.next()
 
 			if c.r == endOfText {
-				err = ErrInvalidEscape
+				err = errInvalidEscape
 				return
 			}
 
@@ -468,7 +464,7 @@ L:
 					c.next()
 
 					if c.r == endOfText {
-						err = ErrInvalidBalance
+						err = errInvalidBalance
 						return
 					}
 
@@ -477,7 +473,7 @@ L:
 					c.next()
 
 					if c.r == endOfText {
-						err = ErrInvalidBalance
+						err = errInvalidBalance
 						return
 					}
 
@@ -488,7 +484,7 @@ L:
 					c.next()
 
 					if c.r != '[' {
-						err = ErrInvalidFrontier
+						err = errInvalidFrontier
 						return
 					}
 
@@ -503,7 +499,7 @@ L:
 				default:
 					x := int(c.r - '0')
 					if x > c.nparens {
-						err = ErrInvalidCapture
+						err = errInvalidCapture
 						return
 					}
 
