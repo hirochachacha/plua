@@ -3,13 +3,13 @@ package strconv
 import (
 	"io"
 	"math"
-	gostrconv "strconv"
+	"strconv"
 	"strings"
 )
 
 var (
-	ErrSyntax = gostrconv.ErrSyntax
-	ErrRange  = gostrconv.ErrRange
+	ErrSyntax = strconv.ErrSyntax
+	ErrRange  = strconv.ErrRange
 )
 
 func Atoi(s string) (i int, err error) {
@@ -22,19 +22,19 @@ func Itoa(i int) string {
 }
 
 func AppendInt(dst []byte, i int64, base int) []byte {
-	return gostrconv.AppendInt(dst, i, base)
+	return strconv.AppendInt(dst, i, base)
 }
 
 func FormatInt(i int64, base int) string {
-	return gostrconv.FormatInt(i, base)
+	return strconv.FormatInt(i, base)
 }
 
 func FormatUint(u uint64, base int) string {
-	return gostrconv.FormatUint(u, base)
+	return strconv.FormatUint(u, base)
 }
 
 func FormatFloat(f float64, fmt byte, prec, bitSize int) string {
-	return gostrconv.FormatFloat(f, fmt, prec, bitSize)
+	return strconv.FormatFloat(f, fmt, prec, bitSize)
 }
 
 func ParseUint(s string) (uint64, error) {
@@ -43,13 +43,13 @@ func ParseUint(s string) (uint64, error) {
 	}
 
 	if s[0] == '0' && len(s) != 1 && (s[1] == 'x' || s[1] == 'X') {
-		u, err := gostrconv.ParseUint(s[2:], 16, 64)
+		u, err := strconv.ParseUint(s[2:], 16, 64)
 		return u, unwrap(err)
 	}
 
-	i, err := gostrconv.ParseUint(s, 10, 64)
+	i, err := strconv.ParseUint(s, 10, 64)
 	if err != nil {
-		f, err := gostrconv.ParseFloat(s, 64)
+		f, err := strconv.ParseFloat(s, 64)
 		return uint64(f), unwrap(err)
 	}
 
@@ -62,11 +62,11 @@ func ParseInt(s string) (int64, error) {
 	}
 
 	if s[0] == '0' && len(s) != 1 && (s[1] == 'x' || s[1] == 'X') {
-		i, err := gostrconv.ParseInt(s[2:], 16, 64)
+		i, err := strconv.ParseInt(s[2:], 16, 64)
 		return i, unwrap(err)
 	}
 
-	i, err := gostrconv.ParseInt(s, 10, 64)
+	i, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		return i, unwrap(err)
 	}
@@ -83,7 +83,7 @@ func ParseFloat(s string) (float64, error) {
 		return parseHexFloat(s[2:])
 	}
 
-	f, err := gostrconv.ParseFloat(s, 64)
+	f, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return f, unwrap(err)
 	}
@@ -155,7 +155,7 @@ func parseHexFloat(s string) (float64, error) {
 		var err error
 
 		if j != 0 {
-			i, err = gostrconv.ParseInt(s[:j], 16, 64)
+			i, err = strconv.ParseInt(s[:j], 16, 64)
 			if err != nil {
 				return 0, unwrap(err)
 			}
@@ -170,7 +170,7 @@ func parseHexFloat(s string) (float64, error) {
 			x = digitVal(r)
 			if x == 16 {
 				if r == 'p' || r == 'P' {
-					e, err := gostrconv.ParseInt(s[j+k+2:], 10, 64)
+					e, err := strconv.ParseInt(s[j+k+2:], 10, 64)
 					if err != nil {
 						return 0, unwrap(err)
 					}
@@ -194,12 +194,12 @@ func parseHexFloat(s string) (float64, error) {
 
 	k := strings.IndexAny(s, "pP")
 	if k != -1 {
-		i, err := gostrconv.ParseInt(s[:k], 16, 64)
+		i, err := strconv.ParseInt(s[:k], 16, 64)
 		if err != nil {
 			return 0, unwrap(err)
 		}
 
-		e, err := gostrconv.ParseInt(s[k+1:], 10, 64)
+		e, err := strconv.ParseInt(s[k+1:], 10, 64)
 		if err != nil {
 			return 0, unwrap(err)
 		}
@@ -207,7 +207,7 @@ func parseHexFloat(s string) (float64, error) {
 		return float64(i) * math.Pow(2, float64(e)), nil
 	}
 
-	i, err := gostrconv.ParseInt(s, 16, 64)
+	i, err := strconv.ParseInt(s, 16, 64)
 	if err != nil {
 		return 0, unwrap(err)
 	}
@@ -233,5 +233,5 @@ func unwrap(err error) error {
 		return nil
 	}
 
-	return err.(*gostrconv.NumError).Err
+	return err.(*strconv.NumError).Err
 }
