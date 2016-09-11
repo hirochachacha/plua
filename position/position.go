@@ -5,7 +5,10 @@ import (
 	"strings"
 )
 
-var NoPos Position
+var NoPos = Position{
+	Line:   -1,
+	Column: -1,
+}
 
 type Position struct {
 	Filename string

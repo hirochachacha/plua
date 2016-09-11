@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/position"
 )
 
 // call a closure by stack index.
@@ -144,8 +145,11 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 		if err.Level > 0 {
 			d := th.getInfo(err.Level, "Sl")
 			if d != nil {
-				err.Pos.Filename = "@" + d.ShortSource
-				err.Pos.Line = d.CurrentLine
+				err.Traceback = append(err.Traceback, position.Position{
+					Filename: "@" + d.ShortSource,
+					Line:     d.CurrentLine,
+					Column:   -1,
+				})
 			}
 		}
 	}
@@ -213,8 +217,11 @@ func (th *thread) callvGo(fn object.GoFunction, args ...object.Value) (rets []ob
 		if err.Level > 0 {
 			d := th.getInfo(err.Level, "Sl")
 			if d != nil {
-				err.Pos.Filename = "@" + d.ShortSource
-				err.Pos.Line = d.CurrentLine
+				err.Traceback = append(err.Traceback, position.Position{
+					Filename: "@" + d.ShortSource,
+					Line:     d.CurrentLine,
+					Column:   -1,
+				})
 			}
 		}
 	}
