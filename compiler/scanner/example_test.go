@@ -8,12 +8,12 @@ import (
 )
 
 func ExampleHello() {
-	f, err := os.Open("testdata/hello.lua")
+	f, err := os.Open("testdata/example.lua")
 	if err != nil {
 		panic(err)
 	}
 
-	s := NewScanner(f, "hello.lua", 0)
+	s := NewScanner(f, "@example.lua", 0)
 
 	for {
 		tok := s.Scan()

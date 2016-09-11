@@ -413,14 +413,13 @@ func (p *parser) isEndOfBlock() bool {
 func (p *parser) parseStmtList() []ast.Stmt {
 	var list []ast.Stmt
 
-loop:
 	for {
-		switch p.tok.Type {
-		case token.EOF, token.ELSE, token.ELSEIF, token.END, token.UNTIL:
-			break loop
-		case token.RETURN:
+		if p.isEndOfBlock() {
+			break
+		}
+		if p.tok.Type == token.RETURN {
 			list = append(list, p.parseReturnStmt())
-			break loop
+			break
 		}
 		list = append(list, p.parseStmt())
 	}
@@ -441,10 +440,15 @@ func (p *parser) parseThenBlock() *ast.Block {
 
 	var closing position.Position
 
-	if p.tok.Type == token.ELSEIF || p.tok.Type == token.ELSE {
+	switch p.tok.Type {
+	case token.ELSEIF:
 		closing = p.tok.Pos
-	} else {
-		closing = p.expect(token.END).OffsetColumn(3)
+	case token.ELSE:
+		closing = p.tok.Pos
+	case token.END:
+		closing = p.tok.Pos.OffsetColumn(3)
+	default:
+		p.errorExpected(p.tok, "ELSEIF, ELSE or END")
 	}
 
 	return &ast.Block{
@@ -468,8 +472,8 @@ func (p *parser) parseRepeatBlock() *ast.Block {
 	}
 }
 
-func (p *parser) parseBlock() *ast.Block {
-	opening := p.skip()
+func (p *parser) parseDoBlockEnd() *ast.Block {
+	opening := p.expect(token.DO)
 
 	list := p.parseStmtList()
 
@@ -1088,7 +1092,7 @@ func (p *parser) parseBreak() ast.Stmt {
 }
 
 func (p *parser) parseDoStmt() *ast.DoStmt {
-	body := p.parseBlock()
+	body := p.parseDoBlockEnd()
 
 	return &ast.DoStmt{
 		Body: body,
@@ -1121,7 +1125,7 @@ func (p *parser) parseWhileStmt() *ast.WhileStmt {
 
 	p.allowBreak = true
 
-	body := p.parseBlock()
+	body := p.parseDoBlockEnd()
 
 	p.allowBreak = old
 
@@ -1171,7 +1175,19 @@ func (p *parser) parseIfStmt() *ast.IfStmt {
 	}
 
 	if p.tok.Type == token.ELSE {
-		last.Else = p.parseBlock()
+		opening := p.skip()
+
+		list := p.parseStmtList()
+
+		closing := p.expect(token.END).OffsetColumn(3)
+
+		last.Else = &ast.Block{
+			Opening: opening,
+			List:    list,
+			Closing: closing,
+		}
+	} else {
+		p.expect(token.END)
 	}
 
 	return ifRoot
@@ -1225,7 +1241,7 @@ func (p *parser) parseForStmt() ast.Stmt {
 
 		p.allowBreak = true
 
-		body := p.parseBlock()
+		body := p.parseDoBlockEnd()
 
 		p.allowBreak = old
 
@@ -1248,7 +1264,7 @@ foreach:
 
 		p.allowBreak = true
 
-		body := p.parseBlock()
+		body := p.parseDoBlockEnd()
 
 		p.allowBreak = old
 

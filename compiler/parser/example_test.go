@@ -1,19 +1,20 @@
-package parser
+package parser_test
 
 import (
 	"os"
 
 	"github.com/hirochachacha/plua/compiler/ast/printer"
+	"github.com/hirochachacha/plua/compiler/parser"
 	"github.com/hirochachacha/plua/compiler/scanner"
 )
 
 func ExampleHello() {
-	f, err := os.Open("testdata/hello.lua")
+	f, err := os.Open("testdata/example.lua")
 	if err != nil {
 		panic(err)
 	}
 
-	ast, err := Parse(scanner.NewScanner(f, "hello.lua", 0), 0)
+	ast, err := parser.Parse(scanner.NewScanner(f, "@hello.lua", 0), 0)
 	if err != nil {
 		panic(err)
 	}
