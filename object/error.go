@@ -38,14 +38,25 @@ func (err *RuntimeError) Error() string {
 			msg += tb.String()
 		}
 		if len(err.Traceback) > 1 {
-			msg += " via "
+			var valid bool
+
 			for _, tb := range err.Traceback[1:] {
 				if tb.IsValid() {
-					msg += tb.String() + ", "
+					valid = true
+					break
 				}
 			}
-			if i := strings.LastIndex(msg, ", "); i > 0 {
-				msg = msg[:i]
+
+			if valid {
+				msg += " via "
+				for _, tb := range err.Traceback[1:] {
+					if tb.IsValid() {
+						msg += tb.String() + ", "
+					}
+				}
+				if strings.HasSuffix(msg, ", ") {
+					msg = msg[:len(msg)-2]
+				}
 			}
 		}
 	}

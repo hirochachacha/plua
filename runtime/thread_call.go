@@ -1,9 +1,6 @@
 package runtime
 
-import (
-	"github.com/hirochachacha/plua/object"
-	"github.com/hirochachacha/plua/position"
-)
+import "github.com/hirochachacha/plua/object"
 
 // call a closure by stack index.
 func (th *thread) callLua(c object.Closure, f, nargs, nrets int) (err *object.RuntimeError) {
@@ -142,16 +139,7 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 
 	rets, err := fn(th, args...)
 	if err != nil {
-		if err.Level > 0 {
-			d := th.getInfo(err.Level, "Sl")
-			if d != nil {
-				err.Traceback = append(err.Traceback, position.Position{
-					Filename: "@" + d.ShortSource,
-					Line:     d.CurrentLine,
-					Column:   -1,
-				})
-			}
-		}
+		th.error(err, true)
 	}
 
 	ctx.stackEnsure(len(rets))
@@ -214,16 +202,7 @@ func (th *thread) callvGo(fn object.GoFunction, args ...object.Value) (rets []ob
 
 	rets, err = fn(th, args...)
 	if err != nil {
-		if err.Level > 0 {
-			d := th.getInfo(err.Level, "Sl")
-			if d != nil {
-				err.Traceback = append(err.Traceback, position.Position{
-					Filename: "@" + d.ShortSource,
-					Line:     d.CurrentLine,
-					Column:   -1,
-				})
-			}
-		}
+		th.error(err, true)
 	}
 
 	ctx.stack[1] = old

@@ -125,10 +125,13 @@ func (th *thread) varinfo(x object.Value) string {
 	return ""
 }
 
-func (th *thread) error(err *object.RuntimeError) {
+func (th *thread) error(err *object.RuntimeError, external bool) {
 	if th.status != object.THREAD_ERROR {
 		if err.Level > 0 {
 			l := err.Level - 1
+			if external {
+				l++
+			}
 			for {
 				d := th.getInfo(l, "Sl")
 				if d == nil {
