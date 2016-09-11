@@ -478,6 +478,50 @@ func (ap *ArgParser) ArgError(n int, extramsg string) *object.RuntimeError {
 		}
 	}
 
+	if d.Name == "" {
+		loaded := ap.th.Loaded()
+
+		var key object.Value
+		var val object.Value
+		var ok bool
+		for {
+			key, val, ok = loaded.Next(key)
+			if !ok {
+				break
+			}
+
+			if modname, ok := key.(object.String); ok {
+				if module, ok := val.(object.Table); ok {
+					var mkey object.Value
+					var mval object.Value
+					var mok bool
+					for {
+						mkey, mval, mok = module.Next(mkey)
+						if !mok {
+							break
+						}
+
+						if fname, ok := mkey.(object.String); ok {
+							if object.Equal(mval, ap.th.Func()) {
+								if modname == "_G" {
+									d.Name = string(fname)
+								} else {
+									d.Name = string(modname) + "." + string(fname)
+								}
+
+								goto found
+							}
+						}
+					}
+				}
+			}
+		}
+
+		d.Name = "?"
+
+	found:
+	}
+
 	return object.NewRuntimeError(fmt.Sprintf("bad argument #%d to '%s' (%s)", n, d.Name, extramsg))
 }
 
