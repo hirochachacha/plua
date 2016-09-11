@@ -1,3 +1,7 @@
+1. If the file header includes LICENSE, you should follow that.
+2. The runtime directory has own LICENSE.
+3. Otherwise:
+
 Copyright (c) 2016 Hiroshi Ioka. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
