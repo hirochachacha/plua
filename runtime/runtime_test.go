@@ -36,6 +36,7 @@ var testExec = []struct {
 	end
 	return fib(10)
 	`, []object.Value{object.Integer(55)}},
+	{`return pcall(debug.getinfo, print, "X")`, []object.Value{object.False, object.String("bad argument #2 to 'debug.getinfo' (invalid option 'X')")}},
 }
 
 func TestExec(t *testing.T) {
@@ -48,6 +49,8 @@ func TestExec(t *testing.T) {
 		}
 
 		p := runtime.NewProcess()
+
+		p.Require("", stdlib.Open)
 
 		rets, err := p.Exec(proto)
 		if err != nil {

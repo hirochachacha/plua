@@ -483,10 +483,9 @@ func (ap *ArgParser) ArgError(n int, extramsg string) *object.RuntimeError {
 
 		var key object.Value
 		var val object.Value
-		var ok bool
 		for {
-			key, val, ok = loaded.Next(key)
-			if !ok {
+			key, val, _ = loaded.Next(key)
+			if val == nil {
 				break
 			}
 
@@ -494,10 +493,9 @@ func (ap *ArgParser) ArgError(n int, extramsg string) *object.RuntimeError {
 				if module, ok := val.(object.Table); ok {
 					var mkey object.Value
 					var mval object.Value
-					var mok bool
 					for {
-						mkey, mval, mok = module.Next(mkey)
-						if !mok {
+						mkey, mval, _ = module.Next(mkey)
+						if mval == nil {
 							break
 						}
 
