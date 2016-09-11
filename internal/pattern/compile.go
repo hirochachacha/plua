@@ -26,40 +26,30 @@ const (
 )
 
 type compiler struct {
-	pat         input
-	step        func(pos int) (r rune, width int)
-	pos         int
-	r           rune
-	typ         matchType
-	poffset     int
-	prefix      string
-	prefixBytes []byte
-	sets        []*rangeTable
-	nparens     int
+	pat     input
+	pos     int
+	r       rune
+	typ     matchType
+	poffset int
+	prefix  string
+	sets    []*rangeTable
+	nparens int
 }
 
-func newCompiler(pat input, byteMatch bool) *compiler {
-	if byteMatch {
-		return &compiler{
-			pat:  pat,
-			step: pat.stepByte,
-		}
-	}
-
+func newCompiler(pat input) *compiler {
 	return &compiler{
-		pat:  pat,
-		step: pat.stepRune,
+		pat: pat,
 	}
 }
 
 func (c *compiler) next() {
-	r, i := c.step(c.pos)
+	r, i := c.pat.stepRune(c.pos)
 	c.pos += i
 	c.r = r
 }
 
 func (c *compiler) peek() rune {
-	r, _ := c.step(c.pos)
+	r, _ := c.pat.stepRune(c.pos)
 
 	return r
 }
@@ -556,9 +546,9 @@ L:
 		c.typ |= matchFullLiteral
 
 		if c.typ&matchBeginning != 0 {
-			c.prefix, c.prefixBytes = c.pat.slices(1, c.poffset)
+			c.prefix = c.pat.slice(1, c.poffset)
 		} else {
-			c.prefix, c.prefixBytes = c.pat.slices(0, c.poffset)
+			c.prefix = c.pat.slice(0, c.poffset)
 		}
 
 		return
@@ -566,9 +556,9 @@ L:
 		c.typ |= matchPrefixLiteral
 
 		if c.typ&matchBeginning != 0 {
-			c.prefix, c.prefixBytes = c.pat.slices(1, c.poffset)
+			c.prefix = c.pat.slice(1, c.poffset)
 		} else {
-			c.prefix, c.prefixBytes = c.pat.slices(0, c.poffset)
+			c.prefix = c.pat.slice(0, c.poffset)
 		}
 	}
 

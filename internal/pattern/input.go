@@ -1,7 +1,6 @@
 package pattern
 
 import (
-	"bytes"
 	"strings"
 	"unicode/utf8"
 )
@@ -13,7 +12,7 @@ const endOfText rune = -1
 type input interface {
 	String() string
 	length() int
-	slices(i, j int) (string, []byte)
+	slice(i, j int) string
 	stepRune(pos int) (r rune, width int) // advance one rune
 	stepByte(pos int) (r rune, width int) // advance one byte
 	hasPrefix(m *machine) bool
@@ -24,119 +23,57 @@ type input interface {
 }
 
 // inputString scans a string.
-type inputString struct {
-	str string
+type inputString string
+
+func (s inputString) String() string {
+	return string(s)
 }
 
-func (i *inputString) String() string {
-	return i.str
+func (s inputString) length() int {
+	return len(s)
 }
 
-func (i *inputString) length() int {
-	return len(i.str)
+func (s inputString) slice(i, j int) string {
+	return string(s[i:j])
 }
 
-func (is *inputString) slices(i, j int) (string, []byte) {
-	s := is.str[i:j]
-	return s, []byte(s)
-}
-
-func (i *inputString) stepRune(pos int) (rune, int) {
-	if pos < len(i.str) {
-		c := i.str[pos]
+func (s inputString) stepRune(pos int) (rune, int) {
+	if pos < len(s) {
+		c := s[pos]
 		if c < utf8.RuneSelf {
 			return rune(c), 1
 		}
-		return utf8.DecodeRuneInString(i.str[pos:])
+		return utf8.DecodeRuneInString(string(s[pos:]))
 	}
 	return endOfText, 0
 }
 
-func (i *inputString) stepByte(pos int) (rune, int) {
-	if pos < len(i.str) {
-		return rune(i.str[pos]), 1
+func (s inputString) stepByte(pos int) (rune, int) {
+	if pos < len(s) {
+		return rune(s[pos]), 1
 	}
 	return endOfText, 0
 }
 
-func (i *inputString) hasPrefix(m *machine) bool {
-	return strings.HasPrefix(i.str, m.prefix)
+func (s inputString) hasPrefix(m *machine) bool {
+	return strings.HasPrefix(string(s), m.prefix)
 }
 
-func (i *inputString) isPrefix(m *machine) bool {
-	return i.str == m.prefix
+func (s inputString) isPrefix(m *machine) bool {
+	return string(s) == m.prefix
 }
 
-func (i *inputString) hasSuffix(m *machine) bool {
-	return strings.HasSuffix(i.str, m.prefix)
+func (s inputString) hasSuffix(m *machine) bool {
+	return strings.HasSuffix(string(s), m.prefix)
 }
 
-func (i *inputString) index(m *machine, pos int) int {
-	if pos >= len(i.str) {
+func (s inputString) index(m *machine, pos int) int {
+	if pos >= len(s) {
 		return -1
 	}
-	return strings.Index(i.str[pos:], m.prefix)
+	return strings.Index(string(s[pos:]), m.prefix)
 }
 
-func (i *inputString) submatch(begin, end, offset int) bool {
-	return i.str[begin:end] == i.str[offset:offset+end-begin]
-}
-
-// inputBytes scans a byte slice.
-type inputBytes struct {
-	str []byte
-}
-
-func (i *inputBytes) String() string {
-	return string(i.str)
-}
-
-func (i *inputBytes) length() int {
-	return len(i.str)
-}
-
-func (ib *inputBytes) slices(i, j int) (string, []byte) {
-	bs := ib.str[i:j]
-	return string(bs), bs
-}
-
-func (i *inputBytes) stepRune(pos int) (rune, int) {
-	if pos < len(i.str) {
-		c := i.str[pos]
-		if c < utf8.RuneSelf {
-			return rune(c), 1
-		}
-		return utf8.DecodeRune(i.str[pos:])
-	}
-	return endOfText, 0
-}
-
-func (i *inputBytes) stepByte(pos int) (rune, int) {
-	if pos < len(i.str) {
-		return rune(i.str[pos]), 1
-	}
-	return endOfText, 0
-}
-
-func (i *inputBytes) hasPrefix(m *machine) bool {
-	return bytes.HasPrefix(i.str, m.prefixBytes)
-}
-
-func (i *inputBytes) isPrefix(m *machine) bool {
-	return bytes.Equal(i.str, m.prefixBytes)
-}
-
-func (i *inputBytes) hasSuffix(m *machine) bool {
-	return bytes.HasSuffix(i.str, m.prefixBytes)
-}
-
-func (i *inputBytes) index(m *machine, pos int) int {
-	if pos >= len(i.str) {
-		return -1
-	}
-	return bytes.Index(i.str[pos:], m.prefixBytes)
-}
-
-func (i *inputBytes) submatch(begin, end, offset int) bool {
-	return bytes.Equal(i.str[begin:end], i.str[offset:offset+end-begin])
+func (s inputString) submatch(begin, end, offset int) bool {
+	return s[begin:end] == s[offset:offset+end-begin]
 }

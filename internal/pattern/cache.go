@@ -80,45 +80,6 @@ func (c *Cache) GetOrCompile(pattern string) (*Pattern, error) {
 	return pat, nil
 }
 
-func (c *Cache) GetOrCompileBytes(pattern []byte, byteMatch bool) (*Pattern, error) {
-	var key string
-	if byteMatch {
-		key = bytesPrefix + string(pattern)
-	} else {
-		key = stringPrefix + string(pattern)
-	}
-
-	if atomic.CompareAndSwapInt32(&c.used, 0, 1) {
-		defer atomic.StoreInt32(&c.used, 0)
-
-		if e, ok := c.m[key]; ok {
-			return e.val, nil
-		}
-
-		pat, err := CompileBytes(pattern, byteMatch)
-		if err != nil {
-			return nil, err
-		}
-
-		c.set(key, pat)
-
-		return pat, nil
-	}
-
-	pat, err := Compile(key)
-	if err != nil {
-		return nil, err
-	}
-
-	if atomic.CompareAndSwapInt32(&c.used, 0, 1) {
-		c.set(key, pat)
-
-		atomic.StoreInt32(&c.used, 0)
-	}
-
-	return pat, nil
-}
-
 type list struct {
 	first *element
 	last  *element

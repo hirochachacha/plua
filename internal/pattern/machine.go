@@ -102,11 +102,9 @@ func (q *queue) clear() {
 }
 
 type machine struct {
-	byteMatch   bool
-	typ         matchType
-	prefix      string
-	prefixBytes []byte
-	insts       []inst
+	typ    matchType
+	prefix string
+	insts  []inst
 
 	preds predicates
 
@@ -395,18 +393,11 @@ func (m *machine) matchFrom(input input, pos int) [][2]int {
 	_cap[0][0] = pos
 	stack := make([]int, m.ncaps)
 
-	var step func(pos int) (r rune, width int)
-	if m.byteMatch {
-		step = input.stepByte
-	} else {
-		step = input.stepRune
-	}
-
 	m.current.clear()
 
 	m.addThread(m.current, 0, _cap, stack, 0, ioffset)
 	for {
-		r, i = step(ioffset)
+		r, i = input.stepRune(ioffset)
 
 		if len(m.current.dense) == 0 {
 			break
