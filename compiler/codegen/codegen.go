@@ -1,6 +1,8 @@
 package codegen
 
 import (
+	"fmt"
+
 	"github.com/hirochachacha/plua/compiler/ast"
 	"github.com/hirochachacha/plua/internal/strconv"
 	"github.com/hirochachacha/plua/object"
@@ -432,12 +434,12 @@ func (g *generator) pushReturn() {
 	g.LineInfo = append(g.LineInfo, g.LastLineDefined)
 }
 
-func unquoteString(g string) string {
-	g, err := strconv.Unquote(g)
+func unquoteString(s string) string {
+	us, err := strconv.Unquote(s)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to unquote %s, err: %v", s, err))
 	}
-	return g
+	return us
 }
 
 func parseInteger(g string) (ret object.Integer, inf int) {
