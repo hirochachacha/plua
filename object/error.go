@@ -1,6 +1,10 @@
 package object
 
-import "github.com/hirochachacha/plua/position"
+import (
+	"strings"
+
+	"github.com/hirochachacha/plua/position"
+)
 
 type RuntimeError struct {
 	Value     Value
@@ -9,7 +13,7 @@ type RuntimeError struct {
 }
 
 func NewRuntimeError(msg string) *RuntimeError {
-	return &RuntimeError{Value: String(msg)}
+	return &RuntimeError{Value: String(msg), Level: 1}
 }
 
 func (err *RuntimeError) Positioned() Value {
@@ -29,9 +33,19 @@ func (err *RuntimeError) Error() string {
 	msg := Repr(err.Value)
 	if len(err.Traceback) > 0 {
 		msg = msg + " raised from "
-		for _, tb := range err.Traceback {
-			if tb.IsValid() {
-				msg += tb.String() + ", "
+		tb := err.Traceback[0]
+		if tb.IsValid() {
+			msg += tb.String()
+		}
+		if len(err.Traceback) > 1 {
+			msg += " via "
+			for _, tb := range err.Traceback[1:] {
+				if tb.IsValid() {
+					msg += tb.String() + ", "
+				}
+			}
+			if i := strings.LastIndex(msg, ", "); i > 0 {
+				msg = msg[:i]
 			}
 		}
 	}

@@ -143,13 +143,19 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 	rets, err := fn(th, args...)
 	if err != nil {
 		if err.Level > 0 {
-			d := th.getInfo(err.Level, "Sl")
-			if d != nil {
+			l := err.Level
+			for {
+				d := th.getInfo(l, "Sl")
+				if d == nil {
+					break
+				}
 				err.Traceback = append(err.Traceback, position.Position{
 					Filename: "@" + d.ShortSource,
 					Line:     d.CurrentLine,
 					Column:   -1,
 				})
+
+				l++
 			}
 		}
 	}
@@ -215,13 +221,19 @@ func (th *thread) callvGo(fn object.GoFunction, args ...object.Value) (rets []ob
 	rets, err = fn(th, args...)
 	if err != nil {
 		if err.Level > 0 {
-			d := th.getInfo(err.Level, "Sl")
-			if d != nil {
+			l := err.Level
+			for {
+				d := th.getInfo(l, "Sl")
+				if d == nil {
+					break
+				}
 				err.Traceback = append(err.Traceback, position.Position{
 					Filename: "@" + d.ShortSource,
 					Line:     d.CurrentLine,
 					Column:   -1,
 				})
+
+				l++
 			}
 		}
 	}
