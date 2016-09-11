@@ -304,9 +304,13 @@ func GSub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 
 	switch repl := repl.(type) {
 	case object.GoFunction, object.Closure:
+		var rerr *object.RuntimeError
+
 		replfn := func(s string) string {
-			rets, err := th.Call(repl, object.String(s))
-			if err != nil {
+			var rets []object.Value
+
+			rets, rerr = th.Call(repl, nil, object.String(s))
+			if rerr != nil {
 				return ""
 			}
 
@@ -321,6 +325,10 @@ func GSub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		ret, err := pattern.ReplaceFuncString(s, replfn, n)
 		if err != nil {
 			return nil, object.NewRuntimeError(e.Error())
+		}
+
+		if rerr != nil {
+			return nil, rerr
 		}
 
 		return []object.Value{object.String(ret)}, nil
