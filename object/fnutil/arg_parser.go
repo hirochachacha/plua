@@ -502,7 +502,7 @@ func (ap *ArgParser) ArgError(n int, extramsg string) *object.RuntimeError {
 						}
 
 						if fname, ok := mkey.(object.String); ok {
-							if object.Equal(mval, ap.th.Func()) {
+							if object.Equal(mval, d.Func) {
 								if modname == "_G" {
 									d.Name = string(fname)
 								} else {

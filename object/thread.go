@@ -45,8 +45,6 @@ type Thread interface {
 
 	// ↓ for debug support
 
-	Func() Value // returns top level Closure or GoFunction
-
 	GetInfo(level int, what string) *DebugInfo
 	GetInfoByFunc(fn Value, what string) *DebugInfo
 

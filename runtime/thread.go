@@ -132,10 +132,6 @@ func (th *thread) NewChannel(capacity int) object.Channel {
 	return newChannel(capacity)
 }
 
-func (th *thread) Func() object.Value {
-	return th.fn()
-}
-
 func (th *thread) Globals() object.Table {
 	return th.env.globals
 }
