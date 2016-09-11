@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	// "fmt"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/opcode"
 )

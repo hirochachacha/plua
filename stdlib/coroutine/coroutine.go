@@ -3,7 +3,6 @@ package coroutine
 import (
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/object/fnutil"
-	// "fmt"
 )
 
 func Create(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {

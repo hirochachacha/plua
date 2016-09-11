@@ -1,7 +1,6 @@
 package string
 
 import (
-	// "fmt"
 	"strings"
 	"unicode/utf8"
 

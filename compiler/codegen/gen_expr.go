@@ -1,8 +1,6 @@
 package codegen
 
 import (
-	// "fmt"
-
 	"github.com/hirochachacha/plua/compiler/ast"
 	"github.com/hirochachacha/plua/compiler/token"
 	"github.com/hirochachacha/plua/internal/version"

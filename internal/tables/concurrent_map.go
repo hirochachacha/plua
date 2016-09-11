@@ -6,7 +6,6 @@ package tables
 // http://creativecommons.org/licenses/publicdomain
 
 import (
-	// "fmt"
 	"sync"
 	"sync/atomic"
 	"unsafe"

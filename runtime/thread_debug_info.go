@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	// "fmt"
 	"strings"
 
 	"github.com/hirochachacha/plua/internal/version"

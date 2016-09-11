@@ -1,7 +1,6 @@
 package codegen
 
 import (
-	// "fmt"
 	"github.com/hirochachacha/plua/compiler/ast"
 	"github.com/hirochachacha/plua/internal/strconv"
 	"github.com/hirochachacha/plua/object"

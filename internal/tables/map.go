@@ -1,7 +1,6 @@
 package tables
 
 import (
-	// "fmt"
 	"unsafe"
 
 	"github.com/hirochachacha/plua/internal/hash"
