@@ -33,18 +33,18 @@ func MatchString(pat, input string) ([]string, error) {
 	return p.MatchString(input), nil
 }
 
-func ReplaceString(pat, input, repl string, n int) (string, error) {
+func ReplaceString(pat, input, repl string, n int) (string, int, error) {
 	p, err := Compile(pat)
 	if err != nil {
-		return "", err
+		return "", -1, err
 	}
 	return p.ReplaceString(input, repl, n)
 }
 
-func ReplaceFuncString(pat, input string, repl func(string) string, n int) (string, error) {
+func ReplaceFuncString(pat, input string, repl func(string) string, n int) (string, int, error) {
 	p, err := Compile(pat)
 	if err != nil {
-		return "", err
+		return "", -1, err
 	}
 	return p.ReplaceFuncString(input, repl, n)
 }
@@ -124,11 +124,11 @@ func (p *Pattern) MatchStringAll(pat string) [][]string {
 	return rets
 }
 
-func (p *Pattern) ReplaceString(pat, repl string, n int) (string, error) {
+func (p *Pattern) ReplaceString(pat, repl string, n int) (string, int, error) {
 	indiceses := p.m.findAll(inputString(pat))
 
 	if indiceses == nil {
-		return pat, nil
+		return pat, 0, nil
 	}
 
 	isLiteral := strings.IndexRune(repl, '%') == -1
@@ -170,17 +170,17 @@ func (p *Pattern) ReplaceString(pat, repl string, n int) (string, error) {
 				buf.WriteString(repl[start:end])
 
 				if len(repl) == end {
-					return "", errMalformedPattern
+					return "", -1, errMalformedPattern
 				}
 
 				d := repl[end+1]
 				if !('1' <= d && d <= '9') {
-					return "", errInvalidCapture
+					return "", -1, errInvalidCapture
 				}
 
 				i := int(d - '0')
 				if i >= len(indices) {
-					return "", errInvalidCapture
+					return "", -1, errInvalidCapture
 				}
 
 				buf.WriteString(pat[indices[i][0]:indices[i][1]])
@@ -198,14 +198,14 @@ func (p *Pattern) ReplaceString(pat, repl string, n int) (string, error) {
 
 	buf.WriteString(pat[i:])
 
-	return buf.String(), nil
+	return buf.String(), len(indiceses), nil
 }
 
-func (p *Pattern) ReplaceFuncString(pat string, repl func(string) string, n int) (string, error) {
+func (p *Pattern) ReplaceFuncString(pat string, repl func(string) string, n int) (string, int, error) {
 	indiceses := p.m.findAll(inputString(pat))
 
 	if indiceses == nil {
-		return pat, nil
+		return pat, 0, nil
 	}
 
 	var buf bytes.Buffer
@@ -226,5 +226,5 @@ func (p *Pattern) ReplaceFuncString(pat string, repl func(string) string, n int)
 
 	buf.WriteString(pat[i:])
 
-	return buf.String(), nil
+	return buf.String(), len(indiceses), nil
 }

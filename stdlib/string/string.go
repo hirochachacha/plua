@@ -322,7 +322,7 @@ func GSub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			return ""
 		}
 
-		ret, err := pattern.ReplaceFuncString(s, replfn, n)
+		ret, count, err := pattern.ReplaceFuncString(s, replfn, n)
 		if err != nil {
 			return nil, object.NewRuntimeError(e.Error())
 		}
@@ -331,7 +331,7 @@ func GSub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			return nil, rerr
 		}
 
-		return []object.Value{object.String(ret)}, nil
+		return []object.Value{object.String(ret), object.Integer(count)}, nil
 	case object.Table:
 		replfn := func(s string) string {
 			val := repl.Get(object.String(s))
@@ -341,20 +341,20 @@ func GSub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			return ""
 		}
 
-		ret, err := pattern.ReplaceFuncString(s, replfn, n)
+		ret, count, err := pattern.ReplaceFuncString(s, replfn, n)
 		if err != nil {
 			return nil, object.NewRuntimeError(e.Error())
 		}
 
-		return []object.Value{object.String(ret)}, nil
+		return []object.Value{object.String(ret), object.Integer(count)}, nil
 	default:
 		if repl, ok := object.ToGoString(repl); ok {
-			ret, err := pattern.ReplaceString(s, repl, n)
+			ret, count, err := pattern.ReplaceString(s, repl, n)
 			if err != nil {
 				return nil, object.NewRuntimeError(e.Error())
 			}
 
-			return []object.Value{object.String(ret)}, nil
+			return []object.Value{object.String(ret), object.Integer(count)}, nil
 		}
 
 		return nil, ap.TypeError(2, "string/function/table")
