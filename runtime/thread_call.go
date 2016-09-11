@@ -293,6 +293,13 @@ func (th *thread) docallv(fn, errh object.Value, args ...object.Value) (rets []o
 	case nil:
 		return th.dohandle(errh, th.callError(fn))
 	case object.GoFunction:
+		switch errh.(type) {
+		case nil:
+		case object.GoFunction, object.Closure:
+		default:
+			panic("error handler is not a function")
+		}
+
 		rets, err := th.callvGo(fn, args...)
 		if err != nil {
 			if errh == nil {
