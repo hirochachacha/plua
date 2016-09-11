@@ -11,7 +11,7 @@ import (
 )
 
 // assert(v [, message], ...) -> ((v [, message], ...) | panic)
-func Assert(th object.Thread, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
+func assert(th object.Thread, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	ok, err := ap.ToGoBool(0)
@@ -32,7 +32,7 @@ func Assert(th object.Thread, args ...object.Value) (rets []object.Value, err *o
 }
 
 // collectgarbage([opt [, arg]])
-func CollectGarbage(th object.Thread, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
+func collectgarbage(th object.Thread, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	opt := "collect"
@@ -49,36 +49,28 @@ func CollectGarbage(th object.Thread, args ...object.Value) (rets []object.Value
 		runtime.GC()
 		return []object.Value{object.Integer(0)}, nil
 	case "stop":
-		// do nothing
-		return []object.Value{object.Integer(0)}, nil
+		return nil, object.NewRuntimeError("not implemented")
 	case "restart":
-		// do nothing
-		return []object.Value{object.Integer(0)}, nil
+		return nil, object.NewRuntimeError("not implemented")
 	case "count":
 		m := runtime.MemStats{}
 		runtime.ReadMemStats(&m)
 		return []object.Value{object.Number(m.Alloc / 1024.0)}, nil
 	case "step":
-		runtime.GC()
-		return []object.Value{object.True}, nil
+		return nil, object.NewRuntimeError("not implemented")
 	case "setpause":
-		// do nothing
-		return []object.Value{object.Integer(-1)}, nil
+		return nil, object.NewRuntimeError("not implemented")
 	case "setstepmul":
-		return []object.Value{object.Integer(-1)}, nil
+		return nil, object.NewRuntimeError("not implemented")
 	case "isrunning":
 		return []object.Value{object.True}, nil
-	case "generational":
-		// do nothing
-	case "incremental":
-		// do nothing
 	}
 
 	return nil, ap.OptionError(1, opt)
 }
 
 // dofile([filename]) -> (... | panic)
-func DoFile(th object.Thread, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
+func dofile(th object.Thread, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	fname := ""
@@ -104,7 +96,7 @@ func DoFile(th object.Thread, args ...object.Value) (rets []object.Value, err *o
 }
 
 // error(message [, level]) -> panic
-func Error(th object.Thread, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
+func _error(th object.Thread, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	val, ok := ap.Get(0)
@@ -125,7 +117,7 @@ func Error(th object.Thread, args ...object.Value) (rets []object.Value, err *ob
 }
 
 // getmetatable(object) -> Value
-func GetMetatable(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func getmetatable(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	val, err := ap.ToValue(0)
@@ -194,7 +186,7 @@ func makeINext(tm object.Value) object.GoFunction {
 }
 
 // ipairs(t) -> (inext, t, 0)
-func IPairs(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func iPairs(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	t, err := ap.ToValue(0)
@@ -220,7 +212,7 @@ func IPairs(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 }
 
 // next(t, key) -> (nkey, val)
-func Next(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func next(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	t, err := ap.ToTable(0)
@@ -246,7 +238,7 @@ func Next(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 }
 
 // pairs(t) -> (next, t, nil)
-func Pairs(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func pairs(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	t, err := ap.ToValue(0)
@@ -268,11 +260,11 @@ func Pairs(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 		return nil, err
 	}
 
-	return []object.Value{object.GoFunction(Next), t, nil}, nil
+	return []object.Value{object.GoFunction(next), t, nil}, nil
 }
 
 // loadfile(fname [, mode [, env]]]) -> (closure | (nil, errmessage))
-func LoadFile(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func loadFile(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	fname, err := ap.OptGoString(0, "")
@@ -313,7 +305,7 @@ func LoadFile(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 }
 
 // load(chunk [, chunkname [, mode [, env]]]) -> (closure | (nil, errmessage))
-func Load(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func load(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	s, err := ap.ToTypes(0, object.TSTRING, object.TFUNCTION)
@@ -382,7 +374,7 @@ func Load(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{cl}, nil
 }
 
-func Print(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func _print(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	if len(args) == 0 {
 		fmt.Println("")
 
@@ -429,7 +421,7 @@ func Print(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 	return nil, nil
 }
 
-func PCall(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func pcall(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	fn, err := ap.ToFunction(0)
@@ -445,7 +437,7 @@ func PCall(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 	return append([]object.Value{object.True}, rets...), nil
 }
 
-func RawEqual(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func rawequal(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	x, err := ap.ToValue(0)
@@ -461,7 +453,7 @@ func RawEqual(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 	return []object.Value{object.Boolean(object.Equal(x, y))}, nil
 }
 
-func RawLen(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func rawlen(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	x, err := ap.ToTypes(0, object.TSTRING, object.TTABLE)
@@ -479,7 +471,7 @@ func RawLen(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	return nil, nil
 }
 
-func RawGet(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func rawget(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	t, err := ap.ToTable(0)
@@ -495,7 +487,7 @@ func RawGet(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	return []object.Value{t.Get(key)}, nil
 }
 
-func RawSet(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func rawset(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	t, err := ap.ToTable(0)
@@ -518,7 +510,7 @@ func RawSet(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	return []object.Value{t}, nil
 }
 
-func Select(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func _select(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	i, err := ap.ToGoInt(0)
@@ -550,7 +542,7 @@ func Select(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 }
 
 // setmetatable(table, metatable) -> table
-func SetMetatable(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func setmetatable(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	t, err := ap.ToTable(0)
@@ -579,7 +571,7 @@ func SetMetatable(th object.Thread, args ...object.Value) ([]object.Value, *obje
 	return []object.Value{t}, nil
 }
 
-func ToNumber(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func tonumber(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	val, err := ap.ToValue(0)
@@ -598,7 +590,7 @@ func ToNumber(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 	return nil, nil
 }
 
-func ToString(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func tostring(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	val, err := ap.ToValue(0)
@@ -617,7 +609,7 @@ func ToString(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 	return []object.Value{object.String(object.Repr(val))}, nil
 }
 
-func Type(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func _type(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	val, err := ap.ToValue(0)
@@ -628,7 +620,7 @@ func Type(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{object.String(object.ToType(val).String())}, nil
 }
 
-func XPCall(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func xpcall(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToFunction(0)
@@ -654,28 +646,28 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 
 	g.Set(object.String("_G"), g)
 	g.Set(object.String("_VERSION"), object.String(version.LUA_NAME))
-	g.Set(object.String("assert"), object.GoFunction(Assert))
-	g.Set(object.String("collectgarbage"), object.GoFunction(CollectGarbage))
-	g.Set(object.String("dofile"), object.GoFunction(DoFile))
-	g.Set(object.String("error"), object.GoFunction(Error))
-	g.Set(object.String("getmetatable"), object.GoFunction(GetMetatable))
-	g.Set(object.String("ipairs"), object.GoFunction(IPairs))
-	g.Set(object.String("loadfile"), object.GoFunction(LoadFile))
-	g.Set(object.String("load"), object.GoFunction(Load))
-	g.Set(object.String("next"), object.GoFunction(Next))
-	g.Set(object.String("pairs"), object.GoFunction(Pairs))
-	g.Set(object.String("pcall"), object.GoFunction(PCall))
-	g.Set(object.String("print"), object.GoFunction(Print))
-	g.Set(object.String("rawequal"), object.GoFunction(RawEqual))
-	g.Set(object.String("rawlen"), object.GoFunction(RawLen))
-	g.Set(object.String("rawget"), object.GoFunction(RawGet))
-	g.Set(object.String("rawset"), object.GoFunction(RawSet))
-	g.Set(object.String("select"), object.GoFunction(Select))
-	g.Set(object.String("setmetatable"), object.GoFunction(SetMetatable))
-	g.Set(object.String("tonumber"), object.GoFunction(ToNumber))
-	g.Set(object.String("tostring"), object.GoFunction(ToString))
-	g.Set(object.String("type"), object.GoFunction(Type))
-	g.Set(object.String("xpcall"), object.GoFunction(XPCall))
+	g.Set(object.String("assert"), object.GoFunction(assert))
+	g.Set(object.String("collectgarbage"), object.GoFunction(collectgarbage))
+	g.Set(object.String("dofile"), object.GoFunction(dofile))
+	g.Set(object.String("error"), object.GoFunction(_error))
+	g.Set(object.String("getmetatable"), object.GoFunction(getmetatable))
+	g.Set(object.String("ipairs"), object.GoFunction(iPairs))
+	g.Set(object.String("loadfile"), object.GoFunction(loadFile))
+	g.Set(object.String("load"), object.GoFunction(load))
+	g.Set(object.String("next"), object.GoFunction(next))
+	g.Set(object.String("pairs"), object.GoFunction(pairs))
+	g.Set(object.String("pcall"), object.GoFunction(pcall))
+	g.Set(object.String("print"), object.GoFunction(_print))
+	g.Set(object.String("rawequal"), object.GoFunction(rawequal))
+	g.Set(object.String("rawlen"), object.GoFunction(rawlen))
+	g.Set(object.String("rawget"), object.GoFunction(rawget))
+	g.Set(object.String("rawset"), object.GoFunction(rawset))
+	g.Set(object.String("select"), object.GoFunction(_select))
+	g.Set(object.String("setmetatable"), object.GoFunction(setmetatable))
+	g.Set(object.String("tonumber"), object.GoFunction(tonumber))
+	g.Set(object.String("tostring"), object.GoFunction(tostring))
+	g.Set(object.String("type"), object.GoFunction(_type))
+	g.Set(object.String("xpcall"), object.GoFunction(xpcall))
 
 	return []object.Value{g}, nil
 }
