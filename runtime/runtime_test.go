@@ -25,6 +25,17 @@ var testExec = []struct {
 	{`function x() return 1 end; x(); return 2`, []object.Value{object.Integer(2)}},
 	{`local a = {1 = 10, 2, 3, 4 = 9}; return a[4]`, []object.Value{object.Integer(9)}},
 	{`a = {1 = 10, 2, 3, 4 = 9}; return #a`, []object.Value{object.Integer(2)}},
+	{`
+	function fib(n)
+	  if n == 0 then
+	  	return 0
+	  elseif n == 1 then
+	  	return 1
+	  end
+	  return fib(n-1) + fib(n-2)
+	end
+	return fib(10)
+	`, []object.Value{object.Integer(55)}},
 }
 
 func TestExec(t *testing.T) {
