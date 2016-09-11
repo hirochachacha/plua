@@ -50,14 +50,14 @@ const (
 )
 
 var (
-	errInvalidLongStringDelimiter       = errors.New("compiler/scanner: invalid long string delimiter")
-	errIllegalHexadecimalNumber         = errors.New("compiler/scanner: illegal hexadecimal number")
-	errInvalidEscapeSequence            = errors.New("compiler/scanner: escape sequence is invalid Unicode code point")
-	errUnknownEscapeSequence            = errors.New("compiler/scanner: unknown escape sequence")
-	errMissingBracketInEscapeSequence   = errors.New("compiler/scanner: missing bracket in escape sequence")
-	errIllegalCharacterInEscapeSequence = errors.New("compiler/scanner: illegal character in escape sequence")
-	errUnterminatedString               = errors.New("compiler/scanner: unterminated string literal")
-	errUnterminatedLongString           = errors.New("compiler/scanner: unterminated long string literal")
+	errInvalidLongStringDelimiter       = errors.New("invalid long string delimiter")
+	errIllegalHexadecimalNumber         = errors.New("illegal hexadecimal number")
+	errInvalidEscapeSequence            = errors.New("escape sequence is invalid Unicode code point")
+	errUnknownEscapeSequence            = errors.New("unknown escape sequence")
+	errMissingBracketInEscapeSequence   = errors.New("missing bracket in escape sequence")
+	errIllegalCharacterInEscapeSequence = errors.New("illegal character in escape sequence")
+	errUnterminatedString               = errors.New("unterminated string literal")
+	errUnterminatedLongString           = errors.New("unterminated long string literal")
 )
 
 type Mode uint
@@ -339,7 +339,7 @@ scanAgain:
 			typ = token.LEN
 		default:
 			s.next()
-			s.error(pos, fmt.Errorf("compiler/scanner: illegal character %c", ch))
+			s.error(pos, fmt.Errorf("illegal character %c", ch))
 			typ = token.ILLEGAL
 			lit = string(ch)
 		}
@@ -598,7 +598,7 @@ func (s *Scanner) skipEscape(quote int) {
 	default:
 		ch := s.ch
 		s.next() // always make progress
-		s.error(pos, fmt.Errorf("compiler/scanner: unknown escape sequence %c", ch))
+		s.error(pos, fmt.Errorf("unknown escape sequence %c", ch))
 
 		return
 	}
@@ -610,7 +610,7 @@ func (s *Scanner) skipEscape(quote int) {
 		if d >= base {
 			// if not unicode
 			if max != unicode.MaxRune {
-				s.error(pos, fmt.Errorf("compiler/scanner: illegal character %c in escape sequence", s.ch))
+				s.error(pos, fmt.Errorf("illegal character %c in escape sequence", s.ch))
 			}
 
 			break
@@ -618,7 +618,7 @@ func (s *Scanner) skipEscape(quote int) {
 
 		// check overflow
 		if x > (unicode.MaxRune-d)/base {
-			s.error(pos, fmt.Errorf("compiler/scanner: escape sequence is invalid Unicode code point %c", s.ch))
+			s.error(pos, fmt.Errorf("escape sequence is invalid Unicode code point %c", s.ch))
 
 			return
 		}
@@ -639,7 +639,7 @@ func (s *Scanner) skipEscape(quote int) {
 		s.next()
 
 		if 0xD800 <= x && x < 0xE000 {
-			s.error(pos, fmt.Errorf("compiler/scanner: escape sequence is invalid Unicode code point %c", s.ch))
+			s.error(pos, fmt.Errorf("escape sequence is invalid Unicode code point %c", s.ch))
 		}
 
 		return
@@ -872,7 +872,7 @@ func (s *Scanner) fill() {
 			return
 		}
 		if n < 0 {
-			panic("compiler/scanner: reader returned negative count from Read")
+			panic("reader returned negative count from Read")
 		}
 		s.end += n
 		if err != nil {

@@ -42,8 +42,8 @@ import (
 )
 
 var (
-	errIllegalVararg = errors.New("compiler/parser: cannot use '...' outside of vararg function")
-	errIllegalBreak  = errors.New("compiler/parser: cannot use 'break' outside of loop")
+	errIllegalVararg = errors.New("cannot use '...' outside of vararg function")
+	errIllegalBreak  = errors.New("cannot use 'break' outside of loop")
 )
 
 type Mode uint // currently, no mode are defined
@@ -256,7 +256,7 @@ func (p *parser) errorExpected(actual token.Token, expected string) {
 		found += " " + actual.Lit
 	}
 
-	p.error(actual.Pos, fmt.Errorf("compiler/parser: expected %s, found %s", expected, found))
+	p.error(actual.Pos, fmt.Errorf("expected %s, found %s", expected, found))
 }
 
 func (p *parser) expect(expected token.Type) position.Position {
@@ -668,7 +668,7 @@ func (p *parser) checkExpr(x ast.Expr) ast.Expr {
 	case *ast.BinaryExpr:
 	default:
 		// all other nodes are not proper expressions
-		p.error(x.Pos(), fmt.Errorf("compiler/parser: expected expression, found %T", x))
+		p.error(x.Pos(), fmt.Errorf("expected expression, found %T", x))
 
 		x = &ast.BadExpr{From: x.Pos(), To: x.End()}
 	}
@@ -699,7 +699,7 @@ func (p *parser) checkLHS(x ast.Expr) ast.Expr {
 
 error:
 	// all other nodes are not proper expressions
-	p.error(x.Pos(), fmt.Errorf("compiler/parser: expected LHS, found %T", x))
+	p.error(x.Pos(), fmt.Errorf("expected LHS, found %T", x))
 
 	x = &ast.BadExpr{From: x.Pos(), To: x.End()}
 
