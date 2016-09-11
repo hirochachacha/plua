@@ -3,6 +3,7 @@ package printer
 import (
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 
 	"github.com/hirochachacha/plua/compiler/ast"
@@ -18,6 +19,12 @@ type treeprinter struct {
 func (pr treeprinter) print(node ast.Node, prefix string, depth int) {
 	ind := strings.Repeat(treeIndent, depth)
 	nind := ind + treeIndent
+
+	if reflect.ValueOf(node).IsNil() {
+		fmt.Fprintf(pr.w, "%snil\n", prefix)
+
+		return
+	}
 
 	switch node := node.(type) {
 	case *ast.Comment:
@@ -105,11 +112,7 @@ func (pr treeprinter) print(node ast.Node, prefix string, depth int) {
 		fmt.Fprintf(pr.w, "%s%s { %s-%s\n", prefix, node.Type(), node.Pos(), node.End())
 		pr.print(node.X, fmt.Sprintf("%sX: ", nind), depth+1)
 		fmt.Fprintf(pr.w, "%sColon: %s\n", nind, node.Colon)
-		if node.Name != nil {
-			pr.print(node.Name, fmt.Sprintf("%sName: ", nind), depth+1)
-		} else {
-			fmt.Fprintf(pr.w, "%sName: nil\n", nind)
-		}
+		pr.print(node.Name, fmt.Sprintf("%sName: ", nind), depth+1)
 		fmt.Fprintf(pr.w, "%sLparen: %s\n", nind, node.Lparen)
 		fmt.Fprintf(pr.w, "%sArgs: {\n", nind)
 		for _, e := range node.Args {
@@ -256,11 +259,7 @@ func (pr treeprinter) print(node ast.Node, prefix string, depth int) {
 		fmt.Fprintf(pr.w, "%sEqual: %s\n", nind, node.Equal)
 		pr.print(node.Start, fmt.Sprintf("%sStart: ", nind), depth+1)
 		pr.print(node.Finish, fmt.Sprintf("%sFinish: ", nind), depth+1)
-		if node.Step != nil {
-			pr.print(node.Step, fmt.Sprintf("%sStep: ", nind), depth+1)
-		} else {
-			fmt.Fprintf(pr.w, "%sStep: nil\n", nind)
-		}
+		pr.print(node.Step, fmt.Sprintf("%sStep: ", nind), depth+1)
 		pr.print(node.Body, fmt.Sprintf("%sBody: ", nind), depth+1)
 		fmt.Fprintf(pr.w, "%s}\n", ind)
 	case *ast.ForEachStmt:
