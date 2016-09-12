@@ -66,7 +66,7 @@ func collectgarbage(th object.Thread, args ...object.Value) (rets []object.Value
 		return []object.Value{object.True}, nil
 	}
 
-	return nil, ap.OptionError(1, opt)
+	return nil, ap.OptionError(0, opt)
 }
 
 // dofile([filename]) -> (... | panic)
@@ -313,11 +313,17 @@ func load(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		return nil, err
 	}
 
-	chunk := ""
+	var chunk string
+	var chunkname string
 
 	switch s := s.(type) {
 	case object.String:
 		chunk = string(s)
+
+		chunkname, err = ap.OptGoString(1, string(s))
+		if err != nil {
+			return nil, err
+		}
 	case object.GoFunction, object.Closure:
 		for {
 			rets, err := th.Call(s, nil)
@@ -336,11 +342,11 @@ func load(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			}
 			chunk += s
 		}
-	}
 
-	chunkname, err := ap.OptGoString(1, "=(load)")
-	if err != nil {
-		return nil, err
+		chunkname, err = ap.OptGoString(1, "=(load)")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	mode, err := ap.OptGoString(2, "bt")
