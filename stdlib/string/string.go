@@ -173,7 +173,7 @@ func Find(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 
 	switch len(indices) {
 	case 0:
-		return nil, nil
+		return []object.Value{nil}, nil
 	case 1:
 		return []object.Value{object.Integer(indices[0][0] + 1), object.Integer(indices[0][1])}, nil
 	}
