@@ -15,6 +15,9 @@ const (
 	// list field per flush
 	LUA_FPF = 50
 
+	// max size of short version of source name
+	LUA_IDSIZE = 60
+
 	LUA_MAJOR_VERSION = "5"
 	LUA_MINOR_VERSION = "3"
 	LUA_VERSION       = LUA_MAJOR_VERSION + "." + LUA_MINOR_VERSION

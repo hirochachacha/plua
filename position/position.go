@@ -3,6 +3,8 @@ package position
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hirochachacha/plua/internal/version"
 )
 
 var NoPos = Position{
@@ -75,13 +77,35 @@ func shorten(s string) string {
 	}
 
 	switch s[0] {
-	case '=', '@':
-		return s[1:]
-	}
+	case '=':
+		s = s[1:]
+		if len(s) > version.LUA_IDSIZE {
+			return s[:version.LUA_IDSIZE]
+		}
+		return s
+	case '@':
+		s = s[1:]
+		if len(s) > version.LUA_IDSIZE {
+			return s[:version.LUA_IDSIZE-3] + "..."
+		}
+		return s
+	default:
+		i := strings.IndexRune(s, '\n')
+		if i == -1 {
+			s = "[string \"" + s
 
-	i := strings.IndexRune(s, '\n')
-	if i == -1 {
-		return "[string \"" + s + "\""
+			if len(s) > version.LUA_IDSIZE-2 {
+				return s[:version.LUA_IDSIZE-5] + "...\"]"
+			}
+			return s + "\"]"
+		}
+
+		s = "[string \"" + s[:i]
+
+		if len(s) > version.LUA_IDSIZE-2 {
+			return s[:version.LUA_IDSIZE-5] + "...\"]"
+		}
+
+		return s + "...\"]"
 	}
-	return "[string \"" + s[:i] + "\""
 }

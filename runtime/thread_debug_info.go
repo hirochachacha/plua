@@ -85,11 +85,13 @@ func (th *thread) getInfoByFunc(fn object.Value, what string) *object.DebugInfo 
 		case 'u':
 			setUpInfo(d, cl)
 		case 'L':
-			lines := th.NewTableSize(0, len(cl.LineInfo))
-			for _, line := range cl.LineInfo {
-				lines.Set(object.Integer(line), object.True)
+			if cl != nil {
+				lines := th.NewTableSize(0, len(cl.LineInfo))
+				for _, line := range cl.LineInfo {
+					lines.Set(object.Integer(line), object.True)
+				}
+				d.Lines = lines
 			}
-			d.Lines = lines
 		}
 	}
 
@@ -153,15 +155,23 @@ func findvarargs(ci *callInfo, n int) (name string, val object.Value) {
 }
 
 func getLocalName(p *object.Proto, pc, n int) (name string) {
-	if n < len(p.LocVars) {
-		locvar := p.LocVars[n]
-
-		if locvar.StartPC <= pc && pc < locvar.EndPC {
-			name = locvar.Name
+	for _, locvar := range p.LocVars {
+		if pc < locvar.StartPC {
+			continue
 		}
+
+		if pc >= locvar.EndPC {
+			break
+		}
+
+		if n == 0 {
+			return locvar.Name
+		}
+
+		n--
 	}
 
-	return
+	return ""
 }
 
 func getUpvalName(p *object.Proto, n int) (name string) {
@@ -198,6 +208,7 @@ func setFuncInfo(d *object.DebugInfo, cl *closure) {
 	} else {
 		if len(cl.Source) == 0 {
 			d.Source = "=?"
+			d.ShortSource = "?"
 		} else {
 			d.Source = cl.Source
 			d.ShortSource = shorten(cl.Source)
@@ -425,14 +436,40 @@ func setFuncName(d *object.DebugInfo, ci *callInfo) {
 }
 
 func shorten(s string) string {
-	switch s[0] {
-	case '=', '@':
-		return s[1:]
+	if len(s) == 0 {
+		return ""
 	}
 
-	i := strings.IndexRune(s, '\n')
-	if i == -1 {
-		return "[string \"" + s + "\""
+	switch s[0] {
+	case '=':
+		s = s[1:]
+		if len(s) > version.LUA_IDSIZE {
+			return s[:version.LUA_IDSIZE]
+		}
+		return s
+	case '@':
+		s = s[1:]
+		if len(s) > version.LUA_IDSIZE {
+			return "..." + s[len(s)-version.LUA_IDSIZE+3:len(s)]
+		}
+		return s
+	default:
+		i := strings.IndexRune(s, '\n')
+		if i == -1 {
+			s = "[string \"" + s
+
+			if len(s) > version.LUA_IDSIZE-2 {
+				return s[:version.LUA_IDSIZE-5] + "...\"]"
+			}
+			return s + "\"]"
+		}
+
+		s = "[string \"" + s[:i]
+
+		if len(s) > version.LUA_IDSIZE-2 {
+			return s[:version.LUA_IDSIZE-5] + "...\"]"
+		}
+
+		return s + "...\"]"
 	}
-	return "[string \"" + s[:i] + "\""
 }
