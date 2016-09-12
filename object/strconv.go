@@ -1,6 +1,8 @@
 package object
 
 import (
+	"strings"
+
 	"github.com/hirochachacha/plua/internal/strconv"
 )
 
@@ -28,8 +30,20 @@ func numberToGoUint(n Number) (uint64, bool) {
 	return u, false
 }
 
+func trimDotZero(s string) string {
+	if i := strings.IndexByte(string(s), '.'); i > 0 {
+		for j := i + 1; j < len(s); j++ {
+			if s[j] != '0' {
+				return s
+			}
+		}
+		return s[:i]
+	}
+	return s
+}
+
 func stringToInteger(s String) (Integer, bool) {
-	i, err := strconv.ParseInt(string(s))
+	i, err := strconv.ParseInt(trimDotZero(string(s)))
 	if err != nil {
 		return 0, false
 	}
@@ -48,7 +62,7 @@ func stringToNumber(s String) (Number, bool) {
 }
 
 func stringToGoUint(s String) (uint64, bool) {
-	u, err := strconv.ParseUint(string(s))
+	u, err := strconv.ParseUint(trimDotZero(string(s)))
 	if err != nil {
 		return 0, false
 	}

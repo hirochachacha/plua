@@ -8,7 +8,7 @@ import (
 	"github.com/hirochachacha/plua/object/fnutil"
 )
 
-func Abs(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func abs(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -31,7 +31,7 @@ func Abs(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 	return []object.Value{object.Number(math.Abs(f))}, nil
 }
 
-func Acos(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func acos(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -42,7 +42,7 @@ func Acos(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{object.Number(math.Acos(f))}, nil
 }
 
-func Asin(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func asin(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -53,7 +53,7 @@ func Asin(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{object.Number(math.Asin(f))}, nil
 }
 
-func Atan(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func atan(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -64,7 +64,7 @@ func Atan(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{object.Number(math.Atan(f))}, nil
 }
 
-func Ceil(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func ceil(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -75,7 +75,7 @@ func Ceil(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{object.Number(math.Ceil(f))}, nil
 }
 
-func Cos(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func cos(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -86,7 +86,7 @@ func Cos(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 	return []object.Value{object.Number(math.Cos(f))}, nil
 }
 
-func Deg(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func deg(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -97,7 +97,7 @@ func Deg(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 	return []object.Value{object.Number((f * 180) / math.Pi)}, nil
 }
 
-func Exp(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func exp(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -108,7 +108,7 @@ func Exp(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 	return []object.Value{object.Number(math.Exp(f))}, nil
 }
 
-func Floor(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func floor(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -119,7 +119,7 @@ func Floor(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 	return []object.Value{object.Number(math.Floor(f))}, nil
 }
 
-func Fmod(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func fmod(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	x, err := ap.ToGoFloat64(0)
@@ -136,7 +136,7 @@ func Fmod(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 }
 
 // log(x, [, base])
-func Log(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func log(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -163,7 +163,7 @@ func Log(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 	}
 }
 
-func Max(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func max(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	maxi := 0
@@ -196,7 +196,7 @@ func Max(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 	return []object.Value{max}, nil
 }
 
-func Min(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func min(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	mini := 0
@@ -229,7 +229,7 @@ func Min(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 	return []object.Value{min}, nil
 }
 
-func Modf(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func modf(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -242,7 +242,7 @@ func Modf(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{object.Integer(i), object.Number(frac)}, nil
 }
 
-func Rad(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func rad(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -254,7 +254,7 @@ func Rad(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 }
 
 // random([m, [, n]])
-func Random(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func random(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	m := int64(1)
@@ -279,7 +279,7 @@ func Random(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	return []object.Value{object.Integer(rand.Int63n(n-m) + m)}, nil
 }
 
-func RandomSeed(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func randomseed(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	i, err := ap.ToGoInt64(0)
@@ -292,7 +292,7 @@ func RandomSeed(th object.Thread, args ...object.Value) ([]object.Value, *object
 	return nil, nil
 }
 
-func Sin(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func sin(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -303,7 +303,7 @@ func Sin(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 	return []object.Value{object.Number(math.Sin(f))}, nil
 }
 
-func Sqrt(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func sqrt(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -314,7 +314,7 @@ func Sqrt(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{object.Number(math.Sqrt(f))}, nil
 }
 
-func Tan(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func tan(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToGoFloat64(0)
@@ -325,22 +325,29 @@ func Tan(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 	return []object.Value{object.Number(math.Tan(f))}, nil
 }
 
-func ToInteger(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func tointeger(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	i, err := ap.ToInteger(0)
 	if err != nil {
+		if _, ok := ap.Get(0); ok {
+			return []object.Value{nil}, nil
+		}
 		return nil, err
 	}
 
 	return []object.Value{i}, nil
 }
 
-func Type(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func _type(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	val, err := ap.ToTypes(0, object.TNUMBER)
 	if err != nil {
+		if _, ok := ap.Get(0); ok {
+			return []object.Value{nil}, nil
+		}
+
 		return nil, err
 	}
 
@@ -354,7 +361,7 @@ func Type(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return nil, nil
 }
 
-func Ult(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func ult(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	x, err := ap.ToGoInt64(0)
@@ -378,29 +385,29 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	m.Set(object.String("mininteger"), object.MinInteger)
 	m.Set(object.String("maxinteger"), object.MaxInteger)
 
-	m.Set(object.String("abs"), object.GoFunction(Abs))
-	m.Set(object.String("acos"), object.GoFunction(Acos))
-	m.Set(object.String("asin"), object.GoFunction(Asin))
-	m.Set(object.String("atan"), object.GoFunction(Atan))
-	m.Set(object.String("ceil"), object.GoFunction(Ceil))
-	m.Set(object.String("cos"), object.GoFunction(Cos))
-	m.Set(object.String("deg"), object.GoFunction(Deg))
-	m.Set(object.String("exp"), object.GoFunction(Exp))
-	m.Set(object.String("floor"), object.GoFunction(Floor))
-	m.Set(object.String("fmod"), object.GoFunction(Fmod))
-	m.Set(object.String("log"), object.GoFunction(Log))
-	m.Set(object.String("max"), object.GoFunction(Max))
-	m.Set(object.String("min"), object.GoFunction(Min))
-	m.Set(object.String("modf"), object.GoFunction(Modf))
-	m.Set(object.String("rad"), object.GoFunction(Rad))
-	m.Set(object.String("random"), object.GoFunction(Random))
-	m.Set(object.String("randomseed"), object.GoFunction(RandomSeed))
-	m.Set(object.String("sin"), object.GoFunction(Sin))
-	m.Set(object.String("sqrt"), object.GoFunction(Sqrt))
-	m.Set(object.String("tan"), object.GoFunction(Tan))
-	m.Set(object.String("tointeger"), object.GoFunction(ToInteger))
-	m.Set(object.String("type"), object.GoFunction(Type))
-	m.Set(object.String("ult"), object.GoFunction(Ult))
+	m.Set(object.String("abs"), object.GoFunction(abs))
+	m.Set(object.String("acos"), object.GoFunction(acos))
+	m.Set(object.String("asin"), object.GoFunction(asin))
+	m.Set(object.String("atan"), object.GoFunction(atan))
+	m.Set(object.String("ceil"), object.GoFunction(ceil))
+	m.Set(object.String("cos"), object.GoFunction(cos))
+	m.Set(object.String("deg"), object.GoFunction(deg))
+	m.Set(object.String("exp"), object.GoFunction(exp))
+	m.Set(object.String("floor"), object.GoFunction(floor))
+	m.Set(object.String("fmod"), object.GoFunction(fmod))
+	m.Set(object.String("log"), object.GoFunction(log))
+	m.Set(object.String("max"), object.GoFunction(max))
+	m.Set(object.String("min"), object.GoFunction(min))
+	m.Set(object.String("modf"), object.GoFunction(modf))
+	m.Set(object.String("rad"), object.GoFunction(rad))
+	m.Set(object.String("random"), object.GoFunction(random))
+	m.Set(object.String("randomseed"), object.GoFunction(randomseed))
+	m.Set(object.String("sin"), object.GoFunction(sin))
+	m.Set(object.String("sqrt"), object.GoFunction(sqrt))
+	m.Set(object.String("tan"), object.GoFunction(tan))
+	m.Set(object.String("tointeger"), object.GoFunction(tointeger))
+	m.Set(object.String("type"), object.GoFunction(_type))
+	m.Set(object.String("ult"), object.GoFunction(ult))
 
 	return []object.Value{m}, nil
 }
