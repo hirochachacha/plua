@@ -2,6 +2,7 @@ package object
 
 import (
 	"fmt"
+	"strings"
 	"unsafe"
 
 	"github.com/hirochachacha/plua/internal/strconv"
@@ -36,6 +37,12 @@ func (s String) Type() Type {
 }
 
 func (s String) String() string {
+	if !strings.ContainsRune(string(s), '"') {
+		return strconv.Quote(string(s))
+	}
+	if !strings.ContainsRune(string(s), '\'') {
+		return strconv.SQuote(string(s))
+	}
 	return strconv.Quote(string(s))
 }
 
