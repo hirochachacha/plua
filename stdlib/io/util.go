@@ -32,6 +32,10 @@ func fileResult(th object.Thread, err error) ([]object.Value, *object.RuntimeErr
 			if errno, ok := err.Err.(syscall.Errno); ok {
 				return []object.Value{nil, object.String(err.Error()), object.Integer(errno)}, nil
 			}
+		case *os.SyscallError:
+			if errno, ok := err.Err.(syscall.Errno); ok {
+				return []object.Value{nil, object.String(err.Error()), object.Integer(errno)}, nil
+			}
 		}
 	}
 
