@@ -1,5 +1,3 @@
-Original: src/lvm.c, src/ldebug.c, src/lauxlib.c
-
 Copyright (C) 1994-2016 Lua.org, PUC-Rio.
 Portions Copyright 2016 Hiroshi Ioka. All rights reserved.
 
