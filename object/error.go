@@ -32,7 +32,7 @@ func (err *RuntimeError) Positioned() Value {
 func (err *RuntimeError) Error() string {
 	msg := Repr(err.Value)
 	if len(err.Traceback) > 0 {
-		msg = msg + " raised from "
+		msg = msg + " from "
 		tb := err.Traceback[0]
 		if tb.IsValid() {
 			msg += tb.String()
