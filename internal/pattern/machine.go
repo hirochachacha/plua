@@ -1,8 +1,10 @@
 package pattern
 
+import "strings"
+
 type thread struct {
-	pc  int
-	cap [][2]int
+	pc   int
+	caps []Range
 
 	stack []int // calculaiton stack for cap
 
@@ -25,29 +27,45 @@ func (q *queue) has(pc int) bool {
 	return 0 < j && j < len(q.dense) && q.dense[j].pc == pc
 }
 
-func (q *queue) sleep(pc int, _cap [][2]int, stack []int, balance, sleep int) {
+func (q *queue) sleep(pc int, caps []Range, stack []int, balance, sleep int) {
 	j := len(q.dense)
 	q.dense = q.dense[:j+1]
 	d := q.dense[j]
 	if d == nil {
 		d = &thread{
 			pc:      pc,
-			cap:     make([][2]int, 1, cap(_cap)),
-			stack:   make([]int, cap(_cap)),
+			caps:    make([]Range, 1, cap(caps)),
+			stack:   make([]int, cap(caps)),
 			balance: balance,
 			sleep:   sleep,
 		}
-		for i := range _cap {
-			d.cap[i] = _cap[i]
-		}
+		copy(d.caps, caps)
 		copy(d.stack, stack)
 		q.dense[j] = d
 		q.sparse[pc] = -1
 	} else {
-		d.pc = pc
-		for i := range _cap {
-			d.cap[i] = _cap[i]
+		if len(d.caps) < len(caps) {
+			if cap(d.caps) >= len(caps) {
+				d.caps = d.caps[:len(caps)]
+			} else {
+				d.caps = make([]Range, len(caps), cap(caps))
+			}
+		} else {
+			d.caps = d.caps[:len(caps)]
 		}
+
+		if len(d.stack) < len(stack) {
+			if cap(d.stack) >= len(stack) {
+				d.stack = d.stack[:len(stack)]
+			} else {
+				d.stack = make([]int, cap(caps))
+			}
+		} else {
+			d.stack = d.stack[:len(stack)]
+		}
+
+		d.pc = pc
+		copy(d.caps, caps)
 		copy(d.stack, stack)
 		d.balance = balance
 		d.sleep = sleep
@@ -55,41 +73,45 @@ func (q *queue) sleep(pc int, _cap [][2]int, stack []int, balance, sleep int) {
 	}
 }
 
-func (q *queue) push(pc int, _cap [][2]int, stack []int, balance, sleep int) {
+func (q *queue) push(pc int, caps []Range, stack []int, balance, sleep int) {
 	j := len(q.dense)
 	q.dense = q.dense[:j+1]
 	d := q.dense[j]
 	if d == nil {
 		d = &thread{
 			pc:      pc,
-			cap:     make([][2]int, len(_cap), cap(_cap)),
-			stack:   make([]int, cap(_cap)),
+			caps:    make([]Range, len(caps), cap(caps)),
+			stack:   make([]int, cap(caps)),
 			balance: balance,
 			sleep:   sleep,
 		}
-		for i := range _cap {
-			d.cap[i] = _cap[i]
-		}
+		copy(d.caps, caps)
 		copy(d.stack, stack)
 		q.dense[j] = d
 		q.sparse[pc] = j
 	} else {
-		if len(d.cap) < len(_cap) {
-			if cap(d.cap) >= len(_cap) {
-				d.cap = d.cap[:cap(d.cap)]
+		if len(d.caps) < len(caps) {
+			if cap(d.caps) >= len(caps) {
+				d.caps = d.caps[:len(caps)]
 			} else {
-				d.cap = make([][2]int, len(_cap), cap(_cap))
+				d.caps = make([]Range, len(caps), cap(caps))
 			}
+		} else {
+			d.caps = d.caps[:len(caps)]
 		}
+
 		if len(d.stack) < len(stack) {
 			if cap(d.stack) >= len(stack) {
-				d.stack = d.stack[:cap(d.stack)]
+				d.stack = d.stack[:len(stack)]
 			} else {
-				d.stack = make([]int, cap(_cap))
+				d.stack = make([]int, cap(caps))
 			}
+		} else {
+			d.stack = d.stack[:len(stack)]
 		}
+
 		d.pc = pc
-		copy(d.cap, _cap)
+		copy(d.caps, caps)
 		copy(d.stack, stack)
 		d.balance = balance
 		d.sleep = sleep
@@ -99,327 +121,317 @@ func (q *queue) push(pc int, _cap [][2]int, stack []int, balance, sleep int) {
 
 func (q *queue) clear() {
 	q.dense = q.dense[:0]
+	// q.dense = make([]*thread, 0, len(q.sparse))
+	// return &queue{sparse: make([]int, n), dense: make([]*thread, 0, n)}
 }
 
 type machine struct {
-	typ    matchType
-	prefix string
-	insts  []inst
-
-	preds predicates
-
-	sets []*rangeTable
-
-	ncaps int
+	typ     matchType
+	literal string
+	code    []inst
+	preds   predicates
+	sets    []*rangeTable
+	ncaps   int
 
 	current *queue
 	next    *queue
 }
 
-func (m *machine) findAll(input input) (rets [][][2]int) {
+func (m *machine) findAll(input string) (matches []*MatchRange) {
 	switch m.typ {
 	case matchBeginning:
 		if found := m.matchFrom(input, 0); found != nil {
-			return [][][2]int{found}
+			return []*MatchRange{found}
 		}
-
 		return nil
 	case matchBeginning | matchFullLiteral:
-		if input.hasPrefix(m) {
-			return [][][2]int{{{0, len(m.prefix)}}}
+		if strings.HasPrefix(input, m.literal) {
+			return []*MatchRange{
+				&MatchRange{
+					Item: Range{0, len(m.literal)},
+				},
+			}
 		}
 		return nil
 	case matchBeginning | matchFullLiteral | matchEnd:
-		if input.isPrefix(m) {
-			return [][][2]int{{{0, len(m.prefix)}}}
+		if input == m.literal {
+			return []*MatchRange{
+				&MatchRange{
+					Item: Range{0, len(m.literal)},
+				},
+			}
 		}
 		return nil
 	case matchBeginning | matchPrefixLiteral:
-		if input.hasPrefix(m) {
+		if strings.HasPrefix(input, m.literal) {
 			if found := m.matchFrom(input, 0); found != nil {
-				return [][][2]int{found}
+				return []*MatchRange{found}
 			}
 		}
 		return nil
 	case matchBeginning | matchPrefixLiteral | matchEnd:
-		if input.hasPrefix(m) {
+		if strings.HasPrefix(input, m.literal) {
 			found := m.matchFrom(input, 0)
-			if found[0][1] == input.length() {
-				return [][][2]int{found}
+			if found.Item.End == len(input) {
+				return []*MatchRange{found}
 			}
 		}
 		return nil
 	case matchEnd:
-		inputLen := input.length()
-		for ioffset := 0; ioffset < inputLen; ioffset++ {
-			found := m.matchFrom(input, ioffset)
-			if found != nil && found[0][1] == inputLen {
-				return [][][2]int{found}
+		for ioff := 0; ioff < len(input); ioff++ {
+			found := m.matchFrom(input, ioff)
+			if found != nil && found.Item.End == len(input) {
+				return []*MatchRange{found}
 			}
 		}
 		return nil
 	case matchEnd | matchFullLiteral:
-		if input.hasSuffix(m) {
-			return [][][2]int{{{input.length() - len(m.prefix), input.length()}}}
+		if strings.HasSuffix(input, m.literal) {
+			return []*MatchRange{
+				&MatchRange{
+					Item: Range{
+						Begin: len(input) - len(m.literal),
+						End:   len(input),
+					},
+				},
+			}
 		}
 		return nil
 	case matchEnd | matchPrefixLiteral:
 		var idx int
-		var ioffset int
-		inputLen := input.length()
+		var ioff int
 
-		for {
-			idx = input.index(m, ioffset)
+		for ioff < len(input) {
+			idx = strings.Index(input[ioff:], m.literal)
 			if idx == -1 {
 				return nil
 			}
 
-			ioffset += idx
+			ioff += idx
 
-			found := m.matchFrom(input, ioffset)
+			found := m.matchFrom(input, ioff)
 			if found != nil {
-				if found[0][1] == inputLen {
-					return [][][2]int{found}
+				if found.Item.End == len(input) {
+					return []*MatchRange{found}
 				}
 
-				ioffset = found[0][1]
+				ioff = found.Item.End
 			} else {
-				ioffset++
-			}
-
-			if ioffset >= inputLen {
-				return
+				ioff++
 			}
 		}
+		return nil
 	case matchFullLiteral:
 		var idx int
-		var ioffset int
+		var ioff int
 
-		for {
-			idx = input.index(m, ioffset)
+		for ioff < len(input) {
+			idx = strings.Index(input[ioff:], m.literal)
 			if idx == -1 {
-				return rets
+				break
 			}
 
-			rets = append(rets, [][2]int{{idx + ioffset, idx + len(m.prefix) + ioffset}})
+			matches = append(matches, &MatchRange{
+				Item: Range{
+					Begin: idx + ioff,
+					End:   idx + len(m.literal) + ioff,
+				},
+			})
 
-			ioffset += idx + len(m.prefix) + 1
+			ioff += idx + len(m.literal) + 1
 		}
+		return matches
 	case matchPrefixLiteral:
 		var idx int
-		var ioffset int
+		var ioff int
 
-		inputLen := input.length()
-
-		for {
-			idx = input.index(m, ioffset)
+		for ioff < len(input) {
+			idx = strings.Index(input[ioff:], m.literal)
 			if idx == -1 {
-				return rets
+				break
 			}
 
-			ioffset += idx
+			ioff += idx
 
-			found := m.matchFrom(input, ioffset)
+			found := m.matchFrom(input, ioff)
 			if found != nil {
-				rets = append(rets, found)
+				matches = append(matches, found)
 
-				ioffset = found[0][1]
+				ioff = found.Item.End
 			} else {
-				ioffset++
-			}
-
-			if ioffset >= inputLen {
-				return
+				ioff++
 			}
 		}
-	}
+		return matches
+	default:
+		var ioff int
 
-	var ioffset int
+		for ioff < len(input) {
+			found := m.matchFrom(input, ioff)
+			if found != nil {
+				matches = append(matches, found)
 
-	inputLen := input.length()
-
-	for {
-		found := m.matchFrom(input, ioffset)
-		if found != nil {
-			rets = append(rets, found)
-
-			ioffset = found[0][1]
-		} else {
-			ioffset++
+				ioff = found.Item.End
+			} else {
+				ioff++
+			}
 		}
-
-		if ioffset >= inputLen {
-			return
-		}
+		return matches
 	}
-
-	return
 }
 
-func (m *machine) find(input input) [][2]int {
+func (m *machine) find(input string) *MatchRange {
 	switch m.typ {
 	case matchBeginning:
 		return m.matchFrom(input, 0)
 	case matchBeginning | matchFullLiteral:
-		if input.hasPrefix(m) {
-			return [][2]int{{0, len(m.prefix)}}
+		if strings.HasPrefix(input, m.literal) {
+			return &MatchRange{Item: Range{0, len(m.literal)}}
 		}
 		return nil
 	case matchBeginning | matchFullLiteral | matchEnd:
-		if input.isPrefix(m) {
-			return [][2]int{{0, input.length()}}
+		if input == m.literal {
+			return &MatchRange{Item: Range{0, len(input)}}
 		}
 		return nil
 	case matchBeginning | matchPrefixLiteral:
-		if input.hasPrefix(m) {
+		if strings.HasPrefix(input, m.literal) {
 			return m.matchFrom(input, 0)
 		}
 		return nil
 	case matchBeginning | matchPrefixLiteral | matchEnd:
-		if input.hasPrefix(m) {
+		if strings.HasPrefix(input, m.literal) {
 			found := m.matchFrom(input, 0)
-			if found[0][1] == input.length() {
+			if found.Item.End == len(input) {
 				return found
 			}
 		}
 		return nil
 	case matchEnd:
-		inputLen := input.length()
-		for ioffset := 0; ioffset < inputLen; ioffset++ {
-			found := m.matchFrom(input, ioffset)
-			if found != nil && found[0][1] == inputLen {
+		for ioff := 0; ioff < len(input); ioff++ {
+			found := m.matchFrom(input, ioff)
+			if found != nil && found.Item.End == len(input) {
 				return found
 			}
 		}
 		return nil
 	case matchEnd | matchFullLiteral:
-		if input.hasSuffix(m) {
-			return [][2]int{{input.length() - len(m.prefix), input.length()}}
+		if strings.HasSuffix(input, m.literal) {
+			return &MatchRange{Item: Range{
+				Begin: len(input) - len(m.literal),
+				End:   len(input),
+			}}
 		}
 		return nil
 	case matchEnd | matchPrefixLiteral:
 		var idx int
-		var ioffset int
-		inputLen := input.length()
+		var ioff int
 
-		for {
-			idx = input.index(m, ioffset)
+		for ioff < len(input) {
+			idx = strings.Index(input[ioff:], m.literal)
 			if idx == -1 {
 				return nil
 			}
 
-			ioffset += idx
+			ioff += idx
 
-			found := m.matchFrom(input, ioffset)
+			found := m.matchFrom(input, ioff)
 			if found != nil {
-				if found[0][1] == inputLen {
+				if found.Item.End == len(input) {
 					return found
 				}
 
-				ioffset = found[0][1]
+				ioff = found.Item.End
 			} else {
-				ioffset++
-			}
-
-			if ioffset >= inputLen {
-				return nil
+				ioff++
 			}
 		}
+		return nil
 	case matchFullLiteral:
-		idx := input.index(m, 0)
+		idx := strings.Index(input, m.literal)
 		if idx != -1 {
-			return [][2]int{{idx, idx + len(m.prefix)}}
+			return &MatchRange{Item: Range{idx, idx + len(m.literal)}}
 		}
 		return nil
 	case matchPrefixLiteral:
 		var idx int
-		var ioffset int
+		var ioff int
 
-		inputLen := input.length()
-
-		for {
-			idx = input.index(m, ioffset)
+		for ioff < len(input) {
+			idx = strings.Index(input[ioff:], m.literal)
 			if idx == -1 {
 				return nil
 			}
 
-			ioffset += idx
+			ioff += idx
 
-			found := m.matchFrom(input, ioffset)
+			found := m.matchFrom(input, ioff)
 			if found != nil {
 				return found
 			}
 
-			ioffset++
+			ioff++
+		}
+		return nil
+	default:
+		var ioff int
 
-			if ioffset >= inputLen {
-				return nil
+		for ioff < len(input) {
+			found := m.matchFrom(input, ioff)
+			if found != nil {
+				return found
 			}
+
+			ioff++
 		}
+		return nil
 	}
-
-	var ioffset int
-
-	inputLen := input.length()
-
-	for {
-		found := m.matchFrom(input, ioffset)
-		if found != nil {
-			return found
-		}
-
-		ioffset++
-
-		if ioffset >= inputLen {
-			return nil
-		}
-	}
-
-	return nil
 }
 
-func (m *machine) matchFrom(input input, pos int) [][2]int {
-	var matched [][2]int
-
-	ioffset := pos + len(m.prefix)
-
-	var add bool
-	var r rune
-	var prev rune
-	var i int
-	var ins inst
-
-	_cap := make([][2]int, 1, m.ncaps)
-	_cap[0][0] = pos
-	stack := make([]int, m.ncaps)
-
+func (m *machine) matchFrom(input string, off int) (matched *MatchRange) {
+	// m.current = newQueue(len(m.current.sparse))
+	// m.next = newQueue(len(m.current.sparse))
 	m.current.clear()
 
-	m.addThread(m.current, 0, _cap, stack, 0, ioffset)
-	for {
-		r, i = input.stepRune(ioffset)
+	caps := make([]Range, 1, m.ncaps)
+	stack := make([]int, m.ncaps)
 
+	caps[0].Begin = off
+
+	m.addThread(m.current, 0, caps, stack, 0, off)
+
+	var prev rune
+
+	for {
 		if len(m.current.dense) == 0 {
 			break
 		}
 
+		r, rsize := decodeRune(input, off+len(m.literal))
 	L:
 		for _, t := range m.current.dense {
 			if t.sleep == 1 {
-				m.next.push(t.pc+1, t.cap, t.stack, t.balance, t.sleep-1)
+				m.next.push(t.pc+1, t.caps, t.stack, t.balance, t.sleep-1)
 				continue
 			} else if t.sleep > 0 {
-				m.next.sleep(t.pc, t.cap, t.stack, t.balance, t.sleep-1)
+				m.next.sleep(t.pc, t.caps, t.stack, t.balance, t.sleep-1)
 				continue
 			}
 
-			ins = m.insts[t.pc]
+			ins := m.code[t.pc]
+
+			var add bool
 
 			switch ins.op {
 			case opMatch:
-				matched = make([][2]int, len(t.cap), cap(t.cap))
-				copy(matched, t.cap)
-				matched[0][1] = ioffset
+				matched = &MatchRange{
+					Item: Range{
+						Begin: t.caps[0].Begin,
+						End:   off + len(m.literal),
+					},
+					Captures: make([]Range, len(t.caps)-1, cap(t.caps)-1),
+				}
+				copy(matched.Captures, t.caps[1:])
 				break L
 			case opAny:
 				add = true
@@ -432,20 +444,20 @@ func (m *machine) matchFrom(input input, pos int) [][2]int {
 			case opFrontier:
 				add = !m.sets[ins.x].is(prev, m.preds) && m.sets[ins.x].is(r, m.preds)
 			case opCapture:
-				begin, end := t.cap[ins.x][0], t.cap[ins.x][1]
-				if input.submatch(begin, end, ioffset) {
-					m.next.sleep(t.pc, t.cap, t.stack, t.balance, end-begin-1)
+				begin, end := t.caps[ins.x].Begin, t.caps[ins.x].End
+				if input[begin:end] == input[off+len(m.literal):off+len(m.literal)+end-begin] {
+					m.next.sleep(t.pc, t.caps, t.stack, t.balance, end-begin-1)
 				}
 			default:
 				add, _ = m.preds.is(ins.op, r)
 			}
 
 			if add {
-				m.addThread(m.next, t.pc+1, t.cap, t.stack, t.balance, ioffset+i)
+				m.addThread(m.next, t.pc+1, t.caps, t.stack, t.balance, off+rsize)
 			}
 		}
 
-		if r == endOfText {
+		if r == eot {
 			break
 		}
 
@@ -453,7 +465,7 @@ func (m *machine) matchFrom(input input, pos int) [][2]int {
 
 		m.next.clear()
 
-		ioffset += i
+		off += rsize
 
 		prev = r
 	}
@@ -461,7 +473,7 @@ func (m *machine) matchFrom(input input, pos int) [][2]int {
 	return matched
 }
 
-func (m *machine) addThread(q *queue, pc int, cap [][2]int, stack []int, balance, pos int) {
+func (m *machine) addThread(q *queue, pc int, caps []Range, stack []int, balance, off int) {
 	var ins inst
 	for {
 		// prevent infinite loop
@@ -469,14 +481,14 @@ func (m *machine) addThread(q *queue, pc int, cap [][2]int, stack []int, balance
 			return
 		}
 
-		ins = m.insts[pc]
+		ins = m.code[pc]
 
 		switch ins.op {
 		case opJmp:
 			pc = ins.x
 		case opSplit:
 			pc = ins.y
-			m.addThread(q, ins.x, cap, stack, balance, pos)
+			m.addThread(q, ins.x, caps, stack, balance, off)
 		case opBalanceUp:
 			balance++
 			pc = ins.x
@@ -493,13 +505,13 @@ func (m *machine) addThread(q *queue, pc int, cap [][2]int, stack []int, balance
 			}
 		case opEnterSave:
 			pc++
-			cap = append(cap, [2]int{pos, 0})
-			stack[ins.x] = len(cap) - 1
+			caps = append(caps, Range{off + len(m.literal), -1})
+			stack[ins.x] = len(caps) - 1
 		case opExitSave:
 			pc++
-			cap[stack[ins.x]][1] = pos
+			caps[stack[ins.x]].End = off + len(m.literal)
 		default:
-			q.push(pc, cap, stack, balance, 0)
+			q.push(pc, caps, stack, balance, 0)
 
 			return
 		}

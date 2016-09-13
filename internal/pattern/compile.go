@@ -1,8 +1,6 @@
 package pattern
 
-import (
-	"errors"
-)
+import "errors"
 
 var (
 	errInvalidRange     = errors.New("invalid character range")
@@ -26,30 +24,30 @@ const (
 )
 
 type compiler struct {
-	pat     input
+	pat     string
 	pos     int
 	r       rune
 	typ     matchType
-	poffset int
-	prefix  string
+	poff    int
+	literal string
 	sets    []*rangeTable
 	nparens int
 }
 
-func newCompiler(pat input) *compiler {
+func newCompiler(pat string) *compiler {
 	return &compiler{
 		pat: pat,
 	}
 }
 
 func (c *compiler) next() {
-	r, i := c.pat.stepRune(c.pos)
-	c.pos += i
+	r, size := decodeRune(c.pat, c.pos)
 	c.r = r
+	c.pos += size
 }
 
 func (c *compiler) peek() rune {
-	r, _ := c.pat.stepRune(c.pos)
+	r, _ := decodeRune(c.pat, c.pos)
 
 	return r
 }
@@ -188,7 +186,7 @@ func (c *compiler) instRange(x int) (ins inst, err error) {
 L2:
 	for {
 		switch c.r {
-		case endOfText:
+		case eot:
 			err = errMissingBracket
 			return
 		case ']':
@@ -199,7 +197,7 @@ L2:
 		case '%':
 			c.next()
 
-			if c.r == endOfText {
+			if c.r == eot {
 				err = errInvalidEscape
 				return
 			}
@@ -220,7 +218,7 @@ L2:
 				case ']':
 					err = errInvalidRange
 					return
-				case endOfText:
+				case eot:
 					err = errMissingBracket
 					return
 				default:
@@ -360,7 +358,7 @@ func (c *compiler) makeBalance(x, y rune, ninsts int) []inst {
 }
 
 func (c *compiler) compile() (insts []inst, err error) {
-	insts = make([]inst, 0, c.pat.length()+1)
+	insts = make([]inst, 0, len(c.pat)+1)
 
 	isPrefix := true
 
@@ -372,6 +370,8 @@ func (c *compiler) compile() (insts []inst, err error) {
 		c.typ |= matchBeginning
 
 		c.next()
+
+		c.poff = 1
 	}
 
 	var isSingle bool
@@ -379,10 +379,10 @@ func (c *compiler) compile() (insts []inst, err error) {
 L:
 	for {
 		switch c.r {
-		case endOfText:
+		case eot:
 			break L
 		case '$':
-			if c.peek() == endOfText {
+			if c.peek() == eot {
 				c.typ |= matchEnd
 
 				break L
@@ -441,7 +441,7 @@ L:
 
 			c.next()
 
-			if c.r == endOfText {
+			if c.r == eot {
 				err = errInvalidEscape
 				return
 			}
@@ -453,7 +453,7 @@ L:
 				case 'b':
 					c.next()
 
-					if c.r == endOfText {
+					if c.r == eot {
 						err = errInvalidBalance
 						return
 					}
@@ -462,7 +462,7 @@ L:
 
 					c.next()
 
-					if c.r == endOfText {
+					if c.r == eot {
 						err = errInvalidBalance
 						return
 					}
@@ -521,7 +521,7 @@ L:
 		}
 
 		if isPrefix {
-			c.poffset = c.pos
+			c.poff = c.pos
 		} else {
 			insts = append(insts, _insts...)
 		}
@@ -546,19 +546,21 @@ L:
 		c.typ |= matchFullLiteral
 
 		if c.typ&matchBeginning != 0 {
-			c.prefix = c.pat.slice(1, c.poffset)
+			c.literal = c.pat[1:c.poff]
 		} else {
-			c.prefix = c.pat.slice(0, c.poffset)
+			c.literal = c.pat[:c.poff]
 		}
 
 		return
-	} else if c.poffset != 0 {
+	}
+
+	if c.poff != 0 {
 		c.typ |= matchPrefixLiteral
 
 		if c.typ&matchBeginning != 0 {
-			c.prefix = c.pat.slice(1, c.poffset)
+			c.literal = c.pat[1:c.poff]
 		} else {
-			c.prefix = c.pat.slice(0, c.poffset)
+			c.literal = c.pat[:c.poff]
 		}
 	}
 

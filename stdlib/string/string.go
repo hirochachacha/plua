@@ -12,13 +12,7 @@ import (
 	"github.com/hirochachacha/plua/object/fnutil"
 )
 
-var pcache *pattern.Cache
-
-func init() {
-	pcache = pattern.NewCache(10)
-}
-
-func Byte(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func _byte(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	s, err := ap.ToGoString(0)
@@ -30,42 +24,22 @@ func Byte(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	if err != nil {
 		return nil, err
 	}
+	if i < 0 {
+		i = len(s) + 1 + i
+	}
+	if i < 1 {
+		i = 1
+	}
 
 	j, err := ap.OptGoInt(2, i)
 	if err != nil {
 		return nil, err
 	}
-
-	if i == 0 {
-		i = 1
-	} else if i < 0 {
-		i = len(s) + 1 + i
-
-		if i <= 0 {
-			return nil, nil
-		}
-
-		if i > len(s) {
-			return nil, nil
-		}
-	} else if i > len(s) {
-		return nil, nil
-	}
-
-	if j == 0 {
-		return nil, nil
-	} else if j < 0 {
+	if j < 0 {
 		j = len(s) + 1 + j
-
-		if j <= 0 {
-			return nil, nil
-		}
-
-		if j > len(s) {
-			return nil, nil
-		}
-	} else if j > len(s) {
-		return nil, nil
+	}
+	if j > len(s) {
+		j = len(s)
 	}
 
 	if i > j {
@@ -73,14 +47,14 @@ func Byte(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	}
 
 	rets := make([]object.Value, j-i+1)
-	for k := i - 1; k < j; k++ {
-		rets[k] = object.Integer(s[k])
+	for k := range rets {
+		rets[k] = object.Integer(s[k+i-1])
 	}
 
 	return rets, nil
 }
 
-func Char(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func char(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	bs := make([]byte, len(args))
@@ -101,7 +75,7 @@ func Char(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{object.String(bs)}, nil
 }
 
-func Dump(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func dump(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	cl, err := ap.ToClosure(0)
@@ -119,7 +93,7 @@ func Dump(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{object.String(code)}, nil
 }
 
-func Find(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func find(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	s, err := ap.ToGoString(0)
@@ -136,64 +110,52 @@ func Find(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	if err != nil {
 		return nil, err
 	}
-
-	isPlain := ap.OptGoBool(3, false)
-
-	if init == 0 {
-		init = 1
-	} else if init < 0 {
+	if init < 0 {
 		init = len(s) + 1 + init
-
-		if init <= 0 {
-			return nil, nil
-		}
-
-		if init > len(s) {
-			return nil, nil
-		}
-	} else if init > len(s) {
+	}
+	if init < 0 {
+		init = 1
+	}
+	if init > len(s) {
 		return nil, nil
 	}
 
+	s = s[init-1:]
+
+	isPlain := ap.OptGoBool(3, false)
+
 	if isPlain {
-		idx := strings.Index(s[init-1:], pat)
+		idx := strings.Index(s, pat)
 		if idx == -1 {
 			return nil, nil
 		}
 
-		return []object.Value{object.Integer(idx + 1), object.Integer(idx + len(pat))}, nil
+		return []object.Value{object.Integer(idx + init), object.Integer(idx + init + len(pat) - 1)}, nil
 	}
 
-	pattern, e := pcache.GetOrCompile(pat)
-	if err != nil {
+	r, e := pattern.Find(pat, s)
+	if e != nil {
 		return nil, object.NewRuntimeError(e.Error())
 	}
 
-	indices := pattern.FindString(s)
-
-	switch len(indices) {
-	case 0:
+	if r == nil {
 		return []object.Value{nil}, nil
-	case 1:
-		return []object.Value{object.Integer(indices[0][0] + 1), object.Integer(indices[0][1])}, nil
 	}
 
-	rets := make([]object.Value, len(indices)+1)
+	rets := make([]object.Value, len(r.Captures)+2)
 
-	first := object.Integer(indices[0][0] + 1)
-	second := object.Integer(indices[0][1])
+	rets[0] = object.Integer(r.Item.Begin + init)
+	rets[1] = object.Integer(r.Item.End + init - 1)
 
-	rets[0] = first
-	rets[1] = second
-	for i, index := range indices[1:] {
-		rets[i+2] = object.String(s[index[0]:index[1]])
+	for i, cap := range r.Captures {
+		rets[i+2] = object.String(s[cap.Begin:cap.End])
 	}
 
 	return rets, nil
 }
 
 // format(fmt, ...)
-func Format(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func _format(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	fmt, err := ap.ToGoString(0)
@@ -219,7 +181,7 @@ func Format(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 }
 
 // gmatch(s, patter)
-func GMatch(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func gmatch(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	s, err := ap.ToGoString(0)
@@ -232,49 +194,39 @@ func GMatch(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	pattern, e := pcache.GetOrCompile(pat)
+	ms, e := pattern.MatchAll(pat, s)
 	if e != nil {
 		return nil, object.NewRuntimeError(e.Error())
 	}
 
-	sss := pattern.MatchStringAll(s)
-
 	var i int
 
-	sssLen := len(sss)
-	ssLen := 0
-	if sssLen > 0 {
-		ssLen = len(sss[0])
-	}
-
 	fn := func(_ object.Thread, _ ...object.Value) ([]object.Value, *object.RuntimeError) {
-		if sssLen <= i {
+		if len(ms) <= i {
 			return nil, nil
 		}
 
-		ss := sss[i]
+		m := ms[i]
 
 		i++
 
-		switch ssLen {
-		case 0:
-			return nil, nil
-		case 1:
-			return []object.Value{object.String(ss[0])}, nil
-		default:
-			rets := make([]object.Value, ssLen-1)
-			for i, s := range ss[1:] {
-				rets[i] = object.String(s)
-			}
-			return rets, nil
+		if len(m.Captures) == 0 {
+			return []object.Value{object.String(m.Item)}, nil
 		}
+
+		rets := make([]object.Value, len(m.Captures))
+		for i, cap := range m.Captures {
+			rets[i] = object.String(cap)
+		}
+
+		return rets, nil
 	}
 
 	return []object.Value{object.GoFunction(fn)}, nil
 }
 
 // gsub(s, pattern, repl, [, n])
-func GSub(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func gsub(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	s, err := ap.ToGoString(0)
@@ -297,19 +249,19 @@ func GSub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		return nil, err
 	}
 
-	pattern, e := pcache.GetOrCompile(pat)
-	if e != nil {
-		return nil, object.NewRuntimeError(e.Error())
-	}
-
 	switch repl := repl.(type) {
 	case object.GoFunction, object.Closure:
 		var rerr *object.RuntimeError
 
-		replfn := func(s string) string {
+		replfn := func(ss ...string) string {
+			rargs := make([]object.Value, len(ss))
+			for i := range ss {
+				rargs[i] = object.String(ss[i])
+			}
+
 			var rets []object.Value
 
-			rets, rerr = th.Call(repl, nil, object.String(s))
+			rets, rerr = th.Call(repl, nil, rargs...)
 			if rerr != nil {
 				return ""
 			}
@@ -322,8 +274,8 @@ func GSub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			return ""
 		}
 
-		ret, count, err := pattern.ReplaceFuncString(s, replfn, n)
-		if err != nil {
+		ret, count, e := pattern.ReplaceFunc(pat, s, replfn, n)
+		if e != nil {
 			return nil, object.NewRuntimeError(e.Error())
 		}
 
@@ -333,24 +285,27 @@ func GSub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 
 		return []object.Value{object.String(ret), object.Integer(count)}, nil
 	case object.Table:
-		replfn := func(s string) string {
-			val := repl.Get(object.String(s))
-			if s2, ok := object.ToGoString(val); ok {
-				return s2
+		replfn := func(ss ...string) string {
+			if len(ss) > 0 {
+				v := repl.Get(object.String(ss[0]))
+				if r, ok := object.ToGoString(v); ok {
+					return r
+				}
+				return ss[0]
 			}
 			return ""
 		}
 
-		ret, count, err := pattern.ReplaceFuncString(s, replfn, n)
-		if err != nil {
+		ret, count, e := pattern.ReplaceFunc(pat, s, replfn, n)
+		if e != nil {
 			return nil, object.NewRuntimeError(e.Error())
 		}
 
 		return []object.Value{object.String(ret), object.Integer(count)}, nil
 	default:
 		if repl, ok := object.ToGoString(repl); ok {
-			ret, count, err := pattern.ReplaceString(s, repl, n)
-			if err != nil {
+			ret, count, e := pattern.Replace(pat, s, repl, n)
+			if e != nil {
 				return nil, object.NewRuntimeError(e.Error())
 			}
 
@@ -361,7 +316,7 @@ func GSub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	}
 }
 
-func Len(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func _len(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	s, err := ap.ToGoString(0)
@@ -372,7 +327,7 @@ func Len(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 	return []object.Value{object.Integer(len(s))}, nil
 }
 
-func Lower(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func lower(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	s, err := ap.ToGoString(0)
@@ -385,7 +340,7 @@ func Lower(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 	return []object.Value{object.String(s)}, nil
 }
 
-func Match(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func match(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	s, err := ap.ToGoString(0)
@@ -402,48 +357,37 @@ func Match(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 	if err != nil {
 		return nil, err
 	}
-
-	if init == 0 {
-		init = 1
-	} else if init < 0 {
+	if init < 0 {
 		init = len(s) + 1 + init
-
-		if init <= 0 {
-			return nil, nil
-		}
-
-		if init > len(s) {
-			return nil, nil
-		}
-	} else if init > len(s) {
+	}
+	if init < 0 {
+		init = 1
+	}
+	if init > len(s) {
 		return nil, nil
 	}
 
-	pattern, e := pcache.GetOrCompile(pat)
-	if err != nil {
+	s = s[init-1:]
+
+	m, e := pattern.Match(pat, s)
+	if e != nil {
 		return nil, object.NewRuntimeError(e.Error())
 	}
 
-	ss := pattern.MatchString(s)
-
-	switch len(ss) {
-	case 0:
-		return nil, nil
-	case 1:
-		return []object.Value{object.String(ss[0])}, nil
+	if len(m.Captures) == 0 {
+		return []object.Value{object.String(m.Item)}, nil
 	}
 
-	rets := make([]object.Value, len(ss)-1)
-
-	for i := range rets {
-		rets[i] = object.String(ss[i+1])
+	rets := make([]object.Value, len(m.Captures))
+	for i, cap := range m.Captures {
+		rets[i] = object.String(cap)
 	}
 
 	return rets, nil
 }
 
 // pack(fmt, v1, v2, ...)
-func Pack(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func pack(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	fmt, err := ap.ToGoString(0)
@@ -467,7 +411,7 @@ func Pack(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 }
 
 // packsize(fmt)
-func PackSize(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func packsize(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	fmt, err := ap.ToGoString(0)
@@ -500,7 +444,7 @@ func PackSize(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 	return []object.Value{object.Integer(total)}, nil
 }
 
-func Repeat(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func rep(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	s, err := ap.ToGoString(0)
@@ -533,7 +477,7 @@ func Repeat(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	return []object.Value{object.String(buf)}, nil
 }
 
-func Reverse(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func reverse(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	s, err := ap.ToGoString(0)
@@ -560,7 +504,7 @@ func Reverse(th object.Thread, args ...object.Value) ([]object.Value, *object.Ru
 	return []object.Value{object.String(bs)}, nil
 }
 
-func Sub(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func sub(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	s, err := ap.ToGoString(0)
@@ -572,41 +516,25 @@ func Sub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 	if err != nil {
 		return nil, err
 	}
+	if i < 0 {
+		i = len(s) + 1 + i
+	}
+	if i < 1 {
+		i = 1
+	}
 
 	j, err := ap.OptGoInt(2, -1)
 	if err != nil {
 		return nil, err
 	}
-
-	if i == 0 {
-		i = 1
-	} else if i < 0 {
-		i = len(s) + 1 + i
-
-		if i <= 0 {
-			return []object.Value{object.String("")}, nil
-		}
-
-		if i > len(s) {
-			return []object.Value{object.String("")}, nil
-		}
-	} else if i > len(s) {
-		return []object.Value{object.String("")}, nil
+	if j < 0 {
+		j = len(s) + 1 + j
+	}
+	if j > len(s) {
+		j = len(s)
 	}
 
-	if j == 0 {
-		return []object.Value{object.String("")}, nil
-	} else if j < 0 {
-		j = len(s) + 1 + j
-
-		if j <= 0 {
-			return []object.Value{object.String("")}, nil
-		}
-
-		if j > len(s) {
-			return []object.Value{object.String("")}, nil
-		}
-	} else if j > len(s) {
+	if i > j {
 		return []object.Value{object.String("")}, nil
 	}
 
@@ -618,7 +546,7 @@ func Sub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 }
 
 // unpack(fmt, s, [, pos])
-func Unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	fmt, err := ap.ToGoString(0)
@@ -654,7 +582,7 @@ func Unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	return u.unpack()
 }
 
-func Upper(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func upper(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	s, err := ap.ToGoString(0)
@@ -670,23 +598,23 @@ func Upper(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	m := th.NewTableSize(0, 17)
 
-	m.Set(object.String("byte"), object.GoFunction(Byte))
-	m.Set(object.String("char"), object.GoFunction(Char))
-	m.Set(object.String("dump"), object.GoFunction(Dump))
-	m.Set(object.String("find"), object.GoFunction(Find))
-	m.Set(object.String("format"), object.GoFunction(Format))
-	m.Set(object.String("gmatch"), object.GoFunction(GMatch))
-	m.Set(object.String("gsub"), object.GoFunction(GSub))
-	m.Set(object.String("len"), object.GoFunction(Len))
-	m.Set(object.String("lower"), object.GoFunction(Lower))
-	m.Set(object.String("match"), object.GoFunction(Match))
-	m.Set(object.String("pack"), object.GoFunction(Pack))
-	m.Set(object.String("packsize"), object.GoFunction(PackSize))
-	m.Set(object.String("rep"), object.GoFunction(Repeat))
-	m.Set(object.String("reverse"), object.GoFunction(Reverse))
-	m.Set(object.String("sub"), object.GoFunction(Sub))
-	m.Set(object.String("unpack"), object.GoFunction(Unpack))
-	m.Set(object.String("upper"), object.GoFunction(Upper))
+	m.Set(object.String("byte"), object.GoFunction(_byte))
+	m.Set(object.String("char"), object.GoFunction(char))
+	m.Set(object.String("dump"), object.GoFunction(dump))
+	m.Set(object.String("find"), object.GoFunction(find))
+	m.Set(object.String("format"), object.GoFunction(_format))
+	m.Set(object.String("gmatch"), object.GoFunction(gmatch))
+	m.Set(object.String("gsub"), object.GoFunction(gsub))
+	m.Set(object.String("len"), object.GoFunction(_len))
+	m.Set(object.String("lower"), object.GoFunction(lower))
+	m.Set(object.String("match"), object.GoFunction(match))
+	m.Set(object.String("pack"), object.GoFunction(pack))
+	m.Set(object.String("packsize"), object.GoFunction(packsize))
+	m.Set(object.String("rep"), object.GoFunction(rep))
+	m.Set(object.String("reverse"), object.GoFunction(reverse))
+	m.Set(object.String("sub"), object.GoFunction(sub))
+	m.Set(object.String("unpack"), object.GoFunction(unpack))
+	m.Set(object.String("upper"), object.GoFunction(upper))
 
 	mt := th.NewTableSize(0, 1)
 

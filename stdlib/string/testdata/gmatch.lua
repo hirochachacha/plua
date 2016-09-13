@@ -1,0 +1,11 @@
+f = string.gmatch("hello world from Lua", "%a+")
+assert(f() == "hello")
+assert(f() == "world")
+assert(f() == "from")
+assert(f() == "Lua")
+
+f = string.gmatch("from=world, to=Lua", "(%w+)=(%w+)")
+k, v = f()
+assert(k == "from" and v == "world")
+k, v = f()
+assert(k == "to" and v == "Lua")

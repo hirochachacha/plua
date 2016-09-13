@@ -131,8 +131,6 @@ func (ins inst) String() string {
 		}
 		return fmt.Sprintf("op: char, r: %s", string(ins.op))
 	}
-
-	return ""
 }
 
 type rangeTable struct {

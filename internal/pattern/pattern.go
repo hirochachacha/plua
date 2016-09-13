@@ -5,60 +5,89 @@ import (
 	"strings"
 )
 
+type MatchString struct {
+	Item     string
+	Captures []string
+}
+
+type MatchRange struct {
+	Item     Range
+	Captures []Range
+}
+
+func (r *MatchRange) MatchString(s string) *MatchString {
+	caps := make([]string, len(r.Captures))
+	for i, cr := range r.Captures {
+		caps[i] = s[cr.Begin:cr.End]
+	}
+
+	ms := &MatchString{
+		Item:     string(s[r.Item.Begin:r.Item.End]),
+		Captures: caps,
+	}
+
+	return ms
+}
+
+type Range struct {
+	Begin int
+	End   int
+}
+
 type Pattern struct {
 	m machine
 }
 
-func FindString(pat string, input string) ([][2]int, error) {
+func Find(pat string, input string) (*MatchRange, error) {
 	p, err := Compile(pat)
 	if err != nil {
 		return nil, err
 	}
-	return p.FindString(input), nil
+	return p.Find(input), nil
 }
 
-func FindStringAll(pat, input string) ([][][2]int, error) {
+func FindAll(pat, input string) ([]*MatchRange, error) {
 	p, err := Compile(pat)
 	if err != nil {
 		return nil, err
 	}
-	return p.FindStringAll(input), nil
+	return p.FindAll(input), nil
 }
 
-func MatchString(pat, input string) ([]string, error) {
+func Match(pat, input string) (*MatchString, error) {
 	p, err := Compile(pat)
 	if err != nil {
 		return nil, err
 	}
-	return p.MatchString(input), nil
+	return p.Match(input), nil
 }
 
-func ReplaceString(pat, input, repl string, n int) (string, int, error) {
+func Replace(pat, input, repl string, n int) (string, int, error) {
 	p, err := Compile(pat)
 	if err != nil {
 		return "", -1, err
 	}
-	return p.ReplaceString(input, repl, n)
+	return p.Replace(input, repl, n)
 }
 
-func ReplaceFuncString(pat, input string, repl func(string) string, n int) (string, int, error) {
+func ReplaceFunc(pat, input string, repl func(ss ...string) string, n int) (string, int, error) {
 	p, err := Compile(pat)
 	if err != nil {
 		return "", -1, err
 	}
-	return p.ReplaceFuncString(input, repl, n)
+	return p.ReplaceFunc(input, repl, n)
 }
 
-func MatchStringAll(pat, input string) ([][]string, error) {
+func MatchAll(pat, input string) ([]*MatchString, error) {
 	p, err := Compile(pat)
 	if err != nil {
 		return nil, err
 	}
-	return p.MatchStringAll(input), nil
+	return p.MatchAll(input), nil
 }
 
 func Compile(pat string) (*Pattern, error) {
-	c := newCompiler(inputString(pat))
+	c := newCompiler(pat)
 
 	insts, err := c.compile()
 	if err != nil {
@@ -68,9 +97,9 @@ func Compile(pat string) (*Pattern, error) {
 	n := len(insts)
 
 	m := machine{
-		insts:  insts,
-		typ:    c.typ,
-		prefix: c.prefix,
+		code:    insts,
+		typ:     c.typ,
+		literal: c.literal,
 
 		preds: upreds,
 
@@ -85,77 +114,66 @@ func Compile(pat string) (*Pattern, error) {
 	return &Pattern{m}, nil
 }
 
-func (p *Pattern) FindString(pat string) [][2]int {
-	return p.m.find(inputString(pat))
+func (p *Pattern) Find(input string) *MatchRange {
+	return p.m.find(input)
 }
 
-func (p *Pattern) FindStringAll(pat string) [][][2]int {
-	return p.m.findAll(inputString(pat))
+func (p *Pattern) FindAll(input string) []*MatchRange {
+	return p.m.findAll(input)
 }
 
-func (p *Pattern) MatchString(pat string) []string {
-	indices := p.m.find(inputString(pat))
-	if indices == nil {
+func (p *Pattern) Match(input string) *MatchString {
+	r := p.m.find(input)
+	if r == nil {
 		return nil
 	}
-	ss := make([]string, len(indices))
-	for i, index := range indices {
-		ss[i] = string(pat[index[0]:index[1]])
-	}
-	return ss
+	return r.MatchString(input)
 }
 
-func (p *Pattern) MatchStringAll(pat string) [][]string {
-	indiceses := p.m.findAll(inputString(pat))
-
-	if indiceses == nil {
+func (p *Pattern) MatchAll(input string) []*MatchString {
+	rs := p.m.findAll(input)
+	if rs == nil {
 		return nil
 	}
 
-	rets := make([][]string, len(indiceses))
-	for i, indices := range indiceses {
-		ret := make([]string, len(indices))
-		for i, index := range indices {
-			ret[i] = string(pat[index[0]:index[1]])
-		}
-		rets[i] = ret
+	ms := make([]*MatchString, len(rs))
+	for i, r := range rs {
+		ms[i] = r.MatchString(input)
 	}
-
-	return rets
+	return ms
 }
 
-func (p *Pattern) ReplaceString(pat, repl string, n int) (string, int, error) {
-	indiceses := p.m.findAll(inputString(pat))
-
-	if indiceses == nil {
-		return pat, 0, nil
+func (p *Pattern) Replace(input, repl string, n int) (string, int, error) {
+	rs := p.m.findAll(input)
+	if rs == nil {
+		return input, 0, nil
 	}
 
 	isLiteral := strings.IndexRune(repl, '%') == -1
 
 	var buf bytes.Buffer
 
-	var i int
+	var off int
 
 	if isLiteral {
-		for j, indices := range indiceses {
+		for j, r := range rs {
 			if j == n {
 				break
 			}
 
-			buf.WriteString(pat[i:indices[0][0]])
+			buf.WriteString(input[off:r.Item.Begin])
 
 			buf.WriteString(repl)
 
-			i = indices[0][1]
+			off = r.Item.End
 		}
 	} else {
-		for j, indices := range indiceses {
+		for j, r := range rs {
 			if j == n {
 				break
 			}
 
-			buf.WriteString(pat[i:indices[0][0]])
+			buf.WriteString(input[off:r.Item.Begin])
 
 			var start int
 			var end int
@@ -174,16 +192,20 @@ func (p *Pattern) ReplaceString(pat, repl string, n int) (string, int, error) {
 				}
 
 				d := repl[end+1]
-				if !('1' <= d && d <= '9') {
+				if !('0' <= d && d <= '9') {
 					return "", -1, errInvalidCapture
 				}
 
 				i := int(d - '0')
-				if i >= len(indices) {
-					return "", -1, errInvalidCapture
-				}
+				if i == 0 {
+					buf.WriteString(input[r.Item.Begin:r.Item.End])
+				} else {
+					if i > len(r.Captures) {
+						return "", -1, errInvalidCapture
+					}
 
-				buf.WriteString(pat[indices[i][0]:indices[i][1]])
+					buf.WriteString(input[r.Captures[i-1].Begin:r.Captures[i-1].End])
+				}
 
 				if len(repl) == end+1 {
 					break
@@ -192,39 +214,44 @@ func (p *Pattern) ReplaceString(pat, repl string, n int) (string, int, error) {
 				start = end + 2
 			}
 
-			i = indices[0][1]
+			off = r.Item.End
 		}
 	}
 
-	buf.WriteString(pat[i:])
+	buf.WriteString(input[off:])
 
-	return buf.String(), len(indiceses), nil
+	return buf.String(), len(rs), nil
 }
 
-func (p *Pattern) ReplaceFuncString(pat string, repl func(string) string, n int) (string, int, error) {
-	indiceses := p.m.findAll(inputString(pat))
-
-	if indiceses == nil {
-		return pat, 0, nil
+func (p *Pattern) ReplaceFunc(input string, repl func(ss ...string) string, n int) (string, int, error) {
+	rs := p.m.findAll(input)
+	if rs == nil {
+		return input, 0, nil
 	}
 
 	var buf bytes.Buffer
 
-	var i int
+	var off int
 
-	for j, indices := range indiceses {
+	for j, r := range rs {
 		if j == n {
 			break
 		}
 
-		buf.WriteString(pat[i:indices[0][0]])
+		buf.WriteString(input[off:r.Item.Begin])
 
-		buf.WriteString(repl(pat[indices[0][0]:indices[0][1]]))
+		m := r.MatchString(input)
 
-		i = indices[0][1]
+		if len(r.Captures) == 0 {
+			buf.WriteString(repl(m.Item))
+		} else {
+			buf.WriteString(repl(m.Captures...))
+		}
+
+		off = r.Item.End
 	}
 
-	buf.WriteString(pat[i:])
+	buf.WriteString(input[off:])
 
-	return buf.String(), len(indiceses), nil
+	return buf.String(), len(rs), nil
 }
