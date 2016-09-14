@@ -1009,7 +1009,7 @@ func (th *thread) concat(a, b, c int) *object.RuntimeError {
 			}
 		}
 
-		rets, err := th.docallv(tm, rb, rc)
+		rets, err := th.docallv(tm, nil, rb, rc)
 		if err != nil {
 			return err
 		}

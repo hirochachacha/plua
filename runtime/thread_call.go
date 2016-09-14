@@ -256,17 +256,17 @@ func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
 
 // call a callable by values, immediately return values.
 func (th *thread) docallv(fn, errh object.Value, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
+	switch errh.(type) {
+	case nil:
+	case object.GoFunction, object.Closure:
+	default:
+		panic("error handler is not a function")
+	}
+
 	switch fn := fn.(type) {
 	case nil:
 		return th.dohandle(errh, th.callError(fn))
 	case object.GoFunction:
-		switch errh.(type) {
-		case nil:
-		case object.GoFunction, object.Closure:
-		default:
-			panic("error handler is not a function")
-		}
-
 		rets, err := th.callvGo(fn, args...)
 		if err != nil {
 			if errh == nil {

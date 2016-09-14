@@ -104,7 +104,7 @@ func (th *thread) calltm(a int, tm object.Value, args ...object.Value) (err *obj
 }
 
 func (th *thread) callcmptm(not bool, tm object.Value, x, y object.Value) (err *object.RuntimeError) {
-	rets, err := th.docallv(tm, x, y)
+	rets, err := th.docallv(tm, nil, x, y)
 	if err != nil {
 		return err
 	}
