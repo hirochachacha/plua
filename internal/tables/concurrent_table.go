@@ -122,11 +122,11 @@ func (t *concurrentTable) get(key object.Value) object.Value {
 }
 
 func (t *concurrentTable) set(key, val object.Value) {
-	if val == nil {
-		t.del(key)
+	if ikey, ok := t.ikey(key); ok {
+		t.iset(int(ikey), val)
 	} else {
-		if ikey, ok := t.ikey(key); ok {
-			t.iset(int(ikey), val)
+		if val == nil {
+			t.m.Delete(key)
 		} else {
 			t.m.Set(key, val)
 		}

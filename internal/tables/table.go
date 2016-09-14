@@ -66,11 +66,11 @@ func (t *table) Get(key object.Value) object.Value {
 }
 
 func (t *table) Set(key, val object.Value) {
-	if val == nil {
-		t.Del(key)
+	if ikey, ok := t.ikey(key); ok {
+		t.ISet(int(ikey), val)
 	} else {
-		if ikey, ok := t.ikey(key); ok {
-			t.ISet(int(ikey), val)
+		if val == nil {
+			t.m.Delete(key)
 		} else {
 			t.m.Set(key, val)
 		}
@@ -95,10 +95,17 @@ func (t *table) IGet(i int) object.Value {
 
 func (t *table) ISet(i int, val object.Value) {
 	if val == nil {
-		if t.alen > i-1 {
-			t.alen = i - 1
+		switch {
+		case 0 < i && i <= len(t.a):
+			if t.alen > i-1 {
+				t.alen = i - 1
+			}
+			t.a[i-1] = nil
+		case i == len(t.a)+1:
+			// do nothing
+		default:
+			t.m.Delete(object.Integer(i))
 		}
-		t.a[i-1] = nil
 	} else {
 		switch {
 		case 0 < i && i <= len(t.a):
