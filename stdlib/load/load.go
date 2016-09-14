@@ -169,7 +169,7 @@ func makeRequire(m object.Table) object.GoFunction {
 					}
 
 					if object.ToType(rets[0]) == object.TFUNCTION {
-						rets, err := th.Call(rets[0], modname, fpath)
+						rets, err := th.Call(rets[0], nil, modname, fpath)
 						if err != nil {
 							return nil, err
 						}
