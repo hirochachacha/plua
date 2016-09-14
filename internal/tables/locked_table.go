@@ -36,46 +36,6 @@ func (t *lockedTable) Len() int {
 	return length
 }
 
-func (t *lockedTable) ALen() int {
-	t.m.Lock()
-
-	length := t.t.ALen()
-
-	t.m.Unlock()
-
-	return length
-}
-
-func (t *lockedTable) ACap() int {
-	t.m.Lock()
-
-	capacity := t.t.ACap()
-
-	t.m.Unlock()
-
-	return capacity
-}
-
-func (t *lockedTable) MLen() int {
-	t.m.Lock()
-
-	length := t.t.MLen()
-
-	t.m.Unlock()
-
-	return length
-}
-
-func (t *lockedTable) MCap() int {
-	t.m.Lock()
-
-	capacity := t.t.MCap()
-
-	t.m.Unlock()
-
-	return capacity
-}
-
 func (t *lockedTable) Get(key object.Value) object.Value {
 	t.m.Lock()
 

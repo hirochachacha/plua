@@ -38,39 +38,10 @@ func (t *concurrentTable) Len() int {
 	t.Lock()
 
 	alen := t.alen
-	mlen := t.MLen()
-
-	t.Unlock()
-
-	return alen + mlen
-}
-
-func (t *concurrentTable) ALen() int {
-	t.Lock()
-
-	alen := t.alen
 
 	t.Unlock()
 
 	return int(alen)
-}
-
-func (t *concurrentTable) ACap() int {
-	t.Lock()
-
-	acap := len(t.a)
-
-	t.Unlock()
-
-	return acap
-}
-
-func (t *concurrentTable) MLen() int {
-	return t.m.Len()
-}
-
-func (t *concurrentTable) MCap() int {
-	return t.m.Cap()
 }
 
 func (t *concurrentTable) ikey(key object.Value) (object.Integer, bool) {

@@ -27,7 +27,7 @@ func concat(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	j, err := ap.OptGoInt(3, t.ALen())
+	j, err := ap.OptGoInt(3, t.Len())
 	if err != nil {
 		return nil, err
 	}
@@ -85,12 +85,12 @@ func insert(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 			return nil, err
 		}
 
-		t.ISet(t.ALen()+1, val)
+		t.ISet(t.Len()+1, val)
 
 		return nil, nil
 	}
 
-	pos, err := ap.OptGoInt(1, t.ALen())
+	pos, err := ap.OptGoInt(1, t.Len())
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func remove(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	pos, err := ap.OptGoInt(1, t.ALen())
+	pos, err := ap.OptGoInt(1, t.Len())
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +250,7 @@ func unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	j, err := ap.OptGoInt(2, t.ALen())
+	j, err := ap.OptGoInt(2, t.Len())
 	if err != nil {
 		return nil, err
 	}

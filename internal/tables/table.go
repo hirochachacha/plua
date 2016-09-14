@@ -40,23 +40,7 @@ func (t *table) String() string {
 }
 
 func (t *table) Len() int {
-	return t.alen + t.m.Len()
-}
-
-func (t *table) ALen() int {
 	return t.alen
-}
-
-func (t *table) ACap() int {
-	return len(t.a)
-}
-
-func (t *table) MLen() int {
-	return t.m.Len()
-}
-
-func (t *table) MCap() int {
-	return t.m.Cap()
 }
 
 func (t *table) ikey(key object.Value) (object.Integer, bool) {

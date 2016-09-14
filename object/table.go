@@ -4,10 +4,6 @@ type Table interface {
 	Value
 
 	Len() int
-	ALen() int
-	ACap() int
-	MLen() int
-	MCap() int
 	Get(key Value) Value
 	Set(Key, val Value)
 	Del(key Value)

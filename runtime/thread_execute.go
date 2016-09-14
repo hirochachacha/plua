@@ -553,7 +553,7 @@ func (th *thread) execute0() (rets []object.Value) {
 						return nil
 					}
 				} else {
-					ctx.setRA(inst, object.Integer(rb.ALen()))
+					ctx.setRA(inst, object.Integer(rb.Len()))
 				}
 			case object.String:
 				ctx.setRA(inst, object.Integer(len(rb)))
