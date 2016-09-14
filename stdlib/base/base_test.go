@@ -1,6 +1,7 @@
 package base_test
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -53,20 +54,26 @@ var testAsserts = []execCase{
 		nil,
 		"got no value",
 	},
+
 	{
 		`assert()`,
 		nil,
-		"assert",
+		"bad argument #1 to 'assert'",
 	},
 	{
 		`function x() assert() end; x()`,
 		nil,
-		"assert",
+		"bad argument #1 to 'assert'",
+	},
+	{
+		`x = assert; x()`,
+		nil,
+		"bad argument #1 to 'x'",
 	},
 	{
 		`t = {x = assert}; t.x()`,
 		nil,
-		"assert",
+		"bad argument #1 to 'x'",
 	},
 }
 
@@ -228,7 +235,7 @@ func testExecCases(t *testing.T, testname string, tests []execCase) {
 		p.Require("_G", base.Open)
 
 		rets, err := p.Exec(proto)
-		// fmt.Printf("code: `%s`, rets: %v, err: %v\n", test.Code, rets, err)
+		fmt.Printf("code: `%s`, rets: %v, err: %v\n", test.Code, rets, err)
 		if err != nil {
 			if test.ErrString == "" {
 				t.Fatal(err)

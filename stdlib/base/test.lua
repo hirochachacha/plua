@@ -1,1 +1,0 @@
-dofile("testdata/nota.lua")
