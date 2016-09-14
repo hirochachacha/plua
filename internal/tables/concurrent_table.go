@@ -183,7 +183,24 @@ func (t *concurrentTable) iget(i int) object.Value {
 
 func (t *concurrentTable) iset(i int, val object.Value) {
 	if val == nil {
-		t.idel(i)
+		t.Lock()
+
+		acap := len(t.a)
+		alen := t.alen
+
+		switch {
+		case 0 < i && i <= acap:
+			if alen > i-1 {
+				t.alen = i - 1
+			}
+			t.a[i-1] = nil
+		case i == acap+1:
+			// do nothing
+		default:
+			t.m.Delete(object.Integer(i))
+		}
+
+		t.Unlock()
 	} else {
 		t.Lock()
 
@@ -230,14 +247,14 @@ func (t *concurrentTable) idel(i int) {
 	t.Lock()
 
 	acap := len(t.a)
-	alen := t.alen
 
 	switch {
 	case 0 < i && i <= acap:
-		if alen > i-1 {
-			t.alen = i - 1
-		}
 		t.a[i-1] = nil
+
+		copy(t.a[i-1:], t.a[i:])
+
+		t.alen--
 	case i == acap+1:
 		// do nothing
 	default:

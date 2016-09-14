@@ -9,7 +9,7 @@ import (
 	"github.com/hirochachacha/plua/object/fnutil"
 )
 
-func Concat(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func concat(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	t, err := ap.ToTable(0)
@@ -70,7 +70,7 @@ func Concat(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	return []object.Value{object.String(buf.String())}, nil
 }
 
-func Insert(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func insert(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	t, err := ap.ToTable(0)
@@ -101,7 +101,7 @@ func Insert(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 }
 
 // TODO support for not table type
-func Move(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func move(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	a1, err := ap.ToTable(0)
@@ -143,7 +143,7 @@ func Move(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return nil, nil
 }
 
-func Pack(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func pack(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	t := th.NewTableArray(append([]object.Value{}, args...))
 
 	t.Set(object.String("n"), object.Integer(len(args)))
@@ -151,7 +151,7 @@ func Pack(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{t}, nil
 }
 
-func Remove(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func remove(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	t, err := ap.ToTable(0)
@@ -164,12 +164,16 @@ func Remove(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	t.IDel(pos)
+	if val := t.IGet(pos); val != nil {
+		t.IDel(pos)
+
+		return []object.Value{val}, nil
+	}
 
 	return nil, nil
 }
 
-func Sort(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func sort(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	t, err := ap.ToTable(0)
@@ -186,7 +190,7 @@ func Sort(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		}
 
 		less = func(x, y object.Value) bool {
-			rets, err := th.Call(cmp, x, y)
+			rets, err := th.Call(cmp, nil, x, y)
 			if err != nil {
 				return false
 			}
@@ -215,7 +219,7 @@ func Sort(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 				}
 			}
 
-			rets, err := th.Call(tm, x, y)
+			rets, err := th.Call(tm, nil, x, y)
 			if err != nil {
 				return false
 			}
@@ -233,7 +237,7 @@ func Sort(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return nil, nil
 }
 
-func Unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	t, err := ap.ToTable(0)
@@ -284,13 +288,13 @@ func Unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	m := th.NewTableSize(0, 7)
 
-	m.Set(object.String("concat"), object.GoFunction(Concat))
-	m.Set(object.String("insert"), object.GoFunction(Insert))
-	m.Set(object.String("move"), object.GoFunction(Move))
-	m.Set(object.String("pack"), object.GoFunction(Pack))
-	m.Set(object.String("remove"), object.GoFunction(Remove))
-	m.Set(object.String("sort"), object.GoFunction(Sort))
-	m.Set(object.String("unpack"), object.GoFunction(Unpack))
+	m.Set(object.String("concat"), object.GoFunction(concat))
+	m.Set(object.String("insert"), object.GoFunction(insert))
+	m.Set(object.String("move"), object.GoFunction(move))
+	m.Set(object.String("pack"), object.GoFunction(pack))
+	m.Set(object.String("remove"), object.GoFunction(remove))
+	m.Set(object.String("sort"), object.GoFunction(sort))
+	m.Set(object.String("unpack"), object.GoFunction(unpack))
 
 	return []object.Value{m}, nil
 }

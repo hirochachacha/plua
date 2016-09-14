@@ -111,7 +111,10 @@ func (t *table) IGet(i int) object.Value {
 
 func (t *table) ISet(i int, val object.Value) {
 	if val == nil {
-		t.IDel(i)
+		if t.alen > i-1 {
+			t.alen = i - 1
+		}
+		t.a[i-1] = nil
 	} else {
 		switch {
 		case 0 < i && i <= len(t.a):
@@ -148,10 +151,11 @@ func (t *table) ISet(i int, val object.Value) {
 func (t *table) IDel(i int) {
 	switch {
 	case 0 < i && i <= len(t.a):
-		if t.alen > i-1 {
-			t.alen = i - 1
-		}
 		t.a[i-1] = nil
+
+		copy(t.a[i-1:], t.a[i:])
+
+		t.alen--
 	case i == len(t.a)+1:
 		// do nothing
 	default:
