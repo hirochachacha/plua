@@ -25,7 +25,7 @@ func (th *thread) getInfo(level int, what string) *object.DebugInfo {
 		}
 	}
 
-	d := &object.DebugInfo{Func: ctx.fn(), CallInfo: ci}
+	d := &object.DebugInfo{Func: ctx.fn(ci), CallInfo: ci}
 
 	cl := ci.closure
 
@@ -110,7 +110,7 @@ func (th *thread) setLocal(d *object.DebugInfo, n int, val object.Value) (name s
 		if d.CallInfo != nil {
 			ci := d.CallInfo.(*callInfo)
 
-			ctx.stack[ci.base+n] = val
+			ctx.stack[ci.base-1+n] = val
 		}
 	}
 
@@ -135,7 +135,7 @@ func (th *thread) getLocal(d *object.DebugInfo, n int) (name string, val object.
 
 			pc = ci.pc
 
-			val = ctx.stack[ci.base+n]
+			val = ctx.stack[ci.base-1+n]
 		} else if n < 0 {
 			return
 		}
@@ -164,11 +164,11 @@ func getLocalName(p *object.Proto, pc, n int) (name string) {
 			break
 		}
 
+		n--
+
 		if n == 0 {
 			return locvar.Name
 		}
-
-		n--
 	}
 
 	return ""
@@ -236,15 +236,15 @@ func getCurrentLine(ci *callInfo) int {
 	return ci.LineInfo[ci.pc-1]
 }
 
-func getObjectName(p *object.Proto, pc, n int) (name, nameWhat string) {
-	name = getLocalName(p, pc, n)
+func getObjectName(p *object.Proto, pc, reg int) (name, nameWhat string) {
+	name = getLocalName(p, pc, reg+1)
 	if len(name) != 0 {
 		nameWhat = "local"
 
 		return
 	}
 
-	pc = getRelativePC(p, pc, n)
+	pc = getRelativePC(p, pc, reg)
 
 	if pc != -1 { /* could find instruction? */
 		inst := p.Code[pc]
@@ -268,7 +268,7 @@ func getObjectName(p *object.Proto, pc, n int) (name, nameWhat string) {
 		case opcode.GETTABLE:
 			t := inst.B()
 			key := inst.C()
-			tn := getLocalName(p, pc, t)
+			tn := getLocalName(p, pc, t+1)
 			name = getRKName(p, pc, key)
 			if tn == version.LUA_ENV {
 				nameWhat = "global"

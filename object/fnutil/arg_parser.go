@@ -466,7 +466,7 @@ func (ap *ArgParser) ArgError(n int, extramsg string) *object.RuntimeError {
 
 	n++
 
-	d := ap.th.GetInfo(1, "n")
+	d := ap.th.GetInfo(0, "n")
 	if d == nil {
 		return object.NewRuntimeError(fmt.Sprintf("bad argument #%d (%s)", n, extramsg))
 	}

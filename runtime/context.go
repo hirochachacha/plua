@@ -36,8 +36,8 @@ func (ctx *context) loadfn(fn object.Value) {
 	ctx.stack[ctx.ci.base-1] = fn
 }
 
-func (ctx *context) fn() object.Value {
-	return ctx.stack[ctx.ci.base-1]
+func (ctx *context) fn(ci *callInfo) object.Value {
+	return ctx.stack[ci.base-1]
 }
 
 func (th *thread) pushContext(stackSize int) {
