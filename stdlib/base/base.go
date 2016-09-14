@@ -186,7 +186,7 @@ func makeINext(tm object.Value) object.GoFunction {
 }
 
 // ipairs(t) -> (inext, t, 0)
-func iPairs(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func ipairs(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	t, err := ap.ToValue(0)
@@ -264,7 +264,7 @@ func pairs(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 }
 
 // loadfile(fname [, mode [, env]]]) -> (closure | (nil, errmessage))
-func loadFile(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func loadfile(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	fname, err := ap.OptGoString(0, "")
@@ -657,8 +657,8 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	g.Set(object.String("dofile"), object.GoFunction(dofile))
 	g.Set(object.String("error"), object.GoFunction(_error))
 	g.Set(object.String("getmetatable"), object.GoFunction(getmetatable))
-	g.Set(object.String("ipairs"), object.GoFunction(iPairs))
-	g.Set(object.String("loadfile"), object.GoFunction(loadFile))
+	g.Set(object.String("ipairs"), object.GoFunction(ipairs))
+	g.Set(object.String("loadfile"), object.GoFunction(loadfile))
 	g.Set(object.String("load"), object.GoFunction(load))
 	g.Set(object.String("next"), object.GoFunction(next))
 	g.Set(object.String("pairs"), object.GoFunction(pairs))
