@@ -11,7 +11,7 @@ import (
 )
 
 // debug()
-func Debug(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func debug(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	stdin := bufio.NewScanner(os.Stdin)
 
 	for {
@@ -55,7 +55,7 @@ func Debug(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 }
 
 // gethook([thread]) -> (fn, mask, count)
-func GetHook(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func gethook(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	th1 := ap.GetThread()
@@ -66,7 +66,7 @@ func GetHook(th object.Thread, args ...object.Value) ([]object.Value, *object.Ru
 }
 
 // getinfo([thread,] f [, what]) -> debug_info
-func GetInfo(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func getinfo(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	th1 := ap.GetThread()
@@ -179,7 +179,7 @@ func GetInfo(th object.Thread, args ...object.Value) ([]object.Value, *object.Ru
 }
 
 // getlocal([thread,] f, local)
-func GetLocal(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func getlocal(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	th1 := ap.GetThread()
@@ -232,7 +232,7 @@ func GetLocal(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 	return []object.Value{object.String(name), val}, nil
 }
 
-func GetMetatable(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func getmetatable(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	val, err := ap.ToValue(0)
@@ -243,12 +243,12 @@ func GetMetatable(th object.Thread, args ...object.Value) ([]object.Value, *obje
 	return []object.Value{th.GetMetatable(val)}, nil
 }
 
-func GetRegistry(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func getregistry(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	return nil, nil
 }
 
 // getupvalue(f, up)
-func GetUpvalue(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func getupvalue(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToFunction(0)
@@ -283,7 +283,7 @@ func GetUpvalue(th object.Thread, args ...object.Value) ([]object.Value, *object
 }
 
 // getuservalue(u)
-func GetUservalue(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func getuservalue(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	if len(args) == 0 {
 		return nil, nil
 	}
@@ -301,7 +301,7 @@ func GetUservalue(th object.Thread, args ...object.Value) ([]object.Value, *obje
 }
 
 // sethook([thread,] hook, mask [, count])
-func SetHook(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func sethook(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	th1 := ap.GetThread()
@@ -327,7 +327,7 @@ func SetHook(th object.Thread, args ...object.Value) ([]object.Value, *object.Ru
 }
 
 // setlocal([thread,] level, local, value)
-func SetLocal(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func setlocal(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	th1 := ap.GetThread()
@@ -361,7 +361,7 @@ func SetLocal(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 }
 
 // setmetatable(value, table)
-func SetMetatable(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func setmetatable(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	val, err := ap.ToValue(0)
@@ -387,7 +387,7 @@ func SetMetatable(th object.Thread, args ...object.Value) ([]object.Value, *obje
 }
 
 // setupvalue(f, up, value)
-func SetUpvalue(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func setupvalue(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToFunction(0)
@@ -426,7 +426,7 @@ func SetUpvalue(th object.Thread, args ...object.Value) ([]object.Value, *object
 	}
 }
 
-func SetUservalue(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func setuservalue(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	ud, err := ap.ToFullUserdata(0)
@@ -446,33 +446,12 @@ func SetUservalue(th object.Thread, args ...object.Value) ([]object.Value, *obje
 
 // TODO
 // traceback([thread,] [message [, level]])
-func TraceBack(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	// ap := fnutil.NewArgParser(th, args)
-
-	// th1 := ap.GetThread()
-
-	// message, err := ap.ToTypes(0, object.TNIL, object.TSTRING)
-	// if err != nil {
-	// if message, ok := ap.Get(0); ok {
-	// return []object.Value{message}, nil
-	// }
-	// }
-
-	// return nil, err
-
+func traceback(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	return nil, object.NewRuntimeError("not implemented")
 }
 
-// level, err := ap.OptGoInt(1, 1)
-// if err != nil {
-// return nil, err
-// }
-// TODO
-
-// }
-
 // upvalueid(f, n)
-func UpvalueId(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func upvalueid(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f, err := ap.ToFunction(0)
@@ -502,7 +481,7 @@ func UpvalueId(th object.Thread, args ...object.Value) ([]object.Value, *object.
 }
 
 // upvaluejoin(f1, n1, f2, n2)
-func UpvalueJoin(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func upvaluejoin(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	f1, err := ap.ToClosure(0)
@@ -541,22 +520,22 @@ func UpvalueJoin(th object.Thread, args ...object.Value) ([]object.Value, *objec
 func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	m := th.NewTableSize(0, 16)
 
-	m.Set(object.String("debug"), object.GoFunction(Debug))
-	m.Set(object.String("gethook"), object.GoFunction(GetHook))
-	m.Set(object.String("getinfo"), object.GoFunction(GetInfo))
-	m.Set(object.String("getlocal"), object.GoFunction(GetLocal))
-	m.Set(object.String("getmetatable"), object.GoFunction(GetMetatable))
-	m.Set(object.String("getregistry"), object.GoFunction(GetRegistry))
-	m.Set(object.String("getupvalue"), object.GoFunction(GetUpvalue))
-	m.Set(object.String("getuservalue"), object.GoFunction(GetUservalue))
-	m.Set(object.String("sethook"), object.GoFunction(SetHook))
-	m.Set(object.String("setlocal"), object.GoFunction(SetLocal))
-	m.Set(object.String("setmetatable"), object.GoFunction(SetMetatable))
-	m.Set(object.String("setupvalue"), object.GoFunction(SetUpvalue))
-	m.Set(object.String("setuservalue"), object.GoFunction(SetUservalue))
-	m.Set(object.String("traceback"), object.GoFunction(TraceBack))
-	m.Set(object.String("upvalueid"), object.GoFunction(UpvalueId))
-	m.Set(object.String("upvaluejoin"), object.GoFunction(UpvalueJoin))
+	m.Set(object.String("debug"), object.GoFunction(debug))
+	m.Set(object.String("gethook"), object.GoFunction(gethook))
+	m.Set(object.String("getinfo"), object.GoFunction(getinfo))
+	m.Set(object.String("getlocal"), object.GoFunction(getlocal))
+	m.Set(object.String("getmetatable"), object.GoFunction(getmetatable))
+	m.Set(object.String("getregistry"), object.GoFunction(getregistry))
+	m.Set(object.String("getupvalue"), object.GoFunction(getupvalue))
+	m.Set(object.String("getuservalue"), object.GoFunction(getuservalue))
+	m.Set(object.String("sethook"), object.GoFunction(sethook))
+	m.Set(object.String("setlocal"), object.GoFunction(setlocal))
+	m.Set(object.String("setmetatable"), object.GoFunction(setmetatable))
+	m.Set(object.String("setupvalue"), object.GoFunction(setupvalue))
+	m.Set(object.String("setuservalue"), object.GoFunction(setuservalue))
+	m.Set(object.String("traceback"), object.GoFunction(traceback))
+	m.Set(object.String("upvalueid"), object.GoFunction(upvalueid))
+	m.Set(object.String("upvaluejoin"), object.GoFunction(upvaluejoin))
 
 	return []object.Value{m}, nil
 }
