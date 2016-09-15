@@ -45,7 +45,7 @@ func (th *thread) resumeExecute(args []object.Value) {
 	}
 
 	// adjust sp
-	ctx.ci.sp = ci.base + len(args)
+	ci.sp = ci.base + len(args)
 }
 
 func (th *thread) execute() {

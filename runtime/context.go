@@ -1,10 +1,14 @@
 package runtime
 
-import "github.com/hirochachacha/plua/object"
+import (
+	"github.com/hirochachacha/plua/internal/limits"
+	"github.com/hirochachacha/plua/object"
+)
 
 type context struct {
-	ci    *callInfo
-	stack []object.Value
+	ci      *callInfo
+	ciStack ciStack
+	stack   []object.Value
 
 	uvcache *uvlist
 
@@ -48,12 +52,13 @@ func (th *thread) pushContext(stackSize int) {
 
 func (th *thread) pushContextWith(stack []object.Value) {
 	ctx := &context{
-		stack: stack,
-		ci: &callInfo{
-			base: 2,
-			sp:   2,
-		},
+		ciStack: make([]callInfo, 1, 16),
+		stack:   stack,
 	}
+
+	ctx.ci = &ctx.ciStack[0]
+	ctx.ci.base = 2
+	ctx.ci.sp = 2
 
 	ctx.prev = th.context
 	ctx.stack[0] = th.env.globals // _ENV
@@ -69,4 +74,33 @@ func (th *thread) popContext() *context {
 	th.context = th.context.prev
 
 	return ctx
+}
+
+func (ctx *context) stackEnsure(size int) bool {
+	if ctx.ci.sp > int(limits.MaxInt)-size-1 {
+		return false
+	}
+
+	needed := ctx.ci.sp + size + 1
+
+	if needed < len(ctx.stack) {
+		return true
+	}
+
+	var newsize int
+
+	if len(ctx.stack) > int(limits.MaxInt) {
+		newsize = needed
+	} else {
+		newsize = len(ctx.stack) * 2
+		if newsize < needed {
+			newsize = needed
+		}
+	}
+
+	newstack := make([]object.Value, newsize)
+	copy(newstack, ctx.stack)
+	ctx.stack = newstack
+
+	return true
 }
