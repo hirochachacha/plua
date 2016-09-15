@@ -1023,13 +1023,15 @@ func (th *thread) concat(a, b, c int) *object.RuntimeError {
 }
 
 func (th *thread) eq(rb, rc object.Value) (b bool, tm object.Value) {
+	// fast path for avoiding assertI2I2
+	eq := object.Equal(rb, rc)
+	if eq {
+		return true, nil
+	}
+
 	switch rb := rb.(type) {
 	case object.Table:
 		if rc, ok := rc.(object.Table); ok {
-			if rb == rc {
-				return true, nil
-			}
-
 			tm := th.fasttm(rb.Metatable(), TM_EQ)
 			if tm == nil {
 				tm = th.fasttm(rc.Metatable(), TM_EQ)
@@ -1044,10 +1046,6 @@ func (th *thread) eq(rb, rc object.Value) (b bool, tm object.Value) {
 		return false, nil
 	case *object.Userdata:
 		if rc, ok := rc.(*object.Userdata); ok {
-			if rb == rc {
-				return true, nil
-			}
-
 			tm := th.fasttm(rb.Metatable, TM_EQ)
 			if tm == nil {
 				tm = th.fasttm(rc.Metatable, TM_EQ)
@@ -1060,9 +1058,9 @@ func (th *thread) eq(rb, rc object.Value) (b bool, tm object.Value) {
 		}
 
 		return false, nil
+	default:
+		return eq, nil
 	}
-
-	return object.Equal(rb, rc), nil
 }
 
 func isfunction(val object.Value) bool {
