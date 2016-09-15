@@ -157,20 +157,17 @@ func findvarargs(ci *callInfo, n int) (name string, val object.Value) {
 func getLocalName(p *object.Proto, pc, n int) (name string) {
 	for _, locvar := range p.LocVars {
 		if pc < locvar.StartPC {
-			continue
-		}
-
-		if pc >= locvar.EndPC {
 			break
 		}
 
-		n--
+		if pc < locvar.EndPC {
+			n--
 
-		if n == 0 {
-			return locvar.Name
+			if n == 0 {
+				return locvar.Name
+			}
 		}
 	}
-
 	return ""
 }
 
