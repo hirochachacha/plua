@@ -158,9 +158,7 @@ func getinfo(th object.Thread, args ...object.Value) ([]object.Value, *object.Ru
 		if d.Name != "" {
 			t.Set(object.String("name"), object.String(d.Name))
 		}
-		if d.NameWhat != "" {
-			t.Set(object.String("namewhat"), object.String(d.NameWhat))
-		}
+		t.Set(object.String("namewhat"), object.String(d.NameWhat))
 	}
 
 	if opts['t'] {
