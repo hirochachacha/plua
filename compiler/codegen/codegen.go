@@ -389,15 +389,33 @@ func (g *generator) closeScope() {
 		g.pushInst(opcode.AsBx(opcode.JMP, g.sp+1, 0))
 	}
 
+	nlocals := g.scope.nlocals
+
 	g.scope = g.scope.outer
 
-	pc := g.pc()
-	for i := len(g.LocVars) - 1; i >= 0; i-- {
-		if g.LocVars[i].EndPC != 0 {
-			break
-		}
-		g.LocVars[i].EndPC = pc
+	if g.scope != nil {
+		nlocals -= g.scope.nlocals
 	}
+
+	if nlocals != 0 {
+		pc := g.pc()
+
+		for i := len(g.LocVars) - 1; i >= 0; i-- {
+			if g.LocVars[i].EndPC != 0 {
+				continue
+			}
+
+			nlocals--
+
+			g.LocVars[i].EndPC = pc
+
+			if nlocals == 0 {
+				break
+			}
+		}
+	}
+
+	return
 
 	return
 }
