@@ -25,7 +25,7 @@ func assert(th object.Thread, args ...object.Value) (rets []object.Value, err *o
 			return nil, object.NewRuntimeError("assertion failed!")
 		}
 
-		return nil, &object.RuntimeError{Value: val}
+		return nil, &object.RuntimeError{Value: val, Level: 1}
 	}
 
 	return args, nil
