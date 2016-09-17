@@ -142,9 +142,9 @@ func (t *table) ISet(i int, val object.Value) {
 func (t *table) IDel(i int) {
 	switch {
 	case 0 < i && i <= len(t.a):
-		t.a[i-1] = nil
-
 		copy(t.a[i-1:], t.a[i:])
+
+		t.a[len(t.a)-1] = nil
 
 		t.alen--
 	case i == len(t.a)+1:

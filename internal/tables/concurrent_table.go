@@ -221,9 +221,9 @@ func (t *concurrentTable) idel(i int) {
 
 	switch {
 	case 0 < i && i <= acap:
-		t.a[i-1] = nil
-
 		copy(t.a[i-1:], t.a[i:])
+
+		t.a[len(t.a)-1] = nil
 
 		t.alen--
 	case i == acap+1:
