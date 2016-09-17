@@ -37,7 +37,7 @@ func (th *thread) getInfo(level int, what string) *object.DebugInfo {
 		case 't':
 			d.IsTailCall = ci.isTailCall
 		case 'n':
-			if ctx.hookMask != 0 {
+			if ctx.inHook {
 				d.Name = "?"
 				d.NameWhat = "hook"
 			} else {

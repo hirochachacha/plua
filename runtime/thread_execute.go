@@ -9,15 +9,23 @@ import (
 	"github.com/hirochachacha/plua/opcode"
 )
 
-func (th *thread) initExecute(args []object.Value) (rets []object.Value, exit bool) {
+func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bool) {
 	ctx := th.context
 
 	switch fn := ctx.stack[1].(type) {
 	case nil:
 		panic("main function isn't loaded yet")
 	case object.GoFunction:
-		rets, _ = th.callvGo(fn, args...)
-		exit = true
+		var err *object.RuntimeError
+		rets, err = th.callvGo(fn, args...)
+
+		if err != nil {
+			th.error(err)
+		} else {
+			ctx.status = object.THREAD_RETURN
+		}
+
+		done = true
 	case object.Closure:
 		copy(ctx.stack[2:], args)
 
@@ -56,12 +64,12 @@ func (th *thread) execute() {
 
 	args := <-th.resume
 
-	if rets, exit := th.initExecute(args); exit {
-		if th.status == object.THREAD_RUNNING {
+	if rets, done := th.initExecute(args); done {
+		switch th.status {
+		case object.THREAD_RETURN:
 			th.yield <- rets
-		}
-
-		if th.status != object.THREAD_ERROR {
+		case object.THREAD_ERROR:
+		default:
 			panic("unexpected")
 		}
 
@@ -128,23 +136,24 @@ func (th *thread) execute() {
 	}
 }
 
-func (th *thread) doExecute(fn, errh object.Value, args []object.Value) (rets []object.Value, err *object.RuntimeError) {
-	th.pushContext(basicStackSize)
+func (th *thread) doExecute(fn, errh object.Value, args []object.Value, isHook bool) (rets []object.Value, err *object.RuntimeError) {
+	th.pushContext(basicStackSize, isHook)
 
 	th.errh = errh
 
 	th.loadfn(fn)
 
-	if rets, exit := th.initExecute(args); exit {
-		if th.status == object.THREAD_RUNNING {
-			return rets, nil
-		}
+	if rets, done := th.initExecute(args); done {
+		ctx := th.popContext()
 
-		if th.status != object.THREAD_ERROR {
+		switch ctx.status {
+		case object.THREAD_RETURN:
+			return rets, nil
+		case object.THREAD_ERROR:
+			return nil, ctx.data.(*object.RuntimeError)
+		default:
 			panic("unexpected")
 		}
-
-		return nil, nil
 	}
 
 	rets = th.execute0()

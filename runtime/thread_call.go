@@ -47,7 +47,7 @@ func (th *thread) callLua(c object.Closure, f, nargs, nrets int) (err *object.Ru
 
 // call a closure by values, immediately return values.
 func (th *thread) docallvLua(c object.Closure, errh object.Value, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
-	return th.doExecute(c, errh, args)
+	return th.doExecute(c, errh, args, false)
 }
 
 // tail call a closure by stack index.

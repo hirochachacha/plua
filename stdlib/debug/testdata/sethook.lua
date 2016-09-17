@@ -7,11 +7,12 @@ function f()
 	return a + 10
 end
 
-lines = {21, 2, 3, 4, 3, 7, 23}
+lines = {22, 2, 3, 4, 3, 7, 24}
 
 function test(f)
 	local i = 1
 	local function hook(event, line)
+		assert(debug.getinfo(1).namewhat == "hook")
 		assert(line == lines[i])
 		i = i + 1
 	end

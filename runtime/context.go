@@ -44,24 +44,29 @@ func (ctx *context) fn(ci *callInfo) object.Value {
 	return ctx.stack[ci.base-1]
 }
 
-func (th *thread) pushContext(stackSize int) {
+func (th *thread) pushContext(stackSize int, isHook bool) {
 	th.depth++
 
-	th.pushContextWith(make([]object.Value, stackSize))
-}
-
-func (th *thread) pushContextWith(stack []object.Value) {
 	ctx := &context{
 		ciStack: make([]callInfo, 1, 16),
-		stack:   stack,
+		stack:   make([]object.Value, stackSize),
 	}
+
+	prev := th.context
 
 	ctx.ci = &ctx.ciStack[0]
 	ctx.ci.base = 2
 	ctx.ci.sp = 2
-
-	ctx.prev = th.context
+	ctx.prev = prev
 	ctx.stack[0] = th.env.globals // _ENV
+
+	if isHook {
+		ctx.inHook = true
+		// inherit information for gethook
+		ctx.hookMask = prev.hookMask
+		ctx.hookFunc = prev.hookFunc
+		ctx.hookCount = prev.hookCount
+	}
 
 	th.context = ctx
 }

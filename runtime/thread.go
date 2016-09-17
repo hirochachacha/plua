@@ -173,12 +173,12 @@ func (th *thread) GetHook() (hook object.Value, mask string, count int) {
 		mask += "c"
 	}
 
-	if th.hookMask&maskLine != 0 {
-		mask += "l"
-	}
-
 	if th.hookMask&maskReturn != 0 {
 		mask += "r"
+	}
+
+	if th.hookMask&maskLine != 0 {
+		mask += "l"
 	}
 
 	return th.hookFunc, mask, th.hookCount
@@ -237,7 +237,7 @@ func (th *thread) newThreadWith(typ threadType, env *environment, stackSize int)
 		depth:  th.depth,
 	}
 
-	newth.pushContext(stackSize)
+	newth.pushContext(stackSize, false)
 
 	go newth.execute()
 
@@ -252,7 +252,7 @@ func newMainThread() *thread {
 		yield:  make(chan []object.Value, 0),
 	}
 
-	th.pushContext(basicStackSize)
+	th.pushContext(basicStackSize, false)
 
 	go th.execute()
 
