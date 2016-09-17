@@ -1,7 +1,6 @@
 package base_test
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -79,6 +78,32 @@ var testAsserts = []execCase{
 
 func TestAssert(t *testing.T) {
 	testExecCases(t, "test_assert", testAsserts)
+}
+
+var testErrors = []execCase{
+	{
+		`
+
+		error("test_message")
+		`,
+		nil,
+		`runtime: "test_message" from test_error:3`,
+	},
+	{
+		`
+		function x()
+		  error("test_message")
+		end
+
+		x()
+		`,
+		nil,
+		`runtime: "test_message" from test_error:3 via test_error:6`,
+	},
+}
+
+func TestError(t *testing.T) {
+	testExecCases(t, "test_error", testErrors)
 }
 
 var testCollectGarbages = []execCase{
@@ -235,7 +260,6 @@ func testExecCases(t *testing.T, testname string, tests []execCase) {
 		p.Require("_G", base.Open)
 
 		rets, err := p.Exec(proto)
-		fmt.Printf("code: `%s`, rets: %v, err: %v\n", test.Code, rets, err)
 		if err != nil {
 			if test.ErrString == "" {
 				t.Fatal(err)
