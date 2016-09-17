@@ -107,7 +107,13 @@ func (th *thread) setLocal(d *object.DebugInfo, n int, val object.Value) (name s
 		if d.CallInfo != nil {
 			ci := d.CallInfo.(*callInfo)
 
-			ctx.stack[ci.base-1+n] = val
+			if n < 0 {
+				if -n <= len(ci.varargs) {
+					ci.varargs[-n-1] = val
+				}
+			} else {
+				ctx.stack[ci.base-1+n] = val
+			}
 		}
 	}
 
@@ -127,7 +133,11 @@ func (th *thread) getLocal(d *object.DebugInfo, n int) (name string, val object.
 			ci := d.CallInfo.(*callInfo)
 
 			if n < 0 {
-				return findvarargs(ci, -n)
+				if -n <= len(ci.varargs) {
+					name, val = "(*vararg)", ci.varargs[-n-1]
+				}
+
+				return
 			}
 
 			pc = ci.pc
@@ -138,14 +148,6 @@ func (th *thread) getLocal(d *object.DebugInfo, n int) (name string, val object.
 		}
 
 		name = getLocalName(fn.Prototype(), pc, n)
-	}
-
-	return
-}
-
-func findvarargs(ci *callInfo, n int) (name string, val object.Value) {
-	if n <= len(ci.varargs) {
-		name, val = "(*vararg)", ci.varargs[n-1]
 	}
 
 	return
