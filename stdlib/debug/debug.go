@@ -302,13 +302,19 @@ func getuservalue(th object.Thread, args ...object.Value) ([]object.Value, *obje
 	return []object.Value{val}, nil
 }
 
-// sethook([thread,] hook, mask [, count])
+// sethook([thread,] hook, mask [, count]) or sethook()
 func sethook(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	if len(args) == 0 {
+		th.SetHook(nil, "", 0)
+
+		return nil, nil
+	}
+
 	ap := fnutil.NewArgParser(th, args)
 
 	th1 := ap.GetThread()
 
-	hook, err := ap.ToFunction(0)
+	hook, err := ap.ToTypes(0, object.TNIL, object.TFUNCTION)
 	if err != nil {
 		return nil, err
 	}
