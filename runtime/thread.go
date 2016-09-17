@@ -198,8 +198,6 @@ func (th *thread) SetHook(hook object.Value, mask string, count int) {
 			bitmask |= maskLine
 		case 'r':
 			bitmask |= maskReturn
-		default:
-			panic("unknown mask")
 		}
 	}
 
