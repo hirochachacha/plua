@@ -185,9 +185,7 @@ func (th *thread) GetHook() (hook object.Value, mask string, count int) {
 }
 
 func (th *thread) SetHook(hook object.Value, mask string, count int) {
-	if !isfunction(hook) {
-		panic("unexpected")
-	}
+	mustFunctionOrNil(hook)
 
 	th.hookFunc = hook
 
@@ -201,7 +199,7 @@ func (th *thread) SetHook(hook object.Value, mask string, count int) {
 		case 'r':
 			bitmask |= maskReturn
 		default:
-			panic("unreachable")
+			panic("unknown mask")
 		}
 	}
 
@@ -217,17 +215,14 @@ func (th *thread) SetHook(hook object.Value, mask string, count int) {
 }
 
 func (th *thread) LoadFunc(fn object.Value) {
-	switch fn := fn.(type) {
-	case object.GoFunction:
-		th.loadfn(fn)
-	case object.Closure:
-		th.loadfn(fn)
-	default:
-		panic("unexpected")
-	}
+	mustFunction(fn)
+
+	th.loadfn(fn)
 }
 
 func (th *thread) Call(fn object.Value, errh object.Value, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	mustFunctionOrNil(errh)
+
 	return th.docallv(fn, errh, args...)
 }
 

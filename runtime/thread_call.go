@@ -136,11 +136,6 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 	}
 
 	rets, err := fn(th, args...)
-	if err != nil {
-		th.error(err, true)
-	}
-
-	ctx.stackEnsure(len(rets))
 
 	ctx.ciStack = ctx.ciStack.pop()
 	ctx.ci = ctx.ciStack.top()
@@ -152,6 +147,8 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 	if nrets != -1 && nrets < len(rets) {
 		rets = rets[:nrets]
 	}
+
+	ctx.stackEnsure(len(rets))
 
 	copy(ctx.stack[f:], rets)
 
@@ -199,9 +196,6 @@ func (th *thread) callvGo(fn object.GoFunction, args ...object.Value) (rets []ob
 	ctx.stack[1] = fn
 
 	rets, err = fn(th, args...)
-	if err != nil {
-		th.error(err, true)
-	}
 
 	ctx.stack[1] = old
 
@@ -240,7 +234,7 @@ func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
 
 	tm := th.gettmbyobj(fn, TM_CALL)
 
-	if !isfunction(tm) {
+	if !isFunction(tm) {
 		return th.callError(fn)
 	}
 
@@ -255,13 +249,6 @@ func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
 
 // call a callable by values, immediately return values.
 func (th *thread) docallv(fn, errh object.Value, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
-	switch errh.(type) {
-	case nil:
-	case object.GoFunction, object.Closure:
-	default:
-		panic("error handler is not a function")
-	}
-
 	switch fn := fn.(type) {
 	case nil:
 		return th.dohandle(errh, th.callError(fn))
@@ -330,7 +317,7 @@ func (th *thread) tailcall(a, nargs int) (err *object.RuntimeError) {
 
 	tm := th.gettmbyobj(fn, TM_CALL)
 
-	if !isfunction(tm) {
+	if !isFunction(tm) {
 		return th.callError(fn)
 	}
 
@@ -383,7 +370,7 @@ func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 
 	tm := th.gettmbyobj(fn, TM_CALL)
 
-	if !isfunction(tm) {
+	if !isFunction(tm) {
 		return th.callError(fn)
 	}
 
