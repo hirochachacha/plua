@@ -17,7 +17,7 @@ func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bo
 		panic("main function isn't loaded yet")
 	case object.GoFunction:
 		var err *object.RuntimeError
-		rets, err = th.callvGo(fn, args...)
+		rets, err = th.docallGo(fn, args...)
 
 		if err != nil {
 			th.error(err)
@@ -1030,7 +1030,7 @@ func (th *thread) concat(a, b, c int) *object.RuntimeError {
 			}
 		}
 
-		rets, err := th.docallv(tm, nil, rb, rc)
+		rets, err := th.docall(tm, nil, rb, rc)
 		if err != nil {
 			return err
 		}

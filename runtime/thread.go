@@ -221,7 +221,7 @@ func (th *thread) LoadFunc(fn object.Value) {
 func (th *thread) Call(fn object.Value, errh object.Value, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	mustFunctionOrNil(errh)
 
-	return th.docallv(fn, errh, args...)
+	return th.docall(fn, errh, args...)
 }
 
 func (th *thread) newThreadWith(typ threadType, env *environment, stackSize int) *thread {
