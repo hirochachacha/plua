@@ -47,6 +47,7 @@ func (ctx *context) fn(ci *callInfo) object.Value {
 func (th *thread) pushContext(stackSize int, isHook bool) {
 	th.depth++
 
+	// TODO
 	ctx := &context{
 		ciStack: make([]callInfo, 1, 16),
 		stack:   make([]object.Value, stackSize),
@@ -82,11 +83,13 @@ func (th *thread) popContext() *context {
 }
 
 func (ctx *context) stackEnsure(size int) bool {
-	if ctx.ci.sp > int(limits.MaxInt)-size-1 {
+	sp := ctx.ci.sp
+
+	if sp > int(limits.MaxInt)-size {
 		return false
 	}
 
-	needed := ctx.ci.sp + size + 1
+	needed := sp + size
 
 	if needed < len(ctx.stack) {
 		return true
@@ -94,10 +97,10 @@ func (ctx *context) stackEnsure(size int) bool {
 
 	var newsize int
 
-	if len(ctx.stack) > int(limits.MaxInt) {
-		newsize = needed
+	if len(ctx.stack) > int(limits.MaxInt)/2 {
+		newsize = int(limits.MaxInt)
 	} else {
-		newsize = len(ctx.stack) * 2
+		newsize *= 2
 		if newsize < needed {
 			newsize = needed
 		}

@@ -855,6 +855,14 @@ func (th *thread) execute0() (rets []object.Value) {
 
 				return nil
 			}
+
+			tloop := ci.Code[ci.pc]
+
+			if tloop.OpCode() != opcode.TFORLOOP {
+				th.error(errInvalidByteCode)
+
+				return nil
+			}
 		case opcode.TFORLOOP:
 			a := inst.A()
 			raplus := ctx.getR(a + 1)
@@ -911,7 +919,9 @@ func (th *thread) execute0() (rets []object.Value) {
 				varargs = varargs[:nrets]
 			}
 
-			ctx.stackEnsure(len(varargs))
+			if !ctx.stackEnsure(len(varargs)) {
+				th.error(errStackOverflow)
+			}
 
 			copy(ctx.stack[ci.base+a:], varargs)
 

@@ -19,9 +19,11 @@ func (th *thread) callLua(c object.Closure, f, nargs, nrets int) (err *object.Ru
 
 	ctx.ci = ctx.ciStack.top()
 
-	ctx.stackEnsure(cl.MaxStackSize)
-
 	ci := ctx.ci
+
+	if !ctx.stackEnsure(cl.MaxStackSize) {
+		return errStackOverflow
+	}
 
 	switch {
 	case nvarargs == 0:
@@ -58,16 +60,18 @@ func (th *thread) tailcallLua(c object.Closure, f, nargs int) (err *object.Runti
 
 	ci := ctx.ci
 
-	maxsp := ci.base + ci.MaxStackSize
-
 	ci.pc = 0
 	ci.sp = ci.base + cl.NParams
 	ci.closure = cl
 	ci.isTailCall = true
 
-	ctx.stackEnsure(cl.MaxStackSize)
+	if !ctx.stackEnsure(cl.MaxStackSize) {
+		return errStackOverflow
+	}
 
 	nvarargs := nargs - cl.NParams
+
+	maxsp := ci.base + ci.MaxStackSize
 
 	switch {
 	case nvarargs == 0:
@@ -148,7 +152,9 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 		rets = rets[:nrets]
 	}
 
-	ctx.stackEnsure(len(rets))
+	if !ctx.stackEnsure(len(rets)) {
+		return errStackOverflow
+	}
 
 	copy(ctx.stack[f:], rets)
 
@@ -238,7 +244,9 @@ func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
 		return th.callError(fn)
 	}
 
-	ctx.stackEnsure(1)
+	if !ctx.stackEnsure(1) {
+		return errStackOverflow
+	}
 
 	copy(ctx.stack[f+1:], ctx.stack[f:f+1+nargs])
 
@@ -321,7 +329,9 @@ func (th *thread) tailcall(a, nargs int) (err *object.RuntimeError) {
 		return th.callError(fn)
 	}
 
-	ctx.stackEnsure(1)
+	if !ctx.stackEnsure(1) {
+		return errStackOverflow
+	}
 
 	copy(ctx.stack[f+1:], ctx.stack[f:f+1+nargs])
 
@@ -338,51 +348,11 @@ func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 
 	f := ctx.ci.base + a
 
-	fn := ctx.stack[f]
+	ctx.ci.sp = ctx.ci.base + 3
 
-	switch fn := fn.(type) {
-	case nil:
-		return th.callError(fn)
-	case object.GoFunction:
-		copy(ctx.stack[f+3:], ctx.stack[f:f+3])
+	copy(ctx.stack[f+3:], ctx.stack[f:f+3])
 
-		return th.callGo(fn, f+3, 2, nrets, false)
-	case object.Closure:
-		args := ctx.stack[f+1 : f+3]
-
-		rets, err := th.docallvLua(fn, nil, args...)
-		if err != nil {
-			return err
-		}
-
-		if nrets != -1 && nrets < len(rets) {
-			rets = rets[:nrets]
-		}
-
-		if len(rets) == 0 {
-			ctx.stack[f+3] = nil
-		} else {
-			copy(ctx.stack[f+3:], rets)
-		}
-
-		return nil
-	}
-
-	tm := th.gettmbyobj(fn, TM_CALL)
-
-	if !isFunction(tm) {
-		return th.callError(fn)
-	}
-
-	ctx.stackEnsure(1)
-
-	copy(ctx.stack[f+1:], ctx.stack[f:f+3])
-
-	ctx.ci.sp++
-
-	ctx.stack[f] = tm
-
-	return th.tforcall(a, nrets)
+	return th.call(3, 2, nrets)
 }
 
 // post process XXXcall.
@@ -411,13 +381,11 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 
 	retbase := ctx.ci.base - 1
 
-	maxsp := ctx.ci.base + ctx.ci.MaxStackSize
-
 	// copy result to stack
 	copy(ctx.stack[retbase:], rets)
 
 	// clear unused stack
-	for r := maxsp - 1; r >= retbase+len(rets); r-- {
+	for r := ctx.ci.base + ctx.ci.MaxStackSize - 1; r >= retbase+len(rets); r-- {
 		ctx.stack[r] = nil
 	}
 
