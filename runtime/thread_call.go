@@ -246,11 +246,51 @@ func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 
 	f := ctx.ci.base + a
 
-	ctx.ci.sp = ctx.ci.base + 3
+	fn := ctx.stack[f]
 
-	copy(ctx.stack[f+3:], ctx.stack[f:f+3])
+	switch fn := fn.(type) {
+	case nil:
+		return th.callError(fn)
+	case object.GoFunction:
+		copy(ctx.stack[f+3:], ctx.stack[f:f+3])
 
-	return th.call(3, 2, nrets)
+		return th.callGo(fn, f+3, 2, nrets, false)
+	case object.Closure:
+		args := ctx.stack[f+1 : f+3]
+
+		rets, err := th.docallLua(fn, nil, args...)
+		if err != nil {
+			return err
+		}
+
+		if nrets != -1 && nrets < len(rets) {
+			rets = rets[:nrets]
+		}
+
+		if len(rets) == 0 {
+			ctx.stack[f+3] = nil
+		} else {
+			copy(ctx.stack[f+3:], rets)
+		}
+
+		return nil
+	}
+
+	tm := th.gettmbyobj(fn, TM_CALL)
+
+	if !isFunction(tm) {
+		return th.callError(fn)
+	}
+
+	ctx.stackEnsure(1)
+
+	copy(ctx.stack[f+1:], ctx.stack[f:f+3])
+
+	ctx.ci.sp++
+
+	ctx.stack[f] = tm
+
+	return th.tforcall(a, nrets)
 }
 
 // post process XXXcall.

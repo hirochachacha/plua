@@ -254,6 +254,9 @@ func testExecCases(t *testing.T, testname string, tests []execCase) {
 
 	for _, test := range tests {
 		proto, err := c.Compile(strings.NewReader(test.Code), "="+testname)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		p := runtime.NewProcess()
 

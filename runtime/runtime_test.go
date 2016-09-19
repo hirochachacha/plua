@@ -37,6 +37,38 @@ var testExec = []struct {
 	return fib(10)
 	`, []object.Value{object.Integer(55)}},
 	{`return pcall(debug.getinfo, print, "X")`, []object.Value{object.False, object.String("bad argument #2 to 'debug.getinfo' (invalid option 'X')")}},
+	{
+		`
+		local x = {}
+		for k, v in pairs({2, 2, 3, 4}) do
+			x[k] = v
+		end
+		return x[1], x[2], x[3], x[4]
+		`,
+		[]object.Value{object.Integer(2), object.Integer(2), object.Integer(3), object.Integer(4)},
+	},
+	{
+		`
+		local x = {}
+		for k, v in ipairs({1, 2, 3, 4}) do
+			x[k] = v
+		end
+		return x[1], x[2], x[3], x[4]
+		`,
+		[]object.Value{object.Integer(1), object.Integer(2), object.Integer(3), object.Integer(4)},
+	},
+	{
+		`
+		local x = {}
+		(function()
+			for k, v in ipairs({1, 2, 3, 4}) do
+				x[k] = v
+			end
+		end)()
+		return x[1], x[2], x[3], x[4]
+		`,
+		[]object.Value{object.Integer(1), object.Integer(2), object.Integer(3), object.Integer(4)},
+	},
 }
 
 func TestExec(t *testing.T) {
