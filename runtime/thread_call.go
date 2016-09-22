@@ -25,7 +25,7 @@ func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
 		return th.callError(fn)
 	}
 
-	if !ctx.stackEnsure(1) {
+	if !ctx.growStack(1) {
 		return errStackOverflow
 	}
 
@@ -42,7 +42,7 @@ func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
 func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall bool) (err *object.RuntimeError) {
 	ctx := th.context
 
-	ctx.ciStack = ctx.ciStack.push(callInfo{
+	ctx.pushFrame(callInfo{
 		nrets:      nrets,
 		isTailCall: isTailCall,
 		base:       f + 1,
@@ -51,8 +51,6 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 		// fake infos
 		pc: -1,
 	})
-
-	ctx.ci = ctx.ciStack.top()
 
 	if ctx.hookMask != 0 {
 		if isTailCall {
@@ -68,8 +66,7 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 
 	rets, err := fn(th, ctx.stack[ctx.ci.base:ctx.ci.top]...)
 	if err != nil {
-		ctx.ciStack = ctx.ciStack.pop()
-		ctx.ci = ctx.ciStack.top()
+		ctx.popFrame()
 
 		return err
 	}
@@ -78,7 +75,7 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 		rets = rets[:nrets]
 	}
 
-	if !ctx.stackEnsure(len(rets) - 1 - nargs) {
+	if !ctx.growStack(len(rets) - 1 - nargs) {
 		return errStackOverflow
 	}
 
@@ -91,8 +88,7 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 		ctx.stack[r] = nil
 	}
 
-	ctx.ciStack = ctx.ciStack.pop()
-	ctx.ci = ctx.ciStack.top()
+	ctx.popFrame()
 
 	// adjust top
 	ctx.ci.top = retop
@@ -110,18 +106,16 @@ func (th *thread) callLua(c object.Closure, f, nargs, nrets int) (err *object.Ru
 
 	cl := c.(*closure)
 
-	ctx.ciStack = ctx.ciStack.push(callInfo{
+	ctx.pushFrame(callInfo{
 		closure: cl,
 		nrets:   nrets,
 		base:    f + 1,
 		top:     f + 1 + cl.MaxStackSize,
 	})
 
-	ctx.ci = ctx.ciStack.top()
-
 	ci := ctx.ci
 
-	if !ctx.stackEnsure(0) {
+	if !ctx.growStack(0) {
 		return errStackOverflow
 	}
 
@@ -173,7 +167,7 @@ func (th *thread) tailcall(a, nargs int) (err *object.RuntimeError) {
 		return th.callError(fn)
 	}
 
-	if !ctx.stackEnsure(1) {
+	if !ctx.growStack(1) {
 		return errStackOverflow
 	}
 
@@ -199,7 +193,7 @@ func (th *thread) tailcallLua(c object.Closure, f, nargs int) (err *object.Runti
 	ci.closure = cl
 	ci.isTailCall = true
 
-	if !ctx.stackEnsure(0) {
+	if !ctx.growStack(0) {
 		return errStackOverflow
 	}
 
@@ -270,7 +264,7 @@ func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 		return th.callError(fn)
 	}
 
-	ctx.stackEnsure(1)
+	ctx.growStack(1)
 
 	copy(ctx.stack[f+1:], ctx.stack[f:f+3])
 
@@ -292,7 +286,7 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 
 	th.closeUpvals(ctx.ci.base) // closing upvalues
 
-	if ctx.ciStack.isBottom() {
+	if ctx.ci.isBottom() {
 		if ctx.hookMask != 0 {
 			if err := th.onReturn(); err != nil {
 				return nil, true
@@ -314,8 +308,7 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 		ctx.stack[r] = nil
 	}
 
-	ctx.ciStack = ctx.ciStack.pop()
-	ctx.ci = ctx.ciStack.top()
+	ctx.popFrame()
 
 	// adjust top
 	ctx.ci.top = retop
@@ -358,7 +351,7 @@ func (th *thread) docall(fn, errh object.Value, args ...object.Value) (rets []ob
 func (th *thread) docallGo(fn object.GoFunction, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	ctx := th.context
 
-	ctx.ciStack = ctx.ciStack.push(callInfo{
+	ctx.pushFrame(callInfo{
 		nrets:      -1,
 		isTailCall: false,
 
@@ -367,8 +360,6 @@ func (th *thread) docallGo(fn object.GoFunction, args ...object.Value) (rets []o
 		top:  -1,
 		pc:   -1,
 	})
-
-	ctx.ci = ctx.ciStack.top()
 
 	if ctx.hookMask != 0 {
 		if err := th.onCall(); err != nil {
@@ -386,8 +377,7 @@ func (th *thread) docallGo(fn object.GoFunction, args ...object.Value) (rets []o
 
 	ctx.stack[1] = old
 
-	ctx.ciStack = ctx.ciStack.pop()
-	ctx.ci = ctx.ciStack.top()
+	ctx.popFrame()
 
 	if err != nil {
 		return nil, err

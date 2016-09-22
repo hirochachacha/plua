@@ -7,7 +7,7 @@ import (
 
 type context struct {
 	ci      *callInfo
-	ciStack ciStack
+	ciStack []callInfo
 	stack   []object.Value
 
 	uvcache *uvlist
@@ -47,7 +47,6 @@ func (ctx *context) fn(ci *callInfo) object.Value {
 func (th *thread) pushContext(stackSize int, isHook bool) {
 	th.depth++
 
-	// TODO
 	ctx := &context{
 		ciStack: make([]callInfo, 1, 16),
 		stack:   make([]object.Value, stackSize),
@@ -83,7 +82,17 @@ func (th *thread) popContext() *context {
 	return ctx
 }
 
-func (ctx *context) stackEnsure(size int) bool {
+func (ctx *context) pushFrame(ci callInfo) {
+	ctx.ciStack = append(ctx.ciStack, ci)
+	ctx.ci = &ctx.ciStack[len(ctx.ciStack)-1]
+}
+
+func (ctx *context) popFrame() {
+	ctx.ciStack = ctx.ciStack[:len(ctx.ciStack)-1]
+	ctx.ci = &ctx.ciStack[len(ctx.ciStack)-1]
+}
+
+func (ctx *context) growStack(size int) bool {
 	if size < 0 {
 		return true
 	}

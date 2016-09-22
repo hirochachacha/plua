@@ -33,7 +33,7 @@ func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bo
 		ci.closure = cl
 		ci.top = ci.base + cl.MaxStackSize
 
-		if !ctx.stackEnsure(0) {
+		if !ctx.growStack(0) {
 			panic(errStackOverflow)
 		}
 
@@ -945,7 +945,7 @@ func (th *thread) execute0() (rets []object.Value) {
 				varargs = varargs[:nrets]
 			}
 
-			if !ctx.stackEnsure(len(varargs)) {
+			if !ctx.growStack(len(varargs)) {
 				th.error(errStackOverflow)
 			}
 
