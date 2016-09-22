@@ -171,17 +171,19 @@ func (m *machine) findAll(input string) (matches []*MatchRange) {
 		return nil
 	case matchBeginning | matchPrefixLiteral | matchEnd:
 		if strings.HasPrefix(input, m.literal) {
-			found := m.matchFrom(input, 0)
-			if found.Item.End == len(input) {
-				return []*MatchRange{found}
+			if found := m.matchFrom(input, 0); found != nil {
+				if found.Item.End == len(input) {
+					return []*MatchRange{found}
+				}
 			}
 		}
 		return nil
 	case matchEnd:
 		for ioff := 0; ioff < len(input); ioff++ {
-			found := m.matchFrom(input, ioff)
-			if found != nil && found.Item.End == len(input) {
-				return []*MatchRange{found}
+			if found := m.matchFrom(input, ioff); found != nil {
+				if found.Item.End == len(input) {
+					return []*MatchRange{found}
+				}
 			}
 		}
 		return nil
@@ -209,8 +211,7 @@ func (m *machine) findAll(input string) (matches []*MatchRange) {
 
 			ioff += idx
 
-			found := m.matchFrom(input, ioff)
-			if found != nil {
+			if found := m.matchFrom(input, ioff); found != nil {
 				if found.Item.End == len(input) {
 					return []*MatchRange{found}
 				}
@@ -253,8 +254,7 @@ func (m *machine) findAll(input string) (matches []*MatchRange) {
 
 			ioff += idx
 
-			found := m.matchFrom(input, ioff)
-			if found != nil {
+			if found := m.matchFrom(input, ioff); found != nil {
 				matches = append(matches, found)
 
 				ioff = found.Item.End
@@ -267,8 +267,7 @@ func (m *machine) findAll(input string) (matches []*MatchRange) {
 		var ioff int
 
 		for ioff < len(input) {
-			found := m.matchFrom(input, ioff)
-			if found != nil {
+			if found := m.matchFrom(input, ioff); found != nil {
 				matches = append(matches, found)
 
 				ioff = found.Item.End
@@ -301,17 +300,19 @@ func (m *machine) find(input string) *MatchRange {
 		return nil
 	case matchBeginning | matchPrefixLiteral | matchEnd:
 		if strings.HasPrefix(input, m.literal) {
-			found := m.matchFrom(input, 0)
-			if found.Item.End == len(input) {
-				return found
+			if found := m.matchFrom(input, 0); found != nil {
+				if found.Item.End == len(input) {
+					return found
+				}
 			}
 		}
 		return nil
 	case matchEnd:
 		for ioff := 0; ioff < len(input); ioff++ {
-			found := m.matchFrom(input, ioff)
-			if found != nil && found.Item.End == len(input) {
-				return found
+			if found := m.matchFrom(input, ioff); found != nil {
+				if found.Item.End == len(input) {
+					return found
+				}
 			}
 		}
 		return nil
@@ -335,8 +336,7 @@ func (m *machine) find(input string) *MatchRange {
 
 			ioff += idx
 
-			found := m.matchFrom(input, ioff)
-			if found != nil {
+			if found := m.matchFrom(input, ioff); found != nil {
 				if found.Item.End == len(input) {
 					return found
 				}
@@ -365,8 +365,7 @@ func (m *machine) find(input string) *MatchRange {
 
 			ioff += idx
 
-			found := m.matchFrom(input, ioff)
-			if found != nil {
+			if found := m.matchFrom(input, ioff); found != nil {
 				return found
 			}
 
@@ -377,8 +376,7 @@ func (m *machine) find(input string) *MatchRange {
 		var ioff int
 
 		for ioff < len(input) {
-			found := m.matchFrom(input, ioff)
-			if found != nil {
+			if found := m.matchFrom(input, ioff); found != nil {
 				return found
 			}
 
