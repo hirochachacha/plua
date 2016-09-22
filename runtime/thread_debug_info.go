@@ -41,7 +41,7 @@ func (th *thread) getInfo(level int, what string) *object.DebugInfo {
 		case 't':
 			d.IsTailCall = ci.isTailCall
 		case 'n':
-			if ctx.inHook && i == 0 {
+			if ctx.hookState == isHook && i == 0 {
 				d.Name = "?"
 				d.NameWhat = "hook"
 			} else {
@@ -118,6 +118,7 @@ func (th *thread) setLocal(d *object.DebugInfo, n int, val object.Value) (name s
 					ci.varargs[-n-1] = val
 				}
 			} else {
+				// TODO
 				ctx.stack[ci.base-1+n] = val
 			}
 		}
@@ -148,6 +149,7 @@ func (th *thread) getLocal(d *object.DebugInfo, n int) (name string, val object.
 
 			pc = ci.pc
 
+			// TODO
 			val = ctx.stack[ci.base-1+n]
 		} else if n < 0 {
 			return

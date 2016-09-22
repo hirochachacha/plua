@@ -23,6 +23,12 @@ type thread struct {
 	resume chan []object.Value
 	yield  chan []object.Value
 
+	hookMask  maskType
+	hookFunc  object.Value
+	instCount int
+	hookCount int
+	lastLine  int
+
 	depth int
 }
 
@@ -187,29 +193,35 @@ func (th *thread) GetHook() (hook object.Value, mask string, count int) {
 func (th *thread) SetHook(hook object.Value, mask string, count int) {
 	mustFunctionOrNil(hook)
 
-	th.hookFunc = hook
-
-	var bitmask maskType
-	for _, r := range mask {
-		switch r {
-		case 'c':
-			bitmask |= maskCall
-		case 'l':
-			bitmask |= maskLine
-		case 'r':
-			bitmask |= maskReturn
-		}
-	}
-
-	if count > 0 {
-		bitmask |= maskCount
-
-		th.hookCount = count
-	} else {
+	if hook == nil {
+		th.hookFunc = hook
 		th.hookCount = 0
-	}
+		th.hookMask = 0
+	} else {
+		th.hookFunc = hook
 
-	th.hookMask = bitmask
+		var bitmask maskType
+		for _, r := range mask {
+			switch r {
+			case 'c':
+				bitmask |= maskCall
+			case 'l':
+				bitmask |= maskLine
+			case 'r':
+				bitmask |= maskReturn
+			}
+		}
+
+		if count > 0 {
+			bitmask |= maskCount
+
+			th.hookCount = count
+		} else {
+			th.hookCount = 0
+		}
+
+		th.hookMask = bitmask
+	}
 }
 
 func (th *thread) LoadFunc(fn object.Value) {

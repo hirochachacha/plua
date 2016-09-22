@@ -5,6 +5,14 @@ import (
 	"github.com/hirochachacha/plua/object"
 )
 
+type hookState int
+
+const (
+	noHook hookState = iota
+	isHook
+	inHook
+)
+
 type context struct {
 	ci      *callInfo
 	ciStack []callInfo
@@ -12,12 +20,7 @@ type context struct {
 
 	uvcache *uvlist
 
-	inHook    bool
-	hookMask  maskType
-	hookFunc  object.Value
-	instCount int
-	hookCount int
-	lastLine  int
+	hookState hookState
 
 	status object.ThreadStatus
 	data   interface{} // *object.RuntimeError or []object.Value or nil
@@ -44,7 +47,7 @@ func (ctx *context) fn(ci *callInfo) object.Value {
 	return ctx.stack[ci.base-1]
 }
 
-func (th *thread) pushContext(stackSize int, isHook bool) {
+func (th *thread) pushContext(stackSize int, newHook bool) {
 	th.depth++
 
 	ctx := &context{
@@ -60,13 +63,12 @@ func (th *thread) pushContext(stackSize int, isHook bool) {
 	ctx.ci.nrets = -1
 	ctx.prev = prev
 	ctx.stack[0] = th.env.globals // _ENV
-
-	if isHook {
-		ctx.inHook = true
-		// inherit information for gethook
-		ctx.hookMask = prev.hookMask
-		ctx.hookFunc = prev.hookFunc
-		ctx.hookCount = prev.hookCount
+	if newHook {
+		ctx.hookState = isHook
+	} else {
+		if prev != nil && prev.hookState != noHook {
+			ctx.hookState = inHook
+		}
 	}
 
 	th.context = ctx

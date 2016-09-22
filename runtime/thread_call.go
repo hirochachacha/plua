@@ -52,7 +52,7 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 		pc: -1,
 	})
 
-	if ctx.hookMask != 0 {
+	if th.hookMask != 0 {
 		if isTailCall {
 			if err := th.onTailCall(); err != nil {
 				return err
@@ -93,7 +93,7 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 	// adjust top
 	ctx.ci.top = retop
 
-	if ctx.hookMask != 0 {
+	if th.hookMask != 0 {
 		return th.onReturn()
 	}
 
@@ -135,7 +135,7 @@ func (th *thread) callLua(c object.Closure, f, nargs, nrets int) (err *object.Ru
 		}
 	}
 
-	if ctx.hookMask != 0 {
+	if th.hookMask != 0 {
 		return th.onCall()
 	}
 
@@ -215,7 +215,7 @@ func (th *thread) tailcallLua(c object.Closure, f, nargs int) (err *object.Runti
 		}
 	}
 
-	if ctx.hookMask != 0 {
+	if th.hookMask != 0 {
 		return th.onTailCall()
 	}
 
@@ -287,7 +287,7 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 	th.closeUpvals(ctx.ci.base) // closing upvalues
 
 	if ctx.ci.isBottom() {
-		if ctx.hookMask != 0 {
+		if th.hookMask != 0 {
 			if err := th.onReturn(); err != nil {
 				return nil, true
 			}
@@ -313,7 +313,7 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 	// adjust top
 	ctx.ci.top = retop
 
-	if ctx.hookMask != 0 {
+	if th.hookMask != 0 {
 		if err := th.onReturn(); err != nil {
 			return nil, true
 		}
@@ -361,7 +361,7 @@ func (th *thread) docallGo(fn object.GoFunction, args ...object.Value) (rets []o
 		pc:   -1,
 	})
 
-	if ctx.hookMask != 0 {
+	if th.hookMask != 0 {
 		if err := th.onCall(); err != nil {
 			return nil, err
 		}
@@ -383,7 +383,7 @@ func (th *thread) docallGo(fn object.GoFunction, args ...object.Value) (rets []o
 		return nil, err
 	}
 
-	if ctx.hookMask != 0 {
+	if th.hookMask != 0 {
 		if err := th.onReturn(); err != nil {
 			return nil, err
 		}

@@ -1,8 +1,6 @@
 package runtime
 
-import (
-	"github.com/hirochachacha/plua/object"
-)
+import "github.com/hirochachacha/plua/object"
 
 type hookType int
 
@@ -36,31 +34,31 @@ var hookNames = [...]string{
 }
 
 func (th *thread) onInstruction() *object.RuntimeError {
-	ctx := th.context
-
-	if ctx.inHook {
-		return nil
-	}
-	if ctx.hookFunc == nil {
+	if th.context.hookState != noHook {
 		return nil
 	}
 
-	if ctx.hookMask&maskCount != 0 && ctx.hookCount > 0 {
-		ctx.instCount++
+	if th.hookFunc == nil {
+		return nil
+	}
 
-		if ctx.instCount%ctx.hookCount == 0 {
+	if th.hookMask&maskCount != 0 && th.hookCount > 0 {
+		th.instCount++
+
+		if th.instCount%th.hookCount == 0 {
 			if err := th.callHook(hookCount, nil); err != nil {
 				return err
 			}
 		}
 	}
 
-	if ctx.hookMask&maskLine != 0 {
+	if th.hookMask&maskLine != 0 {
+		ctx := th.context
 		line := ctx.ci.LineInfo[ctx.ci.pc]
-		if line == ctx.lastLine {
+		if line == th.lastLine {
 			return nil
 		}
-		ctx.lastLine = line
+		th.lastLine = line
 
 		return th.callHook(hookLine, object.Integer(line))
 	}
@@ -69,12 +67,15 @@ func (th *thread) onInstruction() *object.RuntimeError {
 }
 
 func (th *thread) onReturn() *object.RuntimeError {
-	ctx := th.context
-
-	if ctx.inHook {
+	if th.context.hookState != noHook {
 		return nil
 	}
-	if ctx.hookMask&maskReturn != 0 && ctx.hookFunc != nil {
+
+	if th.hookFunc == nil {
+		return nil
+	}
+
+	if th.hookMask&maskReturn != 0 {
 		return th.callHook(hookReturn, nil)
 	}
 
@@ -82,26 +83,34 @@ func (th *thread) onReturn() *object.RuntimeError {
 }
 
 func (th *thread) onCall() *object.RuntimeError {
-	ctx := th.context
-
-	if ctx.inHook {
+	if th.context.hookState != noHook {
 		return nil
 	}
-	if ctx.hookMask&maskCall != 0 && ctx.hookFunc != nil {
+
+	if th.hookFunc == nil {
+		return nil
+	}
+
+	if th.hookMask&maskCall != 0 {
 		return th.callHook(hookCall, nil)
 	}
+
 	return nil
 }
 
 func (th *thread) onTailCall() *object.RuntimeError {
-	ctx := th.context
-
-	if ctx.inHook {
+	if th.context.hookState != noHook {
 		return nil
 	}
-	if ctx.hookMask&maskCall != 0 && ctx.hookFunc != nil {
+
+	if th.hookFunc == nil {
+		return nil
+	}
+
+	if th.hookMask&maskCall != 0 {
 		return th.callHook(hookTailCall, nil)
 	}
+
 	return nil
 }
 

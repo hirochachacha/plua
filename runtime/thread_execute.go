@@ -230,7 +230,7 @@ func (th *thread) execute0() (rets []object.Value) {
 	for {
 		inst = ci.Code[ci.pc]
 
-		if ctx.hookMask != 0 {
+		if th.hookMask != 0 {
 			if err := th.onInstruction(); err != nil {
 				th.error(err)
 
