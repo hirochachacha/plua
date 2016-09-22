@@ -57,7 +57,7 @@ func (th *thread) pushContext(stackSize int, isHook bool) {
 
 	ctx.ci = &ctx.ciStack[0]
 	ctx.ci.base = 2
-	ctx.ci.sp = 2
+	ctx.ci.top = 2
 	ctx.ci.nrets = -1
 	ctx.prev = prev
 	ctx.stack[0] = th.env.globals // _ENV
@@ -84,13 +84,17 @@ func (th *thread) popContext() *context {
 }
 
 func (ctx *context) stackEnsure(size int) bool {
-	sp := ctx.ci.sp
+	if size < 0 {
+		return true
+	}
 
-	if sp > int(limits.MaxInt)-size {
+	top := ctx.ci.top
+
+	if top > int(limits.MaxInt)-size {
 		return false
 	}
 
-	needed := sp + size
+	needed := top + size
 
 	if needed < len(ctx.stack) {
 		return true

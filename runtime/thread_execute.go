@@ -31,28 +31,27 @@ func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bo
 
 		ci := &ctx.ciStack[0]
 		ci.closure = cl
-		ci.sp = ci.base + cl.NParams
+		ci.top = ci.base + cl.MaxStackSize
 
-		if !ctx.stackEnsure(cl.MaxStackSize) {
+		if !ctx.stackEnsure(0) {
 			panic(errStackOverflow)
 		}
 
 		copy(ctx.stack[ci.base:], args)
 
-		nvarargs := len(args) - cl.NParams
-
-		switch {
-		case nvarargs == 0:
-		// do nothing
-		case nvarargs < 0:
-			for r := ci.sp - 1; r >= ci.base+len(args); r-- {
-				ctx.stack[r] = nil
-			}
-		case nvarargs > 0:
+		if nvarargs := len(args) - cl.NParams; nvarargs > 0 {
 			if cl.IsVararg {
 				ci.varargs = make([]object.Value, nvarargs)
 
 				copy(ci.varargs, ctx.stack[ci.base+cl.NParams:ci.base+len(args)])
+			}
+
+			for r := ci.top - 1; r >= ci.base+cl.NParams; r-- {
+				ctx.stack[r] = nil
+			}
+		} else {
+			for r := ci.top - 1; r >= ci.base+len(args); r-- {
+				ctx.stack[r] = nil
 			}
 		}
 	default:
@@ -75,12 +74,14 @@ func (th *thread) resumeExecute(args []object.Value) {
 
 	copy(ctx.stack[ci.base-1:], args)
 
-	for r := ci.sp; r >= ci.base+len(args); r-- {
+	top := ctx.ci.base - 1 + len(args)
+
+	for r := ci.top; r >= top; r-- {
 		ctx.stack[r] = nil
 	}
 
-	// adjust sp
-	ci.sp = ci.base + len(args)
+	// adjust top
+	ci.top = top
 }
 
 func (th *thread) execute() {
@@ -741,7 +742,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			nrets := inst.C() - 1
 
 			if nargs == -1 {
-				nargs = ci.sp - ci.base - a - 1
+				nargs = ci.top - ci.base - a - 1
 			}
 
 			if err := th.call(a, nargs, nrets); err != nil {
@@ -756,7 +757,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			nargs := inst.B() - 1
 
 			if nargs == -1 {
-				nargs = ci.sp - ci.base - a - 1
+				nargs = ci.top - ci.base - a - 1
 			}
 
 			if err := th.tailcall(a, nargs); err != nil {
@@ -771,7 +772,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			nrets := inst.B() - 1
 
 			if nrets == -1 {
-				nrets = ci.sp - ci.base - a
+				nrets = ci.top - ci.base - a
 			}
 
 			if rets, exit := th.returnLua(a, nrets); exit {
@@ -901,7 +902,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			a := inst.A()
 			length := inst.B()
 			if length == 0 {
-				length = ci.sp - ci.base - a - 1
+				length = ci.top - ci.base - a - 1
 			}
 
 			c := inst.C()
@@ -950,7 +951,7 @@ func (th *thread) execute0() (rets []object.Value) {
 
 			copy(ctx.stack[ci.base+a:], varargs)
 
-			ctx.ci.sp = ci.base + a + len(varargs)
+			ctx.ci.top = ci.base + a + len(varargs)
 		case opcode.EXTRAARG:
 			th.error(errInvalidByteCode)
 

@@ -29,6 +29,8 @@ func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
 		return errStackOverflow
 	}
 
+	ctx.ci.top++
+
 	copy(ctx.stack[f+1:], ctx.stack[f:f+1+nargs])
 
 	ctx.stack[f] = tm
@@ -40,15 +42,11 @@ func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
 func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall bool) (err *object.RuntimeError) {
 	ctx := th.context
 
-	sp := f + 1 + nargs
-
-	args := ctx.stack[f+1 : sp]
-
 	ctx.ciStack = ctx.ciStack.push(callInfo{
 		nrets:      nrets,
 		isTailCall: isTailCall,
 		base:       f + 1,
-		sp:         sp,
+		top:        f + 1 + nargs,
 
 		// fake infos
 		pc: -1,
@@ -68,12 +66,11 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 		}
 	}
 
-	rets, err := fn(th, args...)
-
-	ctx.ciStack = ctx.ciStack.pop()
-	ctx.ci = ctx.ciStack.top()
-
+	rets, err := fn(th, ctx.stack[ctx.ci.base:ctx.ci.top]...)
 	if err != nil {
+		ctx.ciStack = ctx.ciStack.pop()
+		ctx.ci = ctx.ciStack.top()
+
 		return err
 	}
 
@@ -81,19 +78,24 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 		rets = rets[:nrets]
 	}
 
-	if !ctx.stackEnsure(len(rets)) {
+	if !ctx.stackEnsure(len(rets) - 1 - nargs) {
 		return errStackOverflow
 	}
 
-	copy(ctx.stack[f:], rets)
+	copy(ctx.stack[ctx.ci.base-1:], rets)
+
+	retop := ctx.ci.base - 1 + len(rets)
 
 	// clear unused stack
-	for r := sp; r >= f+len(rets); r-- {
+	for r := ctx.ci.top - 1; r >= retop; r-- {
 		ctx.stack[r] = nil
 	}
 
-	// adjust sp
-	ctx.ci.sp = f + len(rets)
+	ctx.ciStack = ctx.ciStack.pop()
+	ctx.ci = ctx.ciStack.top()
+
+	// adjust top
+	ctx.ci.top = retop
 
 	if ctx.hookMask != 0 {
 		return th.onReturn()
@@ -108,35 +110,34 @@ func (th *thread) callLua(c object.Closure, f, nargs, nrets int) (err *object.Ru
 
 	cl := c.(*closure)
 
-	nvarargs := nargs - cl.NParams
-
 	ctx.ciStack = ctx.ciStack.push(callInfo{
 		closure: cl,
 		nrets:   nrets,
 		base:    f + 1,
-		sp:      f + 1 + cl.NParams,
+		top:     f + 1 + cl.MaxStackSize,
 	})
 
 	ctx.ci = ctx.ciStack.top()
 
 	ci := ctx.ci
 
-	if !ctx.stackEnsure(cl.MaxStackSize) {
+	if !ctx.stackEnsure(0) {
 		return errStackOverflow
 	}
 
-	switch {
-	case nvarargs == 0:
-		// do nothing
-	case nvarargs < 0:
-		for r := ci.sp - 1; r >= ci.base+nargs; r-- {
-			ctx.stack[r] = nil
-		}
-	case nvarargs > 0:
+	if nvarargs := nargs - cl.NParams; nvarargs > 0 {
 		if cl.IsVararg {
 			ci.varargs = make([]object.Value, nvarargs)
 
 			copy(ci.varargs, ctx.stack[ci.base+cl.NParams:ci.base+nargs])
+		}
+
+		for r := ci.top - 1; r >= ci.base+cl.NParams; r-- {
+			ctx.stack[r] = nil
+		}
+	} else {
+		for r := ci.top - 1; r >= ci.base+nargs; r-- {
+			ctx.stack[r] = nil
 		}
 	}
 
@@ -178,7 +179,7 @@ func (th *thread) tailcall(a, nargs int) (err *object.RuntimeError) {
 
 	copy(ctx.stack[f+1:], ctx.stack[f:f+1+nargs])
 
-	ctx.ci.sp++
+	ctx.ci.top++
 
 	ctx.stack[f] = tm
 
@@ -194,41 +195,28 @@ func (th *thread) tailcallLua(c object.Closure, f, nargs int) (err *object.Runti
 	ci := ctx.ci
 
 	ci.pc = 0
-	ci.sp = ci.base + cl.NParams
+	ci.top = ci.base + cl.MaxStackSize
 	ci.closure = cl
 	ci.isTailCall = true
 
-	if !ctx.stackEnsure(cl.MaxStackSize) {
+	if !ctx.stackEnsure(0) {
 		return errStackOverflow
 	}
 
-	nvarargs := nargs - cl.NParams
+	copy(ctx.stack[ci.base-1:ci.base+cl.NParams], ctx.stack[f:f+1+cl.NParams])
 
-	maxsp := ci.base + ci.MaxStackSize
-
-	switch {
-	case nvarargs == 0:
-		copy(ctx.stack[ci.base-1:ci.base+nargs], ctx.stack[f:f+1+nargs])
-
-		for r := maxsp - 1; r >= ci.base+nargs; r-- {
-			ctx.stack[r] = nil
-		}
-	case nvarargs < 0:
-		copy(ctx.stack[ci.base-1:ci.base+nargs], ctx.stack[f:f+1+nargs])
-
-		for r := maxsp - 1; r >= ci.base+nargs; r-- {
-			ctx.stack[r] = nil
-		}
-	case nvarargs > 0:
-		copy(ctx.stack[ci.base-1:ci.base+cl.NParams], ctx.stack[f:f+1+cl.NParams])
-
+	if nvarargs := nargs - cl.NParams; nvarargs > 0 {
 		if cl.IsVararg {
 			ci.varargs = make([]object.Value, nvarargs)
 
 			copy(ci.varargs, ctx.stack[f+1+cl.NParams:f+1+nargs])
 		}
 
-		for r := maxsp - 1; r >= ci.base+cl.NParams; r-- {
+		for r := ci.top - 1; r >= ci.base+cl.NParams; r-- {
+			ctx.stack[r] = nil
+		}
+	} else {
+		for r := ci.top - 1; r >= ci.base+nargs; r-- {
 			ctx.stack[r] = nil
 		}
 	}
@@ -286,7 +274,7 @@ func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 
 	copy(ctx.stack[f+1:], ctx.stack[f:f+3])
 
-	ctx.ci.sp++
+	ctx.ci.top++
 
 	ctx.stack[f] = tm
 
@@ -316,21 +304,21 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 		return rets, true
 	}
 
-	retbase := ctx.ci.base - 1
-
 	// copy result to stack
-	copy(ctx.stack[retbase:], rets)
+	copy(ctx.stack[ctx.ci.base-1:], rets)
+
+	retop := ctx.ci.base - 1 + len(rets)
 
 	// clear unused stack
-	for r := ctx.ci.base + ctx.ci.MaxStackSize - 1; r >= retbase+len(rets); r-- {
+	for r := ctx.ci.top - 1; r >= retop; r-- {
 		ctx.stack[r] = nil
 	}
 
 	ctx.ciStack = ctx.ciStack.pop()
 	ctx.ci = ctx.ciStack.top()
 
-	// adjust sp
-	ctx.ci.sp = retbase + len(rets)
+	// adjust top
+	ctx.ci.top = retop
 
 	if ctx.hookMask != 0 {
 		if err := th.onReturn(); err != nil {
@@ -376,7 +364,7 @@ func (th *thread) docallGo(fn object.GoFunction, args ...object.Value) (rets []o
 
 		// fake infos
 		base: 2,
-		sp:   -1,
+		top:  -1,
 		pc:   -1,
 	})
 

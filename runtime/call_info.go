@@ -11,7 +11,7 @@ type callInfo struct {
 
 	base int
 	pc   int
-	sp   int
+	top  int
 
 	isTailCall bool
 
