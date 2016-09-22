@@ -12,7 +12,7 @@ import (
 func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bool) {
 	ctx := th.context
 
-	switch fn := ctx.stack[1].(type) {
+	switch fn := ctx.stack[ctx.ci.base-1].(type) {
 	case nil:
 		panic("main function isn't loaded yet")
 	case object.GoFunction:
@@ -27,9 +27,34 @@ func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bo
 
 		done = true
 	case object.Closure:
-		copy(ctx.stack[2:], args)
+		cl := fn.(*closure)
 
-		th.callLua(fn, 1, len(args), -1)
+		ci := &ctx.ciStack[0]
+		ci.closure = cl
+		ci.sp = ci.base + cl.NParams
+
+		if !ctx.stackEnsure(cl.MaxStackSize) {
+			panic(errStackOverflow)
+		}
+
+		copy(ctx.stack[ci.base:], args)
+
+		nvarargs := len(args) - cl.NParams
+
+		switch {
+		case nvarargs == 0:
+		// do nothing
+		case nvarargs < 0:
+			for r := ci.sp - 1; r >= ci.base+len(args); r-- {
+				ctx.stack[r] = nil
+			}
+		case nvarargs > 0:
+			if cl.IsVararg {
+				ci.varargs = make([]object.Value, nvarargs)
+
+				copy(ci.varargs, ctx.stack[ci.base+cl.NParams:ci.base+len(args)])
+			}
+		}
 	default:
 		panic("unreachable")
 	}

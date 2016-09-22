@@ -58,6 +58,7 @@ func (th *thread) pushContext(stackSize int, isHook bool) {
 	ctx.ci = &ctx.ciStack[0]
 	ctx.ci.base = 2
 	ctx.ci.sp = 2
+	ctx.ci.nrets = -1
 	ctx.prev = prev
 	ctx.stack[0] = th.env.globals // _ENV
 

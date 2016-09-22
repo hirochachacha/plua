@@ -36,6 +36,6 @@ func (stack ciStack) pop() ciStack {
 	return stack[:len(stack)-1]
 }
 
-func (stack ciStack) isLuaBottom() bool {
-	return len(stack) == 2
+func (stack ciStack) isBottom() bool {
+	return len(stack) == 1
 }

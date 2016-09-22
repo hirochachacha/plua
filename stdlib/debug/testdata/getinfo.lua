@@ -93,3 +93,31 @@ function w()
 end
 
 x()
+
+pcall(function()
+	d = debug.getinfo(2)
+end)
+
+assert(d.name == "pcall")
+
+xpcall(function()
+	d1 = debug.getinfo(2)
+	d2 = debug.getinfo(3)
+
+	error("err")
+end, function()
+	d3 = debug.getinfo(2)
+end)
+
+assert(d1.name == "xpcall")
+assert(d2.what == "main")
+assert(d3.name == "error" or d3.name == "xpcall") -- plua returns "xpcall" here, but OK.
+
+debug.sethook(function()
+	assert(debug.getinfo(0).name == "getinfo")
+	assert(debug.getinfo(1).namewhat == "hook" or debug.getinfo(1).namewhat == "") -- lua 5.3.3 returns "", but it should return "hook"
+	assert(debug.getinfo(2).name == "sethook")
+	assert(debug.getinfo(3).what == "main")
+end, "c")
+
+debug.sethook()

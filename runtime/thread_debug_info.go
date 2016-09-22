@@ -16,8 +16,12 @@ func (th *thread) getInfo(level int, what string) *object.DebugInfo {
 	ctx := th.context
 
 	i := len(ctx.ciStack) - 1 - level
-	if i < 0 {
-		return nil
+	for i < 0 {
+		ctx = ctx.prev
+		if ctx == nil {
+			return nil
+		}
+		i += len(ctx.ciStack)
 	}
 
 	ci := &ctx.ciStack[i]
@@ -37,14 +41,16 @@ func (th *thread) getInfo(level int, what string) *object.DebugInfo {
 		case 't':
 			d.IsTailCall = ci.isTailCall
 		case 'n':
-			if ctx.inHook {
+			if ctx.inHook && i == 0 {
 				d.Name = "?"
 				d.NameWhat = "hook"
 			} else {
 				if !ci.isTailCall {
-					prev := &ctx.ciStack[i-1]
-					if prev != nil && !prev.isGoFunction() {
-						setFuncName(d, prev)
+					if i > 0 {
+						prev := &ctx.ciStack[i-1]
+						if prev != nil && !prev.isGoFunction() {
+							setFuncName(d, prev)
+						}
 					}
 				}
 			}

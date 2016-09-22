@@ -293,7 +293,6 @@ func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 	return th.tforcall(a, nrets)
 }
 
-// post process XXXcall.
 func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 	ctx := th.context
 
@@ -305,7 +304,7 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 
 	th.closeUpvals(ctx.ci.base) // closing upvalues
 
-	if ctx.ciStack.isLuaBottom() {
+	if ctx.ciStack.isBottom() {
 		if ctx.hookMask != 0 {
 			if err := th.onReturn(); err != nil {
 				return nil, true
