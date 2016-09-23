@@ -101,61 +101,90 @@ func (th *thread) getInfoByFunc(fn object.Value, what string) *object.DebugInfo 
 	return d
 }
 
-func (th *thread) setLocal(d *object.DebugInfo, n int, val object.Value) (name string) {
-	name, _ = th.getLocal(d, n)
-	if name == "" {
+func (th *thread) setLocal(level, n int, val object.Value) (name string) {
+	if level < 0 {
+		return
+	}
+
+	if n == 0 {
 		return
 	}
 
 	ctx := th.context
 
-	if _, ok := d.Func.(object.Closure); ok {
-		if d.CallInfo != nil {
-			ci := d.CallInfo.(*callInfo)
-
-			if n < 0 {
-				if -n <= len(ci.varargs) {
-					ci.varargs[-n-1] = val
-				}
-			} else {
-				// TODO
-				ctx.stack[ci.base-1+n] = val
-			}
+	i := len(ctx.ciStack) - 1 - level
+	for i < 0 {
+		ctx = ctx.prev
+		if ctx == nil {
+			return
 		}
+		i += len(ctx.ciStack)
+	}
+
+	ci := &ctx.ciStack[i]
+
+	if !ci.isGoFunction() {
+		if n < 0 {
+			if -n <= len(ci.varargs) {
+				name = "(*vararg)"
+				ci.varargs[-n-1] = val
+			}
+
+			return
+		}
+
+		name = getLocalName(ci.Prototype(), ci.pc, n)
+		ctx.stack[ci.base-1+n] = val
+
+		// TODO
+		// if name == "" {
+		// if n > 0 {
+		// }
+		// }
 	}
 
 	return
 }
 
-func (th *thread) getLocal(d *object.DebugInfo, n int) (name string, val object.Value) {
-	if d == nil {
+func (th *thread) getLocal(level, n int) (name string, val object.Value) {
+	if level < 0 {
+		return
+	}
+
+	if n == 0 {
 		return
 	}
 
 	ctx := th.context
 
-	if fn, ok := d.Func.(object.Closure); ok {
-		var pc int
-		if d.CallInfo != nil {
-			ci := d.CallInfo.(*callInfo)
+	i := len(ctx.ciStack) - 1 - level
+	for i < 0 {
+		ctx = ctx.prev
+		if ctx == nil {
+			return
+		}
+		i += len(ctx.ciStack)
+	}
 
-			if n < 0 {
-				if -n <= len(ci.varargs) {
-					name, val = "(*vararg)", ci.varargs[-n-1]
-				}
+	ci := &ctx.ciStack[i]
 
-				return
+	if !ci.isGoFunction() {
+		if n < 0 {
+			if -n <= len(ci.varargs) {
+				name, val = "(*vararg)", ci.varargs[-n-1]
 			}
 
-			pc = ci.pc
-
-			// TODO
-			val = ctx.stack[ci.base-1+n]
-		} else if n < 0 {
 			return
 		}
 
-		name = getLocalName(fn.Prototype(), pc, n)
+		name = getLocalName(ci.Prototype(), ci.pc, n)
+		val = ctx.stack[ci.base-1+n]
+
+		// TODO
+		// if name == "" {
+		// if n > 0 {
+		// }
+		// }
 	}
 
 	return

@@ -166,12 +166,22 @@ func (th *thread) GetInfoByFunc(fn object.Value, what string) *object.DebugInfo 
 	return th.getInfoByFunc(fn, what)
 }
 
-func (th *thread) GetLocal(d *object.DebugInfo, n int) (name string, val object.Value) {
-	return th.getLocal(d, n)
+func (th *thread) GetLocal(level, n int) (name string, val object.Value) {
+	return th.getLocal(level, n)
 }
 
-func (th *thread) SetLocal(d *object.DebugInfo, n int, val object.Value) (name string) {
-	return th.setLocal(d, n, val)
+func (th *thread) SetLocal(level, n int, val object.Value) (name string) {
+	return th.setLocal(level, n, val)
+}
+
+func (th *thread) GetLocalName(fn object.Value, n int) (name string) {
+	mustFunction(fn)
+
+	if cl, ok := fn.(object.Closure); ok {
+		return getLocalName(cl.Prototype(), 0, n)
+	}
+
+	return ""
 }
 
 func (th *thread) GetHook() (hook object.Value, mask string, count int) {

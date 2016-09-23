@@ -48,8 +48,10 @@ type Thread interface {
 	GetInfo(level int, what string) *DebugInfo
 	GetInfoByFunc(fn Value, what string) *DebugInfo
 
-	GetLocal(d *DebugInfo, n int) (name string, val Value)
-	SetLocal(d *DebugInfo, n int, val Value) (name string)
+	GetLocal(level, n int) (name string, val Value)
+	SetLocal(level, n int, val Value) (name string)
+
+	GetLocalName(fn Value, n int) (name string)
 
 	GetHook() (hook Value, mask string, count int)
 	SetHook(hook Value, mask string, count int)
