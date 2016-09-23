@@ -196,8 +196,6 @@ func getlocal(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 		return nil, err
 	}
 
-	var d *object.DebugInfo
-
 	switch f := f.(type) {
 	case object.Integer:
 		level, ok := object.ToGoInt(f)
@@ -205,33 +203,35 @@ func getlocal(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 			return nil, nil
 		}
 
-		d = th1.GetInfo(level, "")
+		d := th1.GetInfo(level, "")
 
 		if d == nil {
 			return nil, ap.ArgError(0, "level out of range")
 		}
+
+		name, val := th1.GetLocal(level, local)
+		if name == "" && val == nil {
+			return nil, nil
+		}
+
+		return []object.Value{object.String(name), val}, nil
 	case object.GoFunction:
-		d = th1.GetInfoByFunc(f, "")
-
-		if d == nil {
+		name := th1.GetLocalName(f, local)
+		if name == "" {
 			return nil, nil
 		}
+
+		return []object.Value{object.String(name)}, nil
 	case object.Closure:
-		d = th1.GetInfoByFunc(f, "")
-
-		if d == nil {
+		name := th1.GetLocalName(f, local)
+		if name == "" {
 			return nil, nil
 		}
+
+		return []object.Value{object.String(name)}, nil
 	default:
 		panic("unreachable")
 	}
-
-	name, val := th1.GetLocal(d, local)
-	if len(name) == 0 {
-		return nil, nil
-	}
-
-	return []object.Value{object.String(name), val}, nil
 }
 
 func getmetatable(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -360,7 +360,7 @@ func setlocal(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 		return nil, ap.ArgError(1, "level out of range")
 	}
 
-	name := th1.SetLocal(d, local, val)
+	name := th1.SetLocal(level, local, val)
 	if name == "" {
 		return nil, nil
 	}

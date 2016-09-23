@@ -38,3 +38,18 @@ function y()
 end
 
 x()
+
+
+function f(a) end
+
+debug.sethook(function ()
+  k, v = debug.getlocal(2, 1)
+  assert(k == "a" and v == 18)
+
+  k, v = debug.getlocal(2, 2)
+  assert(k == "(*temporary)" and v == 19)
+
+  debug.sethook()
+end, "c")
+
+f(18, 19)

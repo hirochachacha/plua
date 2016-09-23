@@ -134,13 +134,23 @@ func (th *thread) setLocal(level, n int, val object.Value) (name string) {
 		}
 
 		name = getLocalName(ci.Prototype(), ci.pc, n)
-		ctx.stack[ci.base-1+n] = val
 
-		// TODO
-		// if name == "" {
-		// if n > 0 {
-		// }
-		// }
+		if i+1 < len(ctx.ciStack) {
+			next := &ctx.ciStack[i+1]
+			if ci.base-1+n <= next.base-1 {
+				ctx.stack[ci.base-1+n] = val
+				if name == "" {
+					name = "(*temporary)"
+				}
+			}
+		} else {
+			if ci.base-1+n <= ci.top {
+				ctx.stack[ci.base-1+n] = val
+				if name == "" {
+					name = "(*temporary)"
+				}
+			}
+		}
 	}
 
 	return
@@ -178,13 +188,23 @@ func (th *thread) getLocal(level, n int) (name string, val object.Value) {
 		}
 
 		name = getLocalName(ci.Prototype(), ci.pc, n)
-		val = ctx.stack[ci.base-1+n]
 
-		// TODO
-		// if name == "" {
-		// if n > 0 {
-		// }
-		// }
+		if i+1 < len(ctx.ciStack) {
+			next := &ctx.ciStack[i+1]
+			if ci.base-1+n <= next.base-1 {
+				val = ctx.stack[ci.base-1+n]
+				if name == "" {
+					name = "(*temporary)"
+				}
+			}
+		} else {
+			if ci.base-1+n <= ci.top {
+				val = ctx.stack[ci.base-1+n]
+				if name == "" {
+					name = "(*temporary)"
+				}
+			}
+		}
 	}
 
 	return
