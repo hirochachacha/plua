@@ -25,3 +25,28 @@ function test(f)
 end
 
 test(f)
+
+t = {
+	{name = "sethook", namewhat = "field", linedefined = -1},
+	{name = "foo", namewhat = "global", linedefined = 34},
+	{what = "main", linedefined = 0},
+}
+
+local i = 1
+
+function foo() end
+
+debug.sethook(function()
+	d = debug.getinfo(2)
+	tt = t[i]
+	if tt ~= nil then
+		for k, v in pairs(tt) do
+			assert(v, d[k])
+		end
+		i = i + 1
+	end
+end, "r")
+
+foo()
+
+debug.sethook()

@@ -69,6 +69,10 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 		return err
 	}
 
+	if err := th.onReturn(); err != nil {
+		return err
+	}
+
 	if nrets != -1 && nrets < len(rets) {
 		rets = rets[:nrets]
 	}
@@ -90,10 +94,6 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 
 	// adjust top
 	ctx.ci.top = retop
-
-	if err := th.onReturn(); err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -274,6 +274,10 @@ func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 }
 
 func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
+	if err := th.onReturn(); err != nil {
+		return nil, true
+	}
+
 	ctx := th.context
 
 	rets = ctx.stack[ctx.ci.base+a : ctx.ci.base+a+nrets]
@@ -285,10 +289,6 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 	th.closeUpvals(ctx.ci.base) // closing upvalues
 
 	if ctx.ci.isBottom() {
-		if err := th.onReturn(); err != nil {
-			return nil, true
-		}
-
 		ctx.status = object.THREAD_RETURN
 
 		return rets, true
@@ -308,10 +308,6 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 
 	// adjust top
 	ctx.ci.top = retop
-
-	if err := th.onReturn(); err != nil {
-		return nil, true
-	}
 
 	return nil, false
 }
@@ -366,18 +362,21 @@ func (th *thread) docallGo(fn object.GoFunction, args ...object.Value) (rets []o
 	ctx.stack[1] = fn
 
 	rets, err = fn(th, args...)
-
-	ctx.stack[1] = old
-
-	ctx.popFrame()
-
 	if err != nil {
+		ctx.stack[1] = old
+
+		ctx.popFrame()
+
 		return nil, err
 	}
 
 	if err := th.onReturn(); err != nil {
 		return nil, err
 	}
+
+	ctx.stack[1] = old
+
+	ctx.popFrame()
 
 	return rets, nil
 }
