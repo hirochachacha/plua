@@ -2,7 +2,7 @@ package compiler
 
 import (
 	"bufio"
-	"errors"
+	"fmt"
 	"io"
 
 	"github.com/hirochachacha/plua/compiler/codegen"
@@ -13,8 +13,6 @@ import (
 	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 )
-
-var errModeMismatch = errors.New("compiler: mode mismatch")
 
 type Mode uint
 
@@ -125,7 +123,7 @@ func (c *Compiler) CompileText(r io.Reader, source string) (*object.Proto, error
 
 	// is bytecode?
 	if bs[0] == version.LUA_SIGNATURE[0] {
-		return nil, errModeMismatch
+		return nil, fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "binary", "text")
 	}
 
 	if c.s == nil {
@@ -154,7 +152,7 @@ func (c *Compiler) CompileBinary(r io.Reader) (*object.Proto, error) {
 	_, err := c.r.ReadAt(bs, 0)
 	if err != nil {
 		if err == io.EOF {
-			return nil, errModeMismatch
+			return nil, fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "text", "binary")
 		}
 
 		return nil, err
@@ -162,7 +160,7 @@ func (c *Compiler) CompileBinary(r io.Reader) (*object.Proto, error) {
 
 	// is text?
 	if bs[0] != version.LUA_SIGNATURE[0] {
-		return nil, errModeMismatch
+		return nil, fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "text", "binary")
 	}
 
 	if c.u == nil {
