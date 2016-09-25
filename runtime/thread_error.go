@@ -135,9 +135,9 @@ func (th *thread) error(err *object.RuntimeError) {
 					break
 				}
 				err.Traceback = append(err.Traceback, position.Position{
-					Filename: "@" + d.ShortSource,
-					Line:     d.CurrentLine,
-					Column:   -1,
+					SourceName: "@" + d.ShortSource,
+					Line:       d.CurrentLine,
+					Column:     -1,
 				})
 
 				l++

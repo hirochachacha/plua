@@ -105,7 +105,7 @@ func makeSearchers(m object.Table) []object.Value {
 		case 1:
 			fpath := string(rets[0].(object.String))
 
-			p, err := compiler_pool.CompileFile(fpath)
+			p, err := compiler_pool.CompileFile(fpath, 0)
 			if err != nil {
 				return nil, object.NewRuntimeError(fmt.Sprintf("error loading module '%s' from file '%s':\n\t%s", modname, fpath, err.Error()))
 			}

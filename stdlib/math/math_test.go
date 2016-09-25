@@ -1,7 +1,6 @@
 package math_test
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -20,12 +19,7 @@ func TestMath(t *testing.T) {
 	}
 
 	for _, fname := range matches {
-		f, err := os.Open(fname)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		proto, err := c.Compile(f, "@"+fname)
+		proto, err := c.CompileFile(fname, 0)
 		if err != nil {
 			t.Fatal(err)
 		}

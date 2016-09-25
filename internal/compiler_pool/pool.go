@@ -18,103 +18,38 @@ var pool = &sync.Pool{
 	},
 }
 
-func CompileFile(fname string) (*object.Proto, error) {
+func CompileFile(path string, typ compiler.FormatType) (*object.Proto, error) {
 	var r io.Reader
 
-	if len(fname) == 0 {
+	if len(path) == 0 {
 		r = os.Stdin
 
-		fname = "=stdin"
+		path = "=stdin"
 	} else {
-		f, err := os.Open(fname)
+		f, err := os.Open(path)
 		if err != nil {
 			return nil, err
 		}
+		defer f.Close()
+
 		r = f
 
-		fname = "@" + fname
+		path = "@" + path
 	}
 
 	c := pool.Get().(*compiler.Compiler)
 
-	p, err := c.Compile(r, fname)
+	p, err := c.Compile(r, path, typ)
 
 	pool.Put(c)
 
 	return p, err
 }
 
-func CompileString(s, source string) (*object.Proto, error) {
+func CompileString(s, srcname string, typ compiler.FormatType) (*object.Proto, error) {
 	c := pool.Get().(*compiler.Compiler)
 
-	p, err := c.Compile(strings.NewReader(s), source)
-
-	pool.Put(c)
-
-	return p, err
-}
-
-func CompileTextFile(fname string) (*object.Proto, error) {
-	var r io.Reader
-
-	if len(fname) == 0 {
-		r = os.Stdin
-
-		fname = "=stdin"
-	} else {
-		f, err := os.Open(fname)
-		if err != nil {
-			return nil, err
-		}
-		r = f
-		fname = "@" + fname
-	}
-
-	c := pool.Get().(*compiler.Compiler)
-
-	p, err := c.CompileText(r, fname)
-
-	pool.Put(c)
-
-	return p, err
-}
-
-func CompileTextString(s, source string) (*object.Proto, error) {
-	c := pool.Get().(*compiler.Compiler)
-
-	p, err := c.CompileText(strings.NewReader(s), source)
-
-	pool.Put(c)
-
-	return p, err
-}
-
-func CompileBinaryFile(fname string) (*object.Proto, error) {
-	var r io.Reader
-
-	if len(fname) == 0 {
-		r = os.Stdin
-	} else {
-		f, err := os.Open(fname)
-		if err != nil {
-			return nil, err
-		}
-		r = f
-	}
-
-	c := pool.Get().(*compiler.Compiler)
-
-	p, err := c.CompileBinary(r)
-
-	pool.Put(c)
-
-	return p, err
-}
-
-func CompileBinaryString(s string) (*object.Proto, error) {
-	c := pool.Get().(*compiler.Compiler)
-
-	p, err := c.CompileBinary(strings.NewReader(s))
+	p, err := c.Compile(strings.NewReader(s), srcname, typ)
 
 	pool.Put(c)
 
@@ -122,8 +57,6 @@ func CompileBinaryString(s string) (*object.Proto, error) {
 }
 
 func DumpToString(p *object.Proto, strip bool) (string, error) {
-	c := pool.Get().(*compiler.Compiler)
-
 	var mode dump.Mode
 	if strip {
 		mode |= dump.StripDebugInfo

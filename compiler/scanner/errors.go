@@ -12,7 +12,7 @@ type Error struct {
 }
 
 func (e Error) Error() string {
-	if e.Pos.Filename != "" || e.Pos.IsValid() {
+	if e.Pos.SourceName != "" || e.Pos.IsValid() {
 		return fmt.Sprintf("compiler/scanner: %v at %s", e.Err, e.Pos)
 	}
 	return fmt.Sprintf("compiler/scanner: %v", e.Err)

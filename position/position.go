@@ -13,9 +13,9 @@ var NoPos = Position{
 }
 
 type Position struct {
-	Filename string
-	Line     int
-	Column   int
+	SourceName string
+	Line       int
+	Column     int
 }
 
 func (pos Position) LessThan(other Position) bool {
@@ -49,7 +49,7 @@ func (pos Position) OffsetColumn(off int) Position {
 }
 
 func (pos Position) String() string {
-	s := shorten(pos.Filename)
+	s := shorten(pos.SourceName)
 
 	if pos.IsValid() {
 		if s != "" {

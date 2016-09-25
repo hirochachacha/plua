@@ -33,7 +33,7 @@ function fib(n)
 end
 
 return fib(10)
-	`), "=fib")
+	`), "=fib", compiler.Text)
 	if err != nil {
 		panic(err)
 	}

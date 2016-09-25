@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/hirochachacha/plua/compiler"
 	"github.com/hirochachacha/plua/internal/compiler_pool"
 	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
@@ -82,7 +83,7 @@ func dofile(th object.Thread, args ...object.Value) (rets []object.Value, err *o
 		}
 	}
 
-	p, e := compiler_pool.CompileFile(fname)
+	p, e := compiler_pool.CompileFile(fname, 0)
 	if e != nil {
 		return []object.Value{nil, object.String(e.Error())}, nil
 	}
@@ -282,11 +283,11 @@ func loadfile(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 
 	switch mode {
 	case "b":
-		p, e = compiler_pool.CompileBinaryFile(fname)
+		p, e = compiler_pool.CompileFile(fname, compiler.Binary)
 	case "t":
-		p, e = compiler_pool.CompileTextFile(fname)
+		p, e = compiler_pool.CompileFile(fname, compiler.Text)
 	case "bt":
-		p, e = compiler_pool.CompileFile(fname)
+		p, e = compiler_pool.CompileFile(fname, 0)
 	default:
 		return nil, ap.OptionError(1, mode)
 	}
@@ -358,11 +359,11 @@ func load(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	var e error
 	switch mode {
 	case "b":
-		p, e = compiler_pool.CompileBinaryString(chunk)
+		p, e = compiler_pool.CompileString(chunk, chunkname, compiler.Binary)
 	case "t":
-		p, e = compiler_pool.CompileTextString(chunk, chunkname)
+		p, e = compiler_pool.CompileString(chunk, chunkname, compiler.Text)
 	case "bt":
-		p, e = compiler_pool.CompileString(chunk, chunkname)
+		p, e = compiler_pool.CompileString(chunk, chunkname, 0)
 	default:
 		return nil, ap.OptionError(2, mode)
 	}

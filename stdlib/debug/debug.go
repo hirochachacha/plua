@@ -33,7 +33,7 @@ func debug(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 			return nil, nil
 		}
 
-		p, err := compiler_pool.CompileString(line, "=(debug command)")
+		p, err := compiler_pool.CompileString(line, "=(debug command)", 0)
 		if err != nil {
 			return nil, object.NewRuntimeError(err.Error())
 		}

@@ -67,8 +67,8 @@ const (
 )
 
 type Scanner struct {
-	Filename string
-	Shebang  string
+	SourceName string
+	Shebang    string
 
 	mode Mode
 
@@ -93,13 +93,13 @@ type Scanner struct {
 	err error
 }
 
-func NewScanner(r io.Reader, filename string, mode Mode) *Scanner {
+func NewScanner(r io.Reader, srcname string, mode Mode) *Scanner {
 	s := &Scanner{
-		r:        r,
-		Filename: filename,
-		buf:      make([]byte, 4096),
-		mode:     mode,
-		_mark:    -1,
+		r:          r,
+		SourceName: srcname,
+		buf:        make([]byte, 4096),
+		mode:       mode,
+		_mark:      -1,
 	}
 
 	s.init()
@@ -115,7 +115,7 @@ func NewScanner(r io.Reader, filename string, mode Mode) *Scanner {
 }
 
 func (s *Scanner) Reset(r io.Reader, filename string, mode Mode) {
-	s.Filename = filename
+	s.SourceName = filename
 	s.Shebang = ""
 
 	s.mode = mode
@@ -753,7 +753,7 @@ func (s *Scanner) skipSpace() {
 
 func (s *Scanner) error(pos position.Position, err error) {
 	if s.err == nil {
-		pos.Filename = s.Filename
+		pos.SourceName = s.SourceName
 
 		s.err = &Error{
 			Pos: pos,

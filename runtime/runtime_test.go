@@ -75,7 +75,7 @@ func TestExec(t *testing.T) {
 	c := compiler.NewCompiler()
 
 	for _, test := range testExec {
-		proto, err := c.Compile(strings.NewReader(test.Code), "=testCode")
+		proto, err := c.Compile(strings.NewReader(test.Code), "=testCode", 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -117,7 +117,7 @@ func TestExecError(t *testing.T) {
 	c := compiler.NewCompiler()
 
 	for _, test := range testExecError {
-		proto, err := c.Compile(strings.NewReader(test.Code), "=testCode")
+		proto, err := c.Compile(strings.NewReader(test.Code), "=testCode", 0)
 		if err != nil {
 			t.Fatal(err)
 		}

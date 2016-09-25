@@ -253,7 +253,7 @@ func testExecCases(t *testing.T, testname string, tests []execCase) {
 	c := compiler.NewCompiler()
 
 	for _, test := range tests {
-		proto, err := c.Compile(strings.NewReader(test.Code), "="+testname)
+		proto, err := c.Compile(strings.NewReader(test.Code), "="+testname, 0)
 		if err != nil {
 			t.Fatal(err)
 		}

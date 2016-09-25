@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/hirochachacha/plua/compiler/codegen"
 	"github.com/hirochachacha/plua/compiler/parser"
@@ -12,6 +13,27 @@ import (
 	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 )
+
+type FormatType uint
+
+const (
+	Either FormatType = iota
+	Text
+	Binary
+)
+
+func (typ FormatType) String() string {
+	switch typ {
+	case Either:
+		return "either"
+	case Text:
+		return "text"
+	case Binary:
+		return "binary"
+	default:
+		return "unexpected"
+	}
+}
 
 type readerAt interface {
 	io.Reader
@@ -22,140 +44,67 @@ type Compiler struct {
 	s *scanner.Scanner
 	u *bufio.Reader // buffer for undump
 	r readerAt
+	b [1]byte
 }
 
 func NewCompiler() *Compiler {
 	return new(Compiler)
 }
 
-func (c *Compiler) Compile(r io.Reader, source string) (*object.Proto, error) {
+func (c *Compiler) Compile(r io.Reader, srcname string, typ FormatType) (*object.Proto, error) {
 	if r, ok := r.(readerAt); ok {
 		c.r = r
 	} else {
 		c.r = &onceReadAt{r: r}
 	}
 
-	bs := make([]byte, 1)
+	_, err := c.r.ReadAt(c.b[:], 0)
 
-	_, err := c.r.ReadAt(bs, 0)
-	if err != nil {
-		if err == io.EOF {
-			if c.s == nil {
-				c.s = scanner.NewScanner(c.r, source, 0)
-			} else {
-				c.s.Reset(c.r, source, 0)
-			}
-			ast, err := parser.Parse(c.s, 0)
-			if err != nil {
-				return nil, err
-			}
-
-			return codegen.Generate(ast), nil
+	switch {
+	case err != nil && err != io.EOF:
+		fallthrough
+	case err == nil && c.b[0] != version.LUA_SIGNATURE[0]:
+		if typ != Either && typ != Text {
+			return nil, fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "text", typ)
 		}
 
-		return nil, err
-	}
+		if c.s == nil {
+			c.s = scanner.NewScanner(c.r, srcname, 0)
+		} else {
+			c.s.Reset(c.r, srcname, 0)
+		}
 
-	// is bytecode?
-	if bs[0] == version.LUA_SIGNATURE[0] {
+		ast, err := parser.Parse(c.s, 0)
+		if err != nil {
+			return nil, err
+		}
+
+		return codegen.Generate(ast), nil
+	case err == nil && c.b[0] == version.LUA_SIGNATURE[0]:
+		if typ != Either && typ != Binary {
+			return nil, fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "binary", typ)
+		}
+
 		if c.u == nil {
 			c.u = bufio.NewReader(c.r)
 		} else {
 			c.u.Reset(c.r)
 		}
+
 		return undump.Undump(c.u, 0)
-	}
-
-	if c.s == nil {
-		c.s = scanner.NewScanner(c.r, source, 0)
-	} else {
-		c.s.Reset(c.r, source, 0)
-	}
-
-	ast, err := parser.Parse(c.s, 0)
-	if err != nil {
+	default:
 		return nil, err
 	}
-
-	return codegen.Generate(ast), nil
 }
 
-func (c *Compiler) CompileText(r io.Reader, source string) (*object.Proto, error) {
-	if r, ok := r.(readerAt); ok {
-		c.r = r
-	} else {
-		c.r = &onceReadAt{r: r}
-	}
-
-	bs := make([]byte, 1)
-
-	_, err := c.r.ReadAt(bs, 0)
-	if err != nil {
-		if err == io.EOF {
-			if c.s == nil {
-				c.s = scanner.NewScanner(c.r, source, 0)
-			} else {
-				c.s.Reset(c.r, source, 0)
-			}
-			ast, err := parser.Parse(c.s, 0)
-			if err != nil {
-				return nil, err
-			}
-
-			return codegen.Generate(ast), nil
-		}
-
-		return nil, err
-	}
-
-	// is bytecode?
-	if bs[0] == version.LUA_SIGNATURE[0] {
-		return nil, fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "binary", "text")
-	}
-
-	if c.s == nil {
-		c.s = scanner.NewScanner(c.r, source, 0)
-	} else {
-		c.s.Reset(c.r, source, 0)
-	}
-
-	ast, err := parser.Parse(c.s, 0)
+func (c *Compiler) CompileFile(path string, typ FormatType) (*object.Proto, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
-	return codegen.Generate(ast), nil
-}
-
-func (c *Compiler) CompileBinary(r io.Reader) (*object.Proto, error) {
-	if r, ok := r.(readerAt); ok {
-		c.r = r
-	} else {
-		c.r = &onceReadAt{r: r}
-	}
-
-	bs := make([]byte, 1)
-
-	_, err := c.r.ReadAt(bs, 0)
-	if err != nil {
-		if err == io.EOF {
-			return nil, fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "text", "binary")
-		}
-
-		return nil, err
-	}
-
-	// is text?
-	if bs[0] != version.LUA_SIGNATURE[0] {
-		return nil, fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "text", "binary")
-	}
-
-	if c.u == nil {
-		c.u = bufio.NewReader(c.r)
-	} else {
-		c.u.Reset(c.r)
-	}
-	return undump.Undump(c.u, 0)
+	return c.Compile(f, "@"+f.Name(), typ)
 }
 
 type onceReadAt struct {

@@ -239,7 +239,7 @@ func (p *parser) error(pos position.Position, err error) {
 	if serr := p.scanner.Err(); serr != nil {
 		p.err = serr
 	} else {
-		pos.Filename = p.scanner.Filename
+		pos.SourceName = p.scanner.SourceName
 
 		p.err = &Error{
 			Pos: pos,
@@ -1320,7 +1320,7 @@ func (p *parser) parseFile() *ast.File {
 	chunk := p.parseChunk()
 
 	return &ast.File{
-		Filename: p.scanner.Filename,
+		Filename: p.scanner.SourceName,
 		Shebang:  p.scanner.Shebang,
 		Chunk:    chunk,
 		Comments: p.comments,
