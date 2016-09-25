@@ -267,7 +267,7 @@ func getupvalue(th object.Thread, args ...object.Value) ([]object.Value, *object
 	case object.GoFunction:
 		return nil, nil
 	case object.Closure:
-		if f.NUpvalues() < up {
+		if up <= 0 || f.NUpvalues() < up {
 			return nil, nil
 		}
 
@@ -417,7 +417,7 @@ func setupvalue(th object.Thread, args ...object.Value) ([]object.Value, *object
 	case object.GoFunction:
 		return nil, nil
 	case object.Closure:
-		if f.NUpvalues() < up {
+		if up <= 0 || f.NUpvalues() < up {
 			return nil, nil
 		}
 
