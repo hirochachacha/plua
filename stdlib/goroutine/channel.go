@@ -5,7 +5,7 @@ import (
 	"github.com/hirochachacha/plua/object/fnutil"
 )
 
-func ChanRecv(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func chanRecv(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	ch, err := ap.ToChannel(0)
@@ -18,7 +18,7 @@ func ChanRecv(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 	return []object.Value{val, object.Boolean(ok)}, nil
 }
 
-func ChanSend(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func shanSend(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	ch, err := ap.ToChannel(0)
@@ -36,7 +36,7 @@ func ChanSend(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 	return nil, nil
 }
 
-func ChanClose(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func chanClose(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	ch, err := ap.ToChannel(0)
@@ -49,7 +49,7 @@ func ChanClose(th object.Thread, args ...object.Value) ([]object.Value, *object.
 	return nil, nil
 }
 
-func ChanPairs(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func chanPairs(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	ch, err := ap.ToChannel(0)

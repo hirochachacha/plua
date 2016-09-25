@@ -5,7 +5,7 @@ import (
 	"github.com/hirochachacha/plua/object/fnutil"
 )
 
-func NewChannel(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func newchannel(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	capacity, err := ap.OptGoInt(0, 0)
@@ -20,7 +20,7 @@ func NewChannel(th object.Thread, args ...object.Value) ([]object.Value, *object
 	return []object.Value{th.NewChannel(capacity)}, nil
 }
 
-func Wrap(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func wrap(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	fn, err := ap.ToFunction(0)
@@ -47,21 +47,21 @@ func Wrap(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	chanIndex := th.NewTableSize(0, 3)
 
-	chanIndex.Set(object.String("recv"), object.GoFunction(ChanRecv))
-	chanIndex.Set(object.String("send"), object.GoFunction(ChanSend))
-	chanIndex.Set(object.String("close"), object.GoFunction(ChanClose))
+	chanIndex.Set(object.String("recv"), object.GoFunction(chanRecv))
+	chanIndex.Set(object.String("send"), object.GoFunction(shanSend))
+	chanIndex.Set(object.String("close"), object.GoFunction(chanClose))
 
 	mt := th.NewTableSize(0, 2)
 
 	mt.Set(object.String("__index"), chanIndex)
-	mt.Set(object.String("__pairs"), object.GoFunction(ChanPairs))
+	mt.Set(object.String("__pairs"), object.GoFunction(chanPairs))
 
 	th.SetMetatable(th.NewChannel(0), mt)
 
 	m := th.NewTableSize(0, 2)
 
-	m.Set(object.String("newchannel"), object.GoFunction(NewChannel))
-	m.Set(object.String("wrap"), object.GoFunction(Wrap))
+	m.Set(object.String("newchannel"), object.GoFunction(newchannel))
+	m.Set(object.String("wrap"), object.GoFunction(wrap))
 
 	return []object.Value{m}, nil
 }
