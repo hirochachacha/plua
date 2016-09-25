@@ -246,7 +246,7 @@ func getmetatable(th object.Thread, args ...object.Value) ([]object.Value, *obje
 }
 
 func getregistry(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	return nil, nil
+	return nil, object.NewRuntimeError("not implemented")
 }
 
 // getupvalue(f, up)
