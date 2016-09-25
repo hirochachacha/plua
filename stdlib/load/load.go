@@ -23,7 +23,7 @@ func init() {
 	}
 }
 
-func SearchPath(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func searchpath(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	name, err := ap.ToGoString(0)
@@ -62,7 +62,7 @@ func SearchPath(th object.Thread, args ...object.Value) ([]object.Value, *object
 	return []object.Value{nil, object.String("\n\t" + strings.Join(errmsg, "\n\t"))}, nil
 }
 
-func PreloadSearcher(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func preloadSearcher(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	modname, err := ap.ToString(0)
@@ -81,7 +81,7 @@ func PreloadSearcher(th object.Thread, args ...object.Value) ([]object.Value, *o
 }
 
 func makeSearchers(m object.Table) []object.Value {
-	LuaSearcher := func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	luaSearcher := func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		ap := fnutil.NewArgParser(th, args)
 
 		modname, err := ap.ToString(0)
@@ -94,7 +94,7 @@ func makeSearchers(m object.Table) []object.Value {
 			return nil, object.NewRuntimeError("'package.path' must be a string")
 		}
 
-		rets, err := SearchPath(th, modname, loadpath)
+		rets, err := searchpath(th, modname, loadpath)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +120,7 @@ func makeSearchers(m object.Table) []object.Value {
 		}
 	}
 
-	return []object.Value{object.GoFunction(PreloadSearcher), object.GoFunction(LuaSearcher)}
+	return []object.Value{object.GoFunction(preloadSearcher), object.GoFunction(luaSearcher)}
 }
 
 func makeRequire(m object.Table) object.GoFunction {
@@ -214,7 +214,7 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	m.Set(object.String("config"), object.String(config))
 	m.Set(object.String("loaded"), th.Loaded())
 
-	m.Set(object.String("searchpath"), object.GoFunction(SearchPath))
+	m.Set(object.String("searchpath"), object.GoFunction(searchpath))
 
 	m.Set(object.String("searchers"), th.NewTableArray(makeSearchers(m)))
 
