@@ -1,6 +1,7 @@
 package base_test
 
 import (
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -165,22 +166,22 @@ func TestCollectGarbage(t *testing.T) {
 
 var testDoFiles = []execCase{
 	{
-		`return dofile("testdata/do.lua")`,
+		`return dofile("testdata/do/do.lua")`,
 		[]object.Value{object.True},
 		"",
 	},
 	{
-		`assert(dofile("testdata/notexist"))`,
+		`assert(dofile("testdata/do/notexist"))`,
 		nil,
 		"no such file",
 	},
 	{
-		`assert(dofile("testdata/not.lua"))`,
+		`assert(dofile("testdata/do/not.lua"))`,
 		nil,
 		"compiler/parser",
 	},
 	{
-		`dofile("testdata/do_err.lua")`,
+		`dofile("testdata/do/do_err.lua")`,
 		nil,
 		"true",
 	},
@@ -188,65 +189,6 @@ var testDoFiles = []execCase{
 
 func TestDoFile(t *testing.T) {
 	testExecCases(t, "test_dofile", testDoFiles)
-}
-
-var testSelects = []execCase{
-	{
-		`return select(1, 2, 3)`,
-		[]object.Value{object.Integer(2), object.Integer(3)},
-		"",
-	},
-	{
-		`return select(-1, 2, 3)`,
-		[]object.Value{object.Integer(3)},
-		"",
-	},
-	{
-		`return select("#", 2, 3)`,
-		[]object.Value{object.Integer(2)},
-		"",
-	},
-}
-
-func TestSelect(t *testing.T) {
-	testExecCases(t, "test_select", testSelects)
-}
-
-var testTypes = []execCase{
-	{
-		`return type(nil)`,
-		[]object.Value{object.String("nil")},
-		"",
-	},
-	{
-		`return type(5)`,
-		[]object.Value{object.String("number")},
-		"",
-	},
-	{
-		`return type("hello")`,
-		[]object.Value{object.String("string")},
-		"",
-	},
-	{
-		`return type(false)`,
-		[]object.Value{object.String("boolean")},
-		"",
-	},
-	{
-		`return type({1 = 5, n = 9})`,
-		[]object.Value{object.String("table")},
-		"",
-	},
-	{
-		`return type(print)`,
-		[]object.Value{object.String("function")},
-		"",
-	},
-}
-
-func TestType(t *testing.T) {
-	testExecCases(t, "test_type", testTypes)
 }
 
 func testExecCases(t *testing.T, testname string, tests []execCase) {
@@ -273,6 +215,31 @@ func testExecCases(t *testing.T, testname string, tests []execCase) {
 		}
 		if !reflect.DeepEqual(rets, test.Rets) {
 			t.Errorf("code: `%s`, rets: %v, expected: %v\n", test.Code, rets, test.Rets)
+		}
+	}
+}
+
+func TestBase(t *testing.T) {
+	c := compiler.NewCompiler()
+
+	matches, err := filepath.Glob("testdata/*.lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, fname := range matches {
+		proto, err := c.CompileFile(fname, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		p := runtime.NewProcess()
+
+		p.Require("_G", base.Open)
+
+		_, err = p.Exec(proto)
+		if err != nil {
+			t.Error(err)
 		}
 	}
 }

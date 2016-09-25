@@ -61,9 +61,7 @@ func (c *Compiler) Compile(r io.Reader, srcname string, typ FormatType) (*object
 	_, err := c.r.ReadAt(c.b[:], 0)
 
 	switch {
-	case err != nil && err != io.EOF:
-		fallthrough
-	case err == nil && c.b[0] != version.LUA_SIGNATURE[0]:
+	case err == io.EOF, err == nil && c.b[0] != version.LUA_SIGNATURE[0]:
 		if typ != Either && typ != Text {
 			return nil, fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "text", typ)
 		}
