@@ -17,7 +17,7 @@ var (
 	location  = startTime.Local().Location()
 )
 
-func Clock(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func clock(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	endTime := time.Now()
 	diffSecond := float64(endTime.Unix()-startTime.Unix()) / 1000
 
@@ -25,7 +25,7 @@ func Clock(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 }
 
 // date([format [, time]])
-func Date(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func date(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	format, err := ap.OptGoString(0, "%c")
@@ -62,7 +62,7 @@ func Date(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{object.String(s)}, nil
 }
 
-func DiffTime(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func difftime(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	t2, err := ap.ToGoInt64(0)
@@ -78,7 +78,7 @@ func DiffTime(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 	return []object.Value{object.Integer(t2 - t1)}, nil
 }
 
-func Execute(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func execute(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	if len(args) == 0 {
 		return []object.Value{object.True}, nil
 	}
@@ -102,7 +102,7 @@ func Execute(th object.Thread, args ...object.Value) ([]object.Value, *object.Ru
 
 // close is not supportted.
 // exit([code [, close]])
-func Exit(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func exit(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	if len(args) == 0 {
 		os.Exit(0)
 	}
@@ -128,7 +128,7 @@ func Exit(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 }
 
 // getenv(varname)
-func GetEnv(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func getenv(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	key, err := ap.ToGoString(0)
@@ -146,7 +146,7 @@ func GetEnv(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 }
 
 // remove(filename)
-func Remove(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func remove(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	name, err := ap.ToGoString(0)
@@ -158,7 +158,7 @@ func Remove(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 }
 
 // rename(oldname, newname)
-func Rename(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func rename(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	old, err := ap.ToGoString(0)
@@ -175,11 +175,11 @@ func Rename(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 }
 
 // setlocale(locale [, category])
-func SetLocale(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func setlocale(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	return nil, object.NewRuntimeError("not implemented")
 }
 
-func Time(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func _time(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	if len(args) == 0 {
 		return []object.Value{object.Integer(time.Now().Unix())}, nil
 	}
@@ -216,7 +216,7 @@ func Time(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{object.Integer(unix)}, nil
 }
 
-func TmpName(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func tmpname(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	f, err := ioutil.TempFile("", "plua")
 	if err != nil {
 		return nil, object.NewRuntimeError(err.Error())
@@ -240,17 +240,17 @@ func TmpName(th object.Thread, args ...object.Value) ([]object.Value, *object.Ru
 func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	m := th.NewTableSize(0, 11)
 
-	m.Set(object.String("clock"), object.GoFunction(Clock))
-	m.Set(object.String("date"), object.GoFunction(Date))
-	m.Set(object.String("difftime"), object.GoFunction(DiffTime))
-	m.Set(object.String("execute"), object.GoFunction(Execute))
-	m.Set(object.String("exit"), object.GoFunction(Exit))
-	m.Set(object.String("getenv"), object.GoFunction(GetEnv))
-	m.Set(object.String("remove"), object.GoFunction(Remove))
-	m.Set(object.String("rename"), object.GoFunction(Rename))
-	m.Set(object.String("setlocale"), object.GoFunction(SetLocale))
-	m.Set(object.String("time"), object.GoFunction(Time))
-	m.Set(object.String("tmpname"), object.GoFunction(TmpName))
+	m.Set(object.String("clock"), object.GoFunction(clock))
+	m.Set(object.String("date"), object.GoFunction(date))
+	m.Set(object.String("difftime"), object.GoFunction(difftime))
+	m.Set(object.String("execute"), object.GoFunction(execute))
+	m.Set(object.String("exit"), object.GoFunction(exit))
+	m.Set(object.String("getenv"), object.GoFunction(getenv))
+	m.Set(object.String("remove"), object.GoFunction(remove))
+	m.Set(object.String("rename"), object.GoFunction(rename))
+	m.Set(object.String("setlocale"), object.GoFunction(setlocale))
+	m.Set(object.String("time"), object.GoFunction(_time))
+	m.Set(object.String("tmpname"), object.GoFunction(tmpname))
 
 	return []object.Value{m}, nil
 }
