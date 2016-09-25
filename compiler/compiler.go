@@ -6,18 +6,11 @@ import (
 	"io"
 
 	"github.com/hirochachacha/plua/compiler/codegen"
-	"github.com/hirochachacha/plua/compiler/dump"
 	"github.com/hirochachacha/plua/compiler/parser"
 	"github.com/hirochachacha/plua/compiler/scanner"
 	"github.com/hirochachacha/plua/compiler/undump"
 	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
-)
-
-type Mode uint
-
-const (
-	StripDebugInfo Mode = 1 << iota
 )
 
 type readerAt interface {
@@ -26,19 +19,13 @@ type readerAt interface {
 }
 
 type Compiler struct {
-	mode Mode
-	s    *scanner.Scanner
-	u    *bufio.Reader // buffer for undump
-	d    *bufio.Writer // buffer for dump
-	r    readerAt
+	s *scanner.Scanner
+	u *bufio.Reader // buffer for undump
+	r readerAt
 }
 
 func NewCompiler() *Compiler {
 	return new(Compiler)
-}
-
-func (c *Compiler) SetMode(mode Mode) {
-	c.mode = mode
 }
 
 func (c *Compiler) Compile(r io.Reader, source string) (*object.Proto, error) {
@@ -169,27 +156,6 @@ func (c *Compiler) CompileBinary(r io.Reader) (*object.Proto, error) {
 		c.u.Reset(c.r)
 	}
 	return undump.Undump(c.u, 0)
-}
-
-func (c *Compiler) DumpTo(w io.Writer, p *object.Proto) error {
-	if c.d == nil {
-		c.d = bufio.NewWriter(w)
-	} else {
-		c.d.Reset(w)
-	}
-
-	var mode dump.Mode
-
-	if c.mode&StripDebugInfo != 0 {
-		mode = dump.StripDebugInfo
-	}
-
-	err := dump.DumpTo(c.d, p, mode)
-	if err != nil {
-		return err
-	}
-
-	return c.d.Flush()
 }
 
 type onceReadAt struct {

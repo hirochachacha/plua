@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/hirochachacha/plua/compiler"
+	"github.com/hirochachacha/plua/compiler/dump"
 	"github.com/hirochachacha/plua/object"
 )
 
@@ -123,13 +124,14 @@ func CompileBinaryString(s string) (*object.Proto, error) {
 func DumpToString(p *object.Proto, strip bool) (string, error) {
 	c := pool.Get().(*compiler.Compiler)
 
+	var mode dump.Mode
 	if strip {
-		c.SetMode(compiler.StripDebugInfo)
+		mode |= dump.StripDebugInfo
 	}
 
 	buf := new(bytes.Buffer)
 
-	err := c.DumpTo(buf, p)
+	err := dump.DumpTo(buf, p, mode)
 	if err != nil {
 		return "", err
 	}
