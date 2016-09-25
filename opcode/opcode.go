@@ -302,10 +302,10 @@ const (
 type OpArgMask int
 
 const (
-	OpArgN OpArgMask = iota /* argument is not used */
-	OpArgU                  /* argument is used */
-	OpArgR                  /* argument is a register or a jump offset */
-	OpArgK                  /* argument is a constant or register/constant */
+	OpArgN OpArgMask = iota /* the argument is not used */
+	OpArgU                  /* the argument is used */
+	OpArgR                  /* the argument is a register or a jump offset */
+	OpArgK                  /* the argument is a register or a constant */
 )
 
 func opMode(t, a int, b, c OpArgMask, m OpMode) int {
