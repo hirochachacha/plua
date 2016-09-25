@@ -55,24 +55,24 @@ func (th *thread) Yield(args ...object.Value) (rets []object.Value, err *object.
 	case threadMain:
 		return nil, errYieldMainThread
 	case threadCo:
-		if th.status == object.THREAD_RUNNING {
-			th.status = object.THREAD_SUSPENDED
-
-			th.yield <- args
-
-			rets = <-th.resume
-
-			th.status = object.THREAD_RUNNING
-		} else {
+		if th.status != object.THREAD_RUNNING {
 			return nil, errYieldFromOutside
 		}
+
+		th.status = object.THREAD_SUSPENDED
+
+		th.yield <- args
+
+		rets = <-th.resume
+
+		th.status = object.THREAD_RUNNING
+
+		return rets, nil
 	case threadGo:
 		return nil, errYieldGoThread
 	default:
 		panic("unreachable")
 	}
-
-	return nil, nil
 }
 
 func (th *thread) Resume(args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
@@ -87,6 +87,9 @@ func (th *thread) Resume(args ...object.Value) (rets []object.Value, err *object
 		rets, ok := <-th.yield
 		if !ok {
 			err = th.err()
+			if err != nil {
+				return nil, err
+			}
 		}
 		return rets, err
 	case threadGo:
