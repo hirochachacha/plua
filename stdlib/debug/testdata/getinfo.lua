@@ -121,3 +121,17 @@ debug.sethook(function()
 end, "c")
 
 debug.sethook()
+
+-- test tagmethod information
+local a = {}
+local function index(t)
+  local info = debug.getinfo(1);
+  assert(info.namewhat == "metamethod")
+  a.op = info.name
+  return info.name
+end
+setmetatable(a, {
+  __index = index
+})
+
+assert(a[3] == "__index")

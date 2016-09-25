@@ -46,11 +46,20 @@ func (th *thread) getInfo(level int, what string) *object.DebugInfo {
 				d.NameWhat = "hook"
 			} else {
 				if !ci.isTailCall {
-					if i > 0 {
-						prev := &ctx.ciStack[i-1]
-						if prev != nil && !prev.isGoFunction() {
-							setFuncName(d, prev)
+					pctx := ctx
+
+					j := i - 1
+					if j < 0 {
+						pctx = pctx.prev
+						if pctx == nil {
+							break
 						}
+						j += len(pctx.ciStack)
+					}
+
+					prev := &pctx.ciStack[j]
+					if prev != nil && !prev.isGoFunction() {
+						setFuncName(d, prev)
 					}
 				}
 			}
