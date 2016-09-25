@@ -5,7 +5,7 @@ import (
 	"github.com/hirochachacha/plua/object/fnutil"
 )
 
-func Create(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func create(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	cl, err := ap.ToClosure(0)
@@ -20,11 +20,11 @@ func Create(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	return []object.Value{th1}, nil
 }
 
-func IsYieldable(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func isyieldable(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	return []object.Value{object.Boolean(th.IsYieldable())}, nil
 }
 
-func Resume(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func resume(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	th1, err := ap.ToThread(0)
@@ -40,11 +40,11 @@ func Resume(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	return append([]object.Value{object.True}, rets...), nil
 }
 
-func Running(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func running(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	return []object.Value{th, object.Boolean(th.IsMainThread())}, nil
 }
 
-func Status(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func status(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	th1, err := ap.ToThread(0)
@@ -72,7 +72,7 @@ func Status(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	}
 }
 
-func Wrap(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func wrap(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	cl, err := ap.ToClosure(0)
@@ -96,20 +96,20 @@ func Wrap(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{object.GoFunction(fn)}, nil
 }
 
-func Yield(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func yield(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	return th.Yield(args...)
 }
 
 func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	m := th.NewTableSize(0, 7)
 
-	m.Set(object.String("create"), object.GoFunction(Create))
-	m.Set(object.String("isyieldable"), object.GoFunction(IsYieldable))
-	m.Set(object.String("resume"), object.GoFunction(Resume))
-	m.Set(object.String("running"), object.GoFunction(Running))
-	m.Set(object.String("status"), object.GoFunction(Status))
-	m.Set(object.String("wrap"), object.GoFunction(Wrap))
-	m.Set(object.String("yield"), object.GoFunction(Yield))
+	m.Set(object.String("create"), object.GoFunction(create))
+	m.Set(object.String("isyieldable"), object.GoFunction(isyieldable))
+	m.Set(object.String("resume"), object.GoFunction(resume))
+	m.Set(object.String("running"), object.GoFunction(running))
+	m.Set(object.String("status"), object.GoFunction(status))
+	m.Set(object.String("wrap"), object.GoFunction(wrap))
+	m.Set(object.String("yield"), object.GoFunction(yield))
 
 	return []object.Value{m}, nil
 }
