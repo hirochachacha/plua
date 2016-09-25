@@ -6,7 +6,7 @@ import (
 	"github.com/hirochachacha/plua/object"
 )
 
-type threadType int
+type threadType uint
 
 const (
 	threadMain threadType = iota

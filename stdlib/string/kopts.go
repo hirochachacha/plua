@@ -16,7 +16,7 @@ type kOption struct {
 	endian  byteOrder
 }
 
-type kType int
+type kType uint
 
 const (
 	kInt kType = iota

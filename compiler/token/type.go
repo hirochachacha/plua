@@ -1,6 +1,6 @@
 package token
 
-type Type int
+type Type uint
 
 func (typ Type) String() string {
 	return tokenNames[typ]

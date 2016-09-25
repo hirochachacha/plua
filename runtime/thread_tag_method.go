@@ -7,7 +7,7 @@ import (
 
 const MaxTagType = TM_CALL + 1
 
-type tagType int
+type tagType uint
 
 func (t tagType) String() string {
 	return tagNames[t]

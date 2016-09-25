@@ -2,7 +2,7 @@ package runtime
 
 import "github.com/hirochachacha/plua/object"
 
-type hookType int
+type hookType uint
 
 func (h hookType) String() string {
 	return hookNames[h]
