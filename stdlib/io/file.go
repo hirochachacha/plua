@@ -8,7 +8,7 @@ import (
 	"github.com/hirochachacha/plua/object/fnutil"
 )
 
-func FClose(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func fclose(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	ud, err := ap.ToFullUserdata(0)
@@ -24,7 +24,7 @@ func FClose(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	return fileResult(th, f.Close())
 }
 
-func FFlush(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func fflush(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	ud, err := ap.ToFullUserdata(0)
@@ -40,7 +40,7 @@ func FFlush(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	return fileResult(th, f.Flush())
 }
 
-func FLines(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func flines(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	ud, err := ap.ToFullUserdata(0)
@@ -54,13 +54,13 @@ func FLines(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	}
 
 	retfn := func(_ object.Thread, _ ...object.Value) ([]object.Value, *object.RuntimeError) {
-		return fread(th, args, f, 1)
+		return _read(th, args, f, 1)
 	}
 
 	return []object.Value{object.GoFunction(retfn)}, nil
 }
 
-func FRead(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func fread(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	ud, err := ap.ToFullUserdata(0)
@@ -73,10 +73,10 @@ func FRead(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 		return nil, ap.TypeError(0, "FILE*")
 	}
 
-	return fread(th, args, f, 1)
+	return _read(th, args, f, 1)
 }
 
-func FSeek(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func fseek(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	ud, err := ap.ToFullUserdata(0)
@@ -120,7 +120,7 @@ func FSeek(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 	return []object.Value{object.Integer(n)}, nil
 }
 
-func FSetvbuf(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func fsetvbuf(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	ud, err := ap.ToFullUserdata(0)
@@ -159,7 +159,7 @@ func FSetvbuf(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 	return fileResult(th, e)
 }
 
-func FWrite(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func fwrite(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	ud, err := ap.ToFullUserdata(0)
@@ -187,7 +187,7 @@ func FWrite(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	return fileResult(th, nil)
 }
 
-func FToString(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func ftostring(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	ud, err := ap.ToFullUserdata(0)

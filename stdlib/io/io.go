@@ -14,18 +14,18 @@ import (
 func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	fileIndex := th.NewTableSize(0, 7)
 
-	fileIndex.Set(object.String("close"), object.GoFunction(FClose))
-	fileIndex.Set(object.String("flush"), object.GoFunction(FFlush))
-	fileIndex.Set(object.String("lines"), object.GoFunction(FLines))
-	fileIndex.Set(object.String("read"), object.GoFunction(FRead))
-	fileIndex.Set(object.String("seek"), object.GoFunction(FSeek))
-	fileIndex.Set(object.String("setvbuf"), object.GoFunction(FSetvbuf))
-	fileIndex.Set(object.String("write"), object.GoFunction(FWrite))
+	fileIndex.Set(object.String("close"), object.GoFunction(fclose))
+	fileIndex.Set(object.String("flush"), object.GoFunction(fflush))
+	fileIndex.Set(object.String("lines"), object.GoFunction(flines))
+	fileIndex.Set(object.String("read"), object.GoFunction(fread))
+	fileIndex.Set(object.String("seek"), object.GoFunction(fseek))
+	fileIndex.Set(object.String("setvbuf"), object.GoFunction(fsetvbuf))
+	fileIndex.Set(object.String("write"), object.GoFunction(fwrite))
 
 	mt := th.NewTableSize(0, 2)
 
 	mt.Set(object.String("__index"), fileIndex)
-	mt.Set(object.String("__tostring"), object.GoFunction(FToString))
+	mt.Set(object.String("__tostring"), object.GoFunction(ftostring))
 
 	stdin := &object.Userdata{
 		Value:     file.NewFile(os.Stdin, os.O_RDONLY),
@@ -42,30 +42,30 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		Metatable: mt,
 	}
 
-	var input = stdin
-	var output = stdout
+	var _input = stdin
+	var _output = stdout
 
 	// close([file])
-	var Close = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	var _close = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		if len(args) == 0 {
-			return fileResult(th, output.Value.(file.File).Close())
+			return fileResult(th, _output.Value.(file.File).Close())
 		}
 
-		return FClose(th, args...)
+		return fclose(th, args...)
 	}
 
-	var Flush = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	var flush = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		if len(args) == 0 {
-			return fileResult(th, output.Value.(file.File).Flush())
+			return fileResult(th, _output.Value.(file.File).Flush())
 		}
 
-		return FFlush(th, args...)
+		return fflush(th, args...)
 	}
 
 	// input([file])
-	var Input = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	var input = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		if len(args) == 0 {
-			return []object.Value{input}, nil
+			return []object.Value{_input}, nil
 		}
 
 		ap := fnutil.NewArgParser(th, args)
@@ -96,13 +96,13 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			}
 		}
 
-		input = ud
+		_input = ud
 
 		return []object.Value{ud}, nil
 	}
 
 	// lines([filename, ...])
-	var Lines = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	var lines = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		ap := fnutil.NewArgParser(th, args)
 
 		fname, err := ap.ToGoString(0)
@@ -116,14 +116,14 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		}
 
 		retfn := func(_ object.Thread, _ ...object.Value) ([]object.Value, *object.RuntimeError) {
-			return fread(th, args, f, 1)
+			return _read(th, args, f, 1)
 		}
 
 		return []object.Value{object.GoFunction(retfn)}, nil
 	}
 
 	// open(filename, [, mode])
-	var Open = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	var open = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		ap := fnutil.NewArgParser(th, args)
 
 		fname, err := ap.ToGoString(0)
@@ -168,9 +168,9 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	}
 
 	// output([file])
-	var Output = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	var output = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		if len(args) == 0 {
-			return []object.Value{output}, nil
+			return []object.Value{_output}, nil
 		}
 
 		ap := fnutil.NewArgParser(th, args)
@@ -201,12 +201,12 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			}
 		}
 
-		output = ud
+		_output = ud
 
 		return []object.Value{ud}, nil
 	}
 
-	var Popen = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	var popen = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		ap := fnutil.NewArgParser(th, args)
 
 		prog, err := ap.ToGoString(0)
@@ -263,11 +263,11 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		return []object.Value{ud}, nil
 	}
 
-	var Read = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-		return fread(th, args, input.Value.(file.File), 0)
+	var read = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+		return _read(th, args, _input.Value.(file.File), 0)
 	}
 
-	var TmpFile = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	var tmpfile = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		f, err := ioutil.TempFile("", "plua")
 		if err != nil {
 			return fileResult(th, err)
@@ -281,7 +281,7 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		return []object.Value{ud}, nil
 	}
 
-	var Type = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	var _type = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		ap := fnutil.NewArgParser(th, args)
 
 		ud, err := ap.ToFullUserdata(0)
@@ -301,8 +301,8 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		return []object.Value{object.String("file")}, nil
 	}
 
-	var Write = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-		f := output.Value.(file.File)
+	var write = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+		f := _output.Value.(file.File)
 
 		ap := fnutil.NewArgParser(th, args)
 
@@ -327,17 +327,17 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	m.Set(object.String("stdout"), stdout)
 	m.Set(object.String("stderr"), stderr)
 
-	m.Set(object.String("close"), object.GoFunction(Close))
-	m.Set(object.String("flush"), object.GoFunction(Flush))
-	m.Set(object.String("input"), object.GoFunction(Input))
-	m.Set(object.String("lines"), object.GoFunction(Lines))
-	m.Set(object.String("open"), object.GoFunction(Open))
-	m.Set(object.String("output"), object.GoFunction(Output))
-	m.Set(object.String("popen"), object.GoFunction(Popen))
-	m.Set(object.String("read"), object.GoFunction(Read))
-	m.Set(object.String("tmpfile"), object.GoFunction(TmpFile))
-	m.Set(object.String("type"), object.GoFunction(Type))
-	m.Set(object.String("write"), object.GoFunction(Write))
+	m.Set(object.String("close"), object.GoFunction(_close))
+	m.Set(object.String("flush"), object.GoFunction(flush))
+	m.Set(object.String("input"), object.GoFunction(input))
+	m.Set(object.String("lines"), object.GoFunction(lines))
+	m.Set(object.String("open"), object.GoFunction(open))
+	m.Set(object.String("output"), object.GoFunction(output))
+	m.Set(object.String("popen"), object.GoFunction(popen))
+	m.Set(object.String("read"), object.GoFunction(read))
+	m.Set(object.String("tmpfile"), object.GoFunction(tmpfile))
+	m.Set(object.String("type"), object.GoFunction(_type))
+	m.Set(object.String("write"), object.GoFunction(write))
 
 	return []object.Value{m}, nil
 }
