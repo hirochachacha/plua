@@ -320,10 +320,6 @@ func (th *thread) docall(fn, errh object.Value, args ...object.Value) (rets []ob
 	case object.GoFunction:
 		rets, err := th.docallGo(fn, args...)
 		if err != nil {
-			if errh == nil {
-				return nil, err
-			}
-
 			return th.dohandle(errh, err)
 		}
 
@@ -389,7 +385,7 @@ func (th *thread) docallLua(c object.Closure, errh object.Value, args ...object.
 func (th *thread) dohandle(errh object.Value, err *object.RuntimeError) ([]object.Value, *object.RuntimeError) {
 	switch errh := errh.(type) {
 	case nil:
-		return nil, errInErrorHandling
+		return nil, err
 	case object.GoFunction:
 		rets, err := th.docallGo(errh, err.Positioned())
 		if err != nil {
