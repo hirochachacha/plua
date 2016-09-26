@@ -116,7 +116,7 @@ func find(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	if init < 0 {
 		init = 1
 	}
-	if init > len(s) {
+	if init-1 > len(s) {
 		return nil, nil
 	}
 
@@ -466,7 +466,12 @@ func rep(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 		return []object.Value{object.String("")}, nil
 	}
 
-	buf := make([]byte, len(s)*n+len(sep)*(n-1))
+	size := len(s)*n + len(sep)*(n-1)
+	if size < 0 {
+		return nil, object.NewRuntimeError("result is overflowed")
+	}
+
+	buf := make([]byte, size)
 
 	bp := copy(buf, s+sep)
 	for bp < len(buf) {
@@ -532,10 +537,6 @@ func sub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 	}
 	if j > len(s) {
 		j = len(s)
-	}
-
-	if i > j {
-		return []object.Value{object.String("")}, nil
 	}
 
 	if i > j {

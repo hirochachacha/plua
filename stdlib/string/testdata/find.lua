@@ -27,3 +27,7 @@ x, y = string.find("abc", "^[a-z]+$")
 assert(x == 1 and y == 3)
 
 assert(string.find("()", "^[a-z]+$") == nil)
+
+x, y = string.find("", "")
+
+assert(x == 1 and y == 0)
