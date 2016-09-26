@@ -610,7 +610,11 @@ func tostring(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 			return nil, object.NewRuntimeError("'tostring' must return a string to 'print'")
 		}
 
-		return []object.Value{object.String(object.Repr(rets[0]))}, nil
+		val = rets[0]
+	}
+
+	if _, ok := val.(object.String); ok {
+		return []object.Value{val}, nil
 	}
 
 	return []object.Value{object.String(object.Repr(val))}, nil

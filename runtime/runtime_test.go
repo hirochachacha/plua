@@ -25,6 +25,7 @@ var testExec = []struct {
 	{`function x() return 1 end; x(); return 2`, []object.Value{object.Integer(2)}},
 	{`local a = {1 = 10, 2, 3, 4 = 9}; return a[4]`, []object.Value{object.Integer(9)}},
 	{`a = {1 = 10, 2, 3, 4 = 9}; return #a`, []object.Value{object.Integer(2)}},
+	{`return #"test"`, []object.Value{object.Integer(4)}},
 	{`
 	function fib(n)
 	  if n == 0 then
