@@ -61,9 +61,16 @@ func ParseInt(s string) (int64, error) {
 		return 0, ErrSyntax
 	}
 
-	if s[0] == '0' && len(s) != 1 && (s[1] == 'x' || s[1] == 'X') {
-		i, err := strconv.ParseInt(s[2:], 16, 64)
-		return i, unwrap(err)
+	if s[0] == '-' {
+		if len(s) > 2 && s[1] == '0' && (s[2] == 'x' || s[2] == 'X') {
+			i, err := strconv.ParseInt("-"+s[3:], 16, 64)
+			return i, unwrap(err)
+		}
+	} else {
+		if len(s) > 1 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
+			i, err := strconv.ParseInt(s[2:], 16, 64)
+			return i, unwrap(err)
+		}
 	}
 
 	i, err := strconv.ParseInt(s, 10, 64)

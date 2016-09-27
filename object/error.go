@@ -3,6 +3,7 @@ package object
 import (
 	"strings"
 
+	"github.com/hirochachacha/plua/internal/strconv"
 	"github.com/hirochachacha/plua/position"
 )
 
@@ -31,6 +32,9 @@ func (err *RuntimeError) Positioned() Value {
 
 func (err *RuntimeError) Error() string {
 	msg := Repr(err.Value)
+	if val, ok := err.Value.(String); ok {
+		msg = strconv.Quote(string(val))
+	}
 	if len(err.Traceback) > 0 {
 		msg = msg + " from "
 		tb := err.Traceback[0]

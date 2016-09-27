@@ -42,16 +42,16 @@ import (
 // control characters and non-printable characters as defined by
 // IsPrint.
 func Quote(s string) string {
-	return quoteWith(s, '"', false)
+	return quoteWith(s, '"')
 }
 
 func SQuote(s string) string {
-	return quoteWith(s, '\'', false)
+	return quoteWith(s, '\'')
 }
 
 const lowerhex = "0123456789abcdef"
 
-func quoteWith(s string, quote byte, ASCIIonly bool) string {
+func quoteWith(s string, quote byte) string {
 	var runeTmp [utf8.UTFMax]byte
 	buf := make([]byte, 0, 3*len(s)/2) // Try to avoid more allocations.
 	buf = append(buf, quote)
@@ -61,64 +61,34 @@ func quoteWith(s string, quote byte, ASCIIonly bool) string {
 		if r >= utf8.RuneSelf {
 			r, width = utf8.DecodeRuneInString(s)
 		}
-		if width == 1 && r == utf8.RuneError {
-			buf = append(buf, `\x`...)
-			buf = append(buf, lowerhex[s[0]>>4])
-			buf = append(buf, lowerhex[s[0]&0xF])
-			continue
-		}
 		if r == rune(quote) || r == '\\' { // always backslashed
 			buf = append(buf, '\\')
 			buf = append(buf, byte(r))
 			continue
 		}
-		if ASCIIonly {
-			if r < utf8.RuneSelf && unicode.IsPrint(r) {
-				buf = append(buf, byte(r))
-				continue
-			}
-		} else if unicode.IsPrint(r) {
+		if unicode.IsPrint(r) {
 			n := utf8.EncodeRune(runeTmp[:], r)
 			buf = append(buf, runeTmp[:n]...)
 			continue
 		}
 		switch r {
 		case '\a':
-			buf = append(buf, `\a`...)
+			buf = append(buf, "\\\a"...)
 		case '\b':
-			buf = append(buf, `\b`...)
+			buf = append(buf, "\\\b"...)
 		case '\f':
-			buf = append(buf, `\f`...)
+			buf = append(buf, "\\\f"...)
 		case '\n':
-			buf = append(buf, `\n`...)
+			buf = append(buf, "\\\n"...)
 		case '\r':
-			buf = append(buf, `\r`...)
+			buf = append(buf, "\\\r"...)
 		case '\t':
-			buf = append(buf, `\t`...)
+			buf = append(buf, "\\\t"...)
 		case '\v':
-			buf = append(buf, `\v`...)
+			buf = append(buf, "\\\v"...)
 		default:
-			switch {
-			case r < ' ':
-				buf = append(buf, `\x`...)
-				buf = append(buf, lowerhex[s[0]>>4])
-				buf = append(buf, lowerhex[s[0]&0xF])
-			case r > utf8.MaxRune:
-				r = 0xFFFD
-				fallthrough
-			case r < 0x10000:
-				buf = append(buf, `\u{`...)
-				for s := 12; s >= 0; s -= 4 {
-					buf = append(buf, lowerhex[r>>uint(s)&0xF])
-				}
-				buf = append(buf, '}')
-			default:
-				buf = append(buf, `\u{`...)
-				for s := 28; s >= 0; s -= 4 {
-					buf = append(buf, lowerhex[r>>uint(s)&0xF])
-				}
-				buf = append(buf, '}')
-			}
+			buf = append(buf, '\\')
+			buf = AppendInt(buf, int64(r), 10)
 		}
 	}
 	buf = append(buf, quote)
@@ -225,7 +195,11 @@ func UnquoteChar(s string, quote byte) (value rune, multibyte bool, tail string,
 			}
 			v = v<<4 | x
 		}
-		s = s[j:]
+		if s[j] != '}' {
+			err = ErrSyntax
+			return
+		}
+		s = s[j+1:]
 		if v > utf8.MaxRune {
 			err = ErrSyntax
 			return
@@ -251,15 +225,11 @@ func UnquoteChar(s string, quote byte) (value rune, multibyte bool, tail string,
 	case '\\':
 		value = '\\'
 	case '\'', '"':
-		if c != quote {
-			err = ErrSyntax
-			return
-		}
 		value = rune(c)
 	case '\n', '\r':
 		value = rune(c)
 	case 'z':
-		tail = strings.TrimLeft(s, " \t\r\n")
+		s = strings.TrimLeft(s, " \t\r\n")
 		value = -1
 	default:
 		err = ErrSyntax
@@ -294,10 +264,6 @@ func Unquote(s string) (t string, err error) {
 
 			s = s[2 : n-2]
 
-			if strings.Contains(s, prefix) {
-				return "", ErrSyntax
-			}
-
 			return s, nil
 		case "[=":
 			j := 2
@@ -321,10 +287,6 @@ func Unquote(s string) (t string, err error) {
 			prefix = s[:j]
 
 			s = s[j : n-j]
-
-			if strings.Contains(s, prefix) {
-				return "", ErrSyntax
-			}
 
 			return s, nil
 		}

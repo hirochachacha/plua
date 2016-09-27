@@ -184,7 +184,8 @@ func (s *scanner) scanFloat() (float64, error) {
 	if base == 16 {
 		s.acceptHexDigits()
 		s.acceptByte('.')
-		s.acceptByte('p')
+		s.acceptHexDigits()
+		s.accepts("pP")
 		s.acceptSign()
 		s.acceptDigits()
 	} else {
