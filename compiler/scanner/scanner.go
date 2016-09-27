@@ -605,7 +605,8 @@ func (s *Scanner) skipEscape(quote int) {
 
 	var x uint32
 
-	for ; i > 0 && s.ch != quote && pred(s.ch); i-- {
+	j := i
+	for ; j > 0 && s.ch != quote && pred(s.ch); j-- {
 		d := uint32(digitVal(s.ch))
 		if d >= base {
 			// if not unicode
@@ -626,6 +627,15 @@ func (s *Scanner) skipEscape(quote int) {
 		x = x*base + d
 
 		s.next()
+	}
+
+	// hex
+	if i == 2 {
+		if j > 0 {
+			s.error(pos, errUnknownEscapeSequence)
+
+			return
+		}
 	}
 
 	// unicode
