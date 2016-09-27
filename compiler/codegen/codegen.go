@@ -464,7 +464,7 @@ func parseInteger(g string) (ret object.Integer, inf int) {
 	i, err := strconv.ParseInt(g)
 	if err != nil {
 		if err != strconv.ErrRange {
-			panic(err)
+			panic(fmt.Sprintf("strconv.ParseInt(%s) = %v", g, err))
 		}
 
 		// infinity

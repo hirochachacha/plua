@@ -46,7 +46,7 @@ func (g *generator) genExpr(expr ast.Expr, typ genType) (rk int) {
 		if val, ok := g.foldUnary(expr); ok {
 			rk = g.genConst(val, typ)
 		} else {
-			rk = g.genUnaryExpr(expr)
+			rk = g.genUnaryExpr(expr, typ)
 		}
 	case *ast.BinaryExpr:
 		// const folding
@@ -98,7 +98,7 @@ func (g *generator) genExprN(expr ast.Expr, nrets int) (isvar bool) {
 		if val, ok := g.foldUnary(expr); ok {
 			g.genConst(val, genMove)
 		} else {
-			g.genUnaryExpr(expr)
+			g.genUnaryExpr(expr, genMove)
 		}
 	case *ast.BinaryExpr:
 		// const folding
@@ -479,8 +479,31 @@ func (g *generator) genCallExprN(expr *ast.CallExpr, nrets int, isTail bool) (r 
 	return
 }
 
-func (g *generator) genUnaryExpr(expr *ast.UnaryExpr) (r int) {
+func (g *generator) genUnaryExpr(expr *ast.UnaryExpr, typ genType) (r int) {
 	g.tokLine = expr.Pos().Line
+
+	if expr.Op == token.UNM {
+		if x, ok := expr.X.(*ast.BasicLit); ok {
+			tok := x.Token
+
+			if tok.Type == token.INT {
+				var val object.Value
+
+				i, inf := parseInteger("-" + tok.Lit)
+				if inf != 0 {
+					if inf > 0 {
+						val = object.Infinity
+					} else {
+						val = object.Infinity
+					}
+				} else {
+					val = i
+				}
+
+				return g.genConst(val, typ)
+			}
+		}
+	}
 
 	sp := g.sp
 
