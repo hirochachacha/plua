@@ -19,7 +19,7 @@ func numberToInteger(n Number) (Integer, bool) {
 }
 
 func numberToString(n Number) String {
-	return String(strconv.FormatFloat(float64(n), 'f', 1, 64))
+	return String(strconv.FormatFloat(float64(n), 'f', -1, 64))
 }
 
 func numberToGoUint(n Number) (uint64, bool) {
