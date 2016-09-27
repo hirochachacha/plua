@@ -10,7 +10,6 @@ var (
 	errInvalidCapture   = errors.New("invalid capture")
 	errMissingBracket   = errors.New("missing closing ]")
 	errUnexpectedParen  = errors.New("unexpected )")
-	errUnexpectedRange  = errors.New("unexpected -")
 	errMalformedPattern = errors.New("malformed pattern (ends with '%')")
 )
 
@@ -191,9 +190,6 @@ L2:
 			return
 		case ']':
 			break L2
-		case '-':
-			err = errUnexpectedRange
-			return
 		case '%':
 			c.next()
 
