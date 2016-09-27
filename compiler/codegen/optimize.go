@@ -135,9 +135,15 @@ func (g *generator) foldUnary(expr *ast.UnaryExpr) (val object.Value, ok bool) {
 			x = paren.X
 		}
 
-		if t, ok := x.(*ast.TableLit); ok {
+		switch x := x.(type) {
+		case *ast.BasicLit:
+			tok := x.Token
+			if tok.Type == token.STRING {
+				val = object.Integer(len(unquoteString(tok.Lit)))
+			}
+		case *ast.TableLit:
 			alen := 0
-			for _, e := range t.Fields {
+			for _, e := range x.Fields {
 				if _, ok := e.(*ast.KeyValueExpr); !ok {
 					if _, ok := g.foldExpr(e); !ok {
 						g.cfolds[expr] = nil
@@ -147,7 +153,6 @@ func (g *generator) foldUnary(expr *ast.UnaryExpr) (val object.Value, ok bool) {
 					alen++
 				}
 			}
-
 			val = object.Integer(alen)
 		}
 	default:
