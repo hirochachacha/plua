@@ -5,7 +5,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/hirochachacha/plua/internal/compiler_pool"
-	"github.com/hirochachacha/plua/internal/format"
 	"github.com/hirochachacha/plua/internal/limits"
 	"github.com/hirochachacha/plua/internal/pattern"
 	"github.com/hirochachacha/plua/object"
@@ -152,32 +151,6 @@ func find(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	}
 
 	return rets, nil
-}
-
-// format(fmt, ...)
-func _format(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	ap := fnutil.NewArgParser(th, args)
-
-	fmt, err := ap.ToGoString(0)
-	if err != nil {
-		return nil, err
-	}
-
-	s, e := format.Format(fmt, args[1:]...)
-	if e != nil {
-		switch e := e.(type) {
-		case *format.ArgError:
-			return nil, ap.ArgError(e.ArgNum, e.ExtraMsg)
-		case *format.TypeError:
-			return nil, ap.TypeError(e.ArgNum+1, e.Expected)
-		case *format.OptionError:
-			return nil, ap.OptionError(0, e.Opt)
-		default:
-			return nil, object.NewRuntimeError(e.Error())
-		}
-	}
-
-	return []object.Value{object.String(s)}, nil
 }
 
 // gmatch(s, patter)
@@ -603,7 +576,7 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	m.Set(object.String("char"), object.GoFunction(char))
 	m.Set(object.String("dump"), object.GoFunction(dump))
 	m.Set(object.String("find"), object.GoFunction(find))
-	m.Set(object.String("format"), object.GoFunction(_format))
+	m.Set(object.String("format"), object.GoFunction(format))
 	m.Set(object.String("gmatch"), object.GoFunction(gmatch))
 	m.Set(object.String("gsub"), object.GoFunction(gsub))
 	m.Set(object.String("len"), object.GoFunction(_len))
