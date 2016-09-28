@@ -389,7 +389,12 @@ func (t *term) quoteString(ap *fnutil.ArgParser, argn int) (s string, err *objec
 func (t *term) string(th object.Thread, ap *fnutil.ArgParser, argn int) (s string, err *object.RuntimeError) {
 	val, _ := ap.Get(argn)
 
-	if rets, done := th.CallMetaField(val, "__tostring"); done {
+	if fn := th.GetMetaField(val, "__tostring"); fn != nil {
+		rets, err := th.Call(fn, nil)
+		if err != nil {
+			return "", err
+		}
+
 		if len(rets) == 0 {
 			return "", object.NewRuntimeError("'tostring' must return a string to 'print'")
 		}

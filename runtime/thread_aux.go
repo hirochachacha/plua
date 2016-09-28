@@ -30,13 +30,3 @@ func (th *thread) GetMetaField(val object.Value, field string) object.Value {
 
 	return mt.Get(object.String(field))
 }
-
-func (th *thread) CallMetaField(val object.Value, field string) (rets []object.Value, done bool) {
-	if fn := th.GetMetaField(val, field); fn != nil {
-		rets, _ := th.Call(fn, val)
-
-		return rets, true
-	}
-
-	return nil, false
-}

@@ -606,7 +606,12 @@ func tostring(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 		return nil, err
 	}
 
-	if rets, done := th.CallMetaField(val, "__tostring"); done {
+	if fn := th.GetMetaField(val, "__tostring"); fn != nil {
+		rets, err := th.Call(fn, nil)
+		if err != nil {
+			return nil, err
+		}
+
 		if len(rets) == 0 {
 			return nil, object.NewRuntimeError("'tostring' must return a string to 'print'")
 		}
