@@ -8,7 +8,7 @@ import (
 func create(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
-	cl, err := ap.ToClosure(0)
+	cl, err := ap.ToFunction(0)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func status(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 func wrap(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
-	cl, err := ap.ToClosure(0)
+	cl, err := ap.ToFunction(0)
 	if err != nil {
 		return nil, err
 	}
