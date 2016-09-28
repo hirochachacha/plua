@@ -70,24 +70,8 @@ func (t *concurrentTable) Del(key object.Value) {
 	t.del(key)
 }
 
-func (t *concurrentTable) IGet(i int) object.Value {
-	return t.iget(i)
-}
-
-func (t *concurrentTable) ISet(i int, val object.Value) {
-	t.iset(i, val)
-}
-
-func (t *concurrentTable) IDel(i int) {
-	t.idel(i)
-}
-
 func (t *concurrentTable) Next(key object.Value) (nkey, nval object.Value, ok bool) {
 	return t.next(key)
-}
-
-func (t *concurrentTable) INext(i int) (ni int, nval object.Value, ok bool) {
-	return t.inext(i)
 }
 
 func (t *concurrentTable) Sort(less func(x, y object.Value) bool) {
@@ -259,19 +243,6 @@ func (t *concurrentTable) next(key object.Value) (nkey, nval object.Value, ok bo
 	}
 
 	return t.m.Next(key)
-}
-
-func (t *concurrentTable) inext(i int) (ni int, nval object.Value, ok bool) {
-	t.Lock()
-	defer t.Unlock()
-
-	alen := t.alen
-
-	if alen <= i {
-		return -1, nil, false
-	}
-
-	return i + 1, t.a[i], true
 }
 
 func (t *concurrentTable) setList(base int, src []object.Value) {

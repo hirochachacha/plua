@@ -149,16 +149,17 @@ func inext(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 		return nil, err
 	}
 
-	k, v, ok := t.INext(i)
-	if !ok {
-		return nil, object.NewRuntimeError("invalid key to 'inext'")
+	i++
+
+	if i <= t.Len() {
+		v := t.Get(object.Integer(i))
+		if v == nil {
+			return nil, nil
+		}
+		return []object.Value{object.Integer(i), v}, nil
 	}
 
-	if v == nil {
-		return nil, nil
-	}
-
-	return []object.Value{object.Integer(k), v}, nil
+	return nil, nil
 }
 
 func makeINext(tm object.Value) object.GoFunction {

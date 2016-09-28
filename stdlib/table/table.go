@@ -22,12 +22,12 @@ func concat(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	i, err := ap.OptGoInt(2, 1)
+	i, err := ap.OptGoInt64(2, 1)
 	if err != nil {
 		return nil, err
 	}
 
-	j, err := ap.OptGoInt(3, t.Len())
+	j, err := ap.OptGoInt64(3, int64(t.Len()))
 	if err != nil {
 		return nil, err
 	}
@@ -38,33 +38,27 @@ func concat(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 
 	var buf bytes.Buffer
 
-	var nkey int
 	var val object.Value
 	var ok bool
 	var tmp string
 
-	key := i - 1
-	end := j - 1
 	for {
-		nkey, val, ok = t.INext(key)
-		if !ok {
-			return nil, object.NewRuntimeError("invalid key to 'inext'")
-		}
+		val = t.Get(object.Integer(i))
 
 		tmp, ok = object.ToGoString(val)
 		if !ok {
-			return nil, object.NewRuntimeError(fmt.Sprintf("invalid value (%s) at index %d in table for 'concat'", object.ToType(val), key))
+			return nil, object.NewRuntimeError(fmt.Sprintf("invalid value (%s) at index %d in table for 'concat'", object.ToType(val), i))
 		}
 
 		buf.WriteString(tmp)
 
-		if key == end {
+		if i == j {
 			break
 		}
 
 		buf.WriteString(sep)
 
-		key = nkey
+		i++
 	}
 
 	return []object.Value{object.String(buf.String())}, nil
@@ -85,7 +79,7 @@ func insert(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 			return nil, err
 		}
 
-		t.ISet(t.Len()+1, val)
+		t.Set(object.Integer(t.Len()+1), val)
 
 		return nil, nil
 	}
@@ -95,7 +89,7 @@ func insert(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	t.ISet(pos, val)
+	t.Set(object.Integer(pos), val)
 
 	return nil, nil
 }
@@ -132,12 +126,8 @@ func move(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		}
 	}
 
-	if f <= 0 {
-		return nil, ap.ArgError(1, "initial position must be positive")
-	}
-
 	for i := 0; i <= e-f; i++ {
-		a2.ISet(t+i, a1.IGet(f+i))
+		a2.Set(object.Integer(t+i), a1.Get(object.Integer(f+i)))
 	}
 
 	return nil, nil
@@ -159,14 +149,16 @@ func remove(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	pos, err := ap.OptGoInt(1, t.Len())
+	tlen := t.Len()
+
+	pos, err := ap.OptGoInt(1, tlen)
 	if err != nil {
 		return nil, err
 	}
 
-	if val := t.IGet(pos); val != nil {
-		t.IDel(pos)
-
+	if pos <= tlen {
+		val := t.Get(object.Integer(pos))
+		t.Del(object.Integer(pos))
 		return []object.Value{val}, nil
 	}
 
@@ -245,12 +237,12 @@ func unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	i, err := ap.OptGoInt(1, 1)
+	i, err := ap.OptGoInt64(1, 1)
 	if err != nil {
 		return nil, err
 	}
 
-	j, err := ap.OptGoInt(2, t.Len())
+	j, err := ap.OptGoInt64(2, int64(t.Len()))
 	if err != nil {
 		return nil, err
 	}
@@ -261,25 +253,18 @@ func unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 
 	var rets []object.Value
 
-	var nkey int
 	var val object.Value
-	var ok bool
 
-	key := i - 1
-	end := j - 1
 	for {
-		nkey, val, ok = t.INext(key)
-		if !ok {
-			return nil, object.NewRuntimeError("invalid key to 'inext'")
-		}
+		val = t.Get(object.Integer(i))
 
 		rets = append(rets, val)
 
-		if key == end {
+		if i == j {
 			break
 		}
 
-		key = nkey
+		i++
 	}
 
 	return rets, nil

@@ -144,15 +144,9 @@ func makeRequire(m object.Table) object.GoFunction {
 			return nil, object.NewRuntimeError("'package.searchers' must be a table")
 		}
 
-		var i int
-		var val object.Value
-
-		for {
-			i, val, ok = searchers.INext(i)
-			if !ok {
-				return nil, object.NewRuntimeError("invalid key to 'inext'")
-			}
-
+		slen := searchers.Len()
+		for i := 1; i <= slen; i++ {
+			val := searchers.Get(object.Integer(i))
 			if val == nil {
 				break
 			}

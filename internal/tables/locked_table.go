@@ -62,46 +62,10 @@ func (t *lockedTable) Del(key object.Value) {
 	t.m.Unlock()
 }
 
-func (t *lockedTable) IGet(i int) object.Value {
-	t.m.Lock()
-
-	val := t.t.IGet(i)
-
-	t.m.Unlock()
-
-	return val
-}
-
-func (t *lockedTable) ISet(i int, val object.Value) {
-	t.m.Lock()
-
-	t.t.ISet(i, val)
-
-	t.m.Unlock()
-}
-
-func (t *lockedTable) IDel(i int) {
-	t.m.Lock()
-
-	t.t.IDel(i)
-
-	t.m.Unlock()
-}
-
 func (t *lockedTable) Next(key object.Value) (nkey, nval object.Value, ok bool) {
 	t.m.Lock()
 
 	nkey, nval, ok = t.t.Next(key)
-
-	t.m.Unlock()
-
-	return
-}
-
-func (t *lockedTable) INext(i int) (ni int, nval object.Value, ok bool) {
-	t.m.Lock()
-
-	ni, nval, ok = t.t.INext(i)
 
 	t.m.Unlock()
 
