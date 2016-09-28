@@ -401,6 +401,6 @@ func (th *thread) dohandle(errh object.Value, err *object.RuntimeError) ([]objec
 
 		return rets, nil
 	default:
-		panic("unexpected")
+		return nil, errInErrorHandling
 	}
 }

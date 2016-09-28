@@ -244,8 +244,6 @@ func (th *thread) LoadFunc(fn object.Value) {
 }
 
 func (th *thread) Call(fn object.Value, errh object.Value, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	mustFunctionOrNil(errh)
-
 	return th.docall(fn, errh, args...)
 }
 
