@@ -87,8 +87,16 @@ func quoteWith(s string, quote byte) string {
 		case '\v':
 			buf = append(buf, "\\\v"...)
 		default:
-			buf = append(buf, '\\')
-			buf = AppendInt(buf, int64(r), 10)
+			if r <= 255 {
+				buf = append(buf, '\\')
+				buf = AppendInt(buf, int64(r), 10)
+			} else {
+				buf = append(buf, `\u{`...)
+				for s := 28; s >= 0; s -= 4 {
+					buf = append(buf, lowerhex[r>>uint(s)&0xF])
+				}
+				buf = append(buf, '}')
+			}
 		}
 	}
 	buf = append(buf, quote)
@@ -175,7 +183,6 @@ func UnquoteChar(s string, quote byte) (value rune, multibyte bool, tail string,
 		}
 		s = s[2:]
 		value = v
-		break
 	case 'u':
 		var v rune
 		if len(s) < 3 {

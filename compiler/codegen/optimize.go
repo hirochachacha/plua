@@ -88,7 +88,8 @@ func (g *generator) foldUnary(expr *ast.UnaryExpr) (val object.Value, ok bool) {
 		if x, ok := expr.X.(*ast.BasicLit); ok {
 			tok := x.Token
 
-			if tok.Type == token.INT {
+			switch tok.Type {
+			case token.INT:
 				var val object.Value
 
 				i, inf := parseInteger("-" + tok.Lit)
@@ -101,6 +102,12 @@ func (g *generator) foldUnary(expr *ast.UnaryExpr) (val object.Value, ok bool) {
 				} else {
 					val = i
 				}
+
+				g.cfolds[expr] = val
+
+				return val, true
+			case token.FLOAT:
+				val := parseNumber("-" + tok.Lit)
 
 				g.cfolds[expr] = val
 

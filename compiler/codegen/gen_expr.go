@@ -486,7 +486,8 @@ func (g *generator) genUnaryExpr(expr *ast.UnaryExpr, typ genType) (r int) {
 		if x, ok := expr.X.(*ast.BasicLit); ok {
 			tok := x.Token
 
-			if tok.Type == token.INT {
+			switch tok.Type {
+			case token.INT:
 				var val object.Value
 
 				i, inf := parseInteger("-" + tok.Lit)
@@ -499,6 +500,10 @@ func (g *generator) genUnaryExpr(expr *ast.UnaryExpr, typ genType) (r int) {
 				} else {
 					val = i
 				}
+
+				return g.genConst(val, typ)
+			case token.FLOAT:
+				val := parseNumber("-" + tok.Lit)
 
 				return g.genConst(val, typ)
 			}

@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/hirochachacha/plua/compiler/ast"
 	"github.com/hirochachacha/plua/internal/strconv"
@@ -317,8 +318,28 @@ func (g *generator) declareUpvalue(name string, l *link) *link {
 	return link
 }
 
+type negativeZero struct{}
+
+func (n negativeZero) Type() object.Type {
+	return object.Type(-1)
+}
+
+func (n negativeZero) String() string {
+	return "-0.0"
+}
+
 func (g *generator) constant(val object.Value) (k int) {
-	if k, ok := g.rconstants[val]; ok {
+	key := val
+
+	// a stupid trick for avoiding +0.0 == -0.0
+	if n, ok := val.(object.Number); ok && n == 0 {
+		u := math.Float64bits(float64(n))
+		if int(u>>63) == 1 {
+			key = negativeZero{}
+		}
+	}
+
+	if k, ok := g.rconstants[key]; ok {
 		return k
 	}
 
@@ -326,7 +347,7 @@ func (g *generator) constant(val object.Value) (k int) {
 
 	g.Constants = append(g.Constants, val)
 
-	g.rconstants[val] = k
+	g.rconstants[key] = k
 
 	return
 }
@@ -416,8 +437,6 @@ func (g *generator) closeScope() {
 	}
 
 	return
-
-	return
 }
 
 func (g *generator) pushInst(inst opcode.Instruction) {
@@ -482,7 +501,7 @@ func parseNumber(g string) object.Number {
 	f, err := strconv.ParseFloat(g)
 	if err != nil {
 		if err != strconv.ErrRange {
-			panic(err)
+			panic(fmt.Sprintf("strconv.ParseFloat(%s) = %v", g, err))
 		}
 	}
 

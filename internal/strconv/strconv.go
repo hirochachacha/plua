@@ -86,14 +86,40 @@ func ParseFloat(s string) (float64, error) {
 		return 0, ErrSyntax
 	}
 
-	if s[0] == '0' && len(s) != 1 && (s[1] == 'x' || s[1] == 'X') {
-		return parseHexFloat(s[2:])
+	var f float64
+	var err error
+	{
+		if s[0] == '-' {
+			if len(s) > 2 && s[1] == '0' && (s[2] == 'x' || s[2] == 'X') {
+				f, err = parseHexFloat("-" + s[3:])
+
+				goto parseEnd
+			}
+		} else {
+			if len(s) > 1 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
+				f, err = parseHexFloat(s[2:])
+
+				goto parseEnd
+			}
+		}
+
+		f, err = strconv.ParseFloat(s, 64)
+		if err != nil {
+			err = unwrap(err)
+		}
 	}
 
-	f, err := strconv.ParseFloat(s, 64)
+parseEnd:
 	if err != nil {
-		return f, unwrap(err)
+		return 0, err
 	}
+
+	if f == 0 {
+		if s[0] == '-' {
+			f = math.Copysign(0, -1)
+		}
+	}
+
 	return f, nil
 }
 
@@ -156,6 +182,12 @@ func parseHexFloat(s string) (float64, error) {
 		return 0, ErrSyntax
 	}
 
+	var neg bool
+	if s[0] == '-' {
+		s = s[1:]
+		neg = true
+	}
+
 	j := strings.IndexRune(s, '.')
 	if j != -1 {
 		var i int64
@@ -181,7 +213,14 @@ func parseHexFloat(s string) (float64, error) {
 					if err != nil {
 						return 0, unwrap(err)
 					}
-					return f * math.Pow(2, float64(e)), nil
+
+					f *= math.Pow(2, float64(e))
+
+					if neg {
+						f = -f
+					}
+
+					return f, nil
 				}
 				return 0, ErrSyntax
 			}
@@ -196,6 +235,11 @@ func parseHexFloat(s string) (float64, error) {
 
 			coef *= 16
 		}
+
+		if neg {
+			f = -f
+		}
+
 		return f, nil
 	}
 
@@ -211,7 +255,13 @@ func parseHexFloat(s string) (float64, error) {
 			return 0, unwrap(err)
 		}
 
-		return float64(i) * math.Pow(2, float64(e)), nil
+		f := float64(i) * math.Pow(2, float64(e))
+
+		if neg {
+			f = -f
+		}
+
+		return f, nil
 	}
 
 	i, err := strconv.ParseInt(s, 16, 64)
@@ -219,7 +269,13 @@ func parseHexFloat(s string) (float64, error) {
 		return 0, unwrap(err)
 	}
 
-	return float64(i), nil
+	f := float64(i)
+
+	if neg {
+		f = -f
+	}
+
+	return f, nil
 }
 
 func digitVal(r rune) int {

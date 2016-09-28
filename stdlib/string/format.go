@@ -79,19 +79,16 @@ type buffer struct {
 }
 
 func (b *buffer) writeFormat(t *term, argn int) *object.RuntimeError {
-	verb, err := b.verb(t, argn)
+	prefix, verb, err := b.verb(t, argn)
 	if err != nil {
 		return err
 	}
 
-	padSize := t.width - len(verb)
-	if t.sign != 0 {
-		padSize--
-	}
+	padSize := t.width - len(verb) - len(prefix)
 
 	if t.minus {
-		if t.sign != 0 {
-			b.WriteByte(t.sign)
+		if len(prefix) != 0 {
+			b.WriteString(prefix)
 		}
 		b.WriteString(verb)
 		if t.zero {
@@ -105,8 +102,8 @@ func (b *buffer) writeFormat(t *term, argn int) *object.RuntimeError {
 		}
 	} else {
 		if t.zero {
-			if t.sign != 0 {
-				b.WriteByte(t.sign)
+			if len(prefix) != 0 {
+				b.WriteString(prefix)
 			}
 			for i := 0; i < padSize; i++ {
 				b.WriteByte('0')
@@ -115,8 +112,8 @@ func (b *buffer) writeFormat(t *term, argn int) *object.RuntimeError {
 			for i := 0; i < padSize; i++ {
 				b.WriteByte(' ')
 			}
-			if t.sign != 0 {
-				b.WriteByte(t.sign)
+			if len(prefix) != 0 {
+				b.WriteString(prefix)
 			}
 		}
 		b.WriteString(verb)
@@ -125,14 +122,12 @@ func (b *buffer) writeFormat(t *term, argn int) *object.RuntimeError {
 	return nil
 }
 
-func (b *buffer) verb(t *term, argn int) (string, *object.RuntimeError) {
+func (b *buffer) verb(t *term, argn int) (string, string, *object.RuntimeError) {
 	switch t.verb {
 	case 'c':
 		return t.byte(b.ap, argn)
-	case 'd', 'i', 'o', 'x', 'X':
+	case 'd', 'i', 'u', 'o', 'x', 'X':
 		return t.int(b.ap, argn)
-	case 'u':
-		return t.uint(b.ap, argn)
 	case 'e', 'E', 'f', 'g', 'G':
 		return t.float(b.ap, argn)
 	case 'a', 'A':
@@ -143,13 +138,11 @@ func (b *buffer) verb(t *term, argn int) (string, *object.RuntimeError) {
 		return t.string(b.th, b.ap, argn)
 	}
 
-	return "", b.ap.OptionError(0, string(t.verb))
+	return "", "", b.ap.OptionError(0, string(t.verb))
 }
 
 type term struct {
 	verb byte
-
-	sign byte // 0 or '+' or '-'
 
 	width int
 	prec  int
@@ -220,152 +213,143 @@ parseFlags:
 	return t, i
 }
 
-func (t *term) byte(ap *fnutil.ArgParser, argn int) (s string, err *object.RuntimeError) {
+func (t *term) byte(ap *fnutil.ArgParser, argn int) (prefix, s string, err *object.RuntimeError) {
 	i, err := ap.ToGoInt64(argn)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return string(byte(i)), nil
+	return "", string(byte(i)), nil
 }
 
-func (t *term) int(ap *fnutil.ArgParser, argn int) (s string, err *object.RuntimeError) {
+func (t *term) int(ap *fnutil.ArgParser, argn int) (prefix, s string, err *object.RuntimeError) {
 	i, err := ap.ToGoInt64(argn)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	var base int
+	var toUpper bool
+	var toUint bool
 
 	switch t.verb {
 	case 'i', 'd':
 		base = 10
+	case 'u':
+		base = 10
+		toUint = true
 	case 'o':
 		base = 8
-	case 'x', 'X':
+		toUint = true
+	case 'x':
 		base = 16
+		toUint = true
+	case 'X':
+		base = 16
+		toUpper = true
+		toUint = true
 	default:
 		panic("unreachable")
 	}
 
-	ndigits := 1
-	for j := i; j != 0; j /= 10 {
-		ndigits++
+	if toUint {
+		s = strconv.FormatUint(uint64(i), base)
+	} else {
+		s = strconv.FormatInt(i, base)
+
+		if s[0] == '-' {
+			s = s[1:]
+			prefix = "-"
+		} else if t.plus {
+			prefix = "+"
+		}
 	}
 
-	if t.plus && i >= 0 {
-		t.sign = '+'
-	} else if i < 0 {
-		t.sign = '-'
-		i = -i
-	}
-
-	var prec string
-
-	if 0 < t.prec-ndigits {
-		prec = strings.Repeat("0", t.prec-ndigits)
-	}
-
-	s = strconv.FormatInt(i, base)
-
-	if t.verb == 'X' {
+	if toUpper {
 		s = strings.ToUpper(s)
 	}
 
-	return prec + s, nil
-}
-
-func (t *term) uint(ap *fnutil.ArgParser, argn int) (s string, err *object.RuntimeError) {
-	i, err := ap.ToGoInt64(argn)
-	if err != nil {
-		return "", err
-	}
-
-	var base int
-
-	switch t.verb {
-	case 'u':
-		base = 10
-	default:
-		panic("unreachable")
-	}
-
-	ndigits := 1
-	for j := i; j != 0; j /= 10 {
-		ndigits++
-	}
-
-	if t.plus && i >= 0 {
-		t.sign = '+'
-	}
-
 	var prec string
 
-	if 0 < t.prec-ndigits {
-		prec = strings.Repeat("0", t.prec-ndigits)
+	if 0 < t.prec-len(s) {
+		prec = strings.Repeat("0", t.prec-len(s))
 	}
 
-	s = strconv.FormatUint(uint64(i), base)
-
-	return prec + s, nil
+	return prefix, prec + s, nil
 }
 
-func (t *term) float(ap *fnutil.ArgParser, argn int) (s string, err *object.RuntimeError) {
+func (t *term) float(ap *fnutil.ArgParser, argn int) (prefix, s string, err *object.RuntimeError) {
 	f, err := ap.ToGoFloat64(argn)
 	if err != nil {
-		return "", err
-	}
-
-	if t.plus && f >= 0 {
-		t.sign = '+'
-	} else if f < 0 {
-		t.sign = '-'
-		f = -f
+		return "", "", err
 	}
 
 	s = strconv.FormatFloat(f, t.verb, t.prec, 64)
 
-	return s, nil
+	if s[0] == '-' {
+		s = s[1:]
+		prefix = "-"
+	} else if t.plus {
+		prefix = "+"
+	}
+
+	return prefix, s, nil
 }
 
-func (t *term) hexFloat(ap *fnutil.ArgParser, argn int) (s string, err *object.RuntimeError) {
+func (t *term) hexFloat(ap *fnutil.ArgParser, argn int) (prefix, s string, err *object.RuntimeError) {
 	f, err := ap.ToGoFloat64(argn)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	u := math.Float64bits(f)
 
-	sign := u >> 63
-	exponent := int64(u>>52&0x7ff) - 1023
-	fraction := u & 0xfffffffffffff
+	signBit := int(u >> 63)
+
+	if f == 0 {
+		if t.prec > 0 {
+			s = "0." + strings.Repeat("0", t.prec) + "+0"
+		} else {
+			s = "0p+0"
+		}
+	} else {
+		exponent := int64(u>>52&0x7ff) - 1023
+		fraction := u & 0xfffffffffffff
+
+		if t.prec > 0 {
+			// TODO precision support
+
+			s = fmt.Sprintf("1.%xp%+d", fraction, exponent)
+		} else {
+			s = fmt.Sprintf("1.%xp%+d", fraction, exponent)
+		}
+	}
 
 	switch t.verb {
 	case 'a':
-		if sign == 1 {
-			s = fmt.Sprintf("-0x1.%xp%+d", fraction, exponent)
+		if signBit == 1 {
+			prefix = "-0x"
 		} else if t.plus {
-			s = fmt.Sprintf("+0x1.%xp%+d", fraction, exponent)
+			prefix = "+0x"
 		} else {
-			s = fmt.Sprintf("0x1.%xp%+d", fraction, exponent)
+			prefix = "0x"
 		}
 	case 'A':
-		if sign == 1 {
-			s = fmt.Sprintf("-0x1.%xp%+d", fraction, exponent)
+		if signBit == 1 {
+			prefix = "-0X"
 		} else if t.plus {
-			s = fmt.Sprintf("+0x1.%xp%+d", fraction, exponent)
+			prefix = "+0X"
 		} else {
-			s = fmt.Sprintf("0x1.%xp%+d", fraction, exponent)
+			prefix = "0X"
 		}
-
 		s = strings.ToUpper(s)
 	default:
 		panic("unreachable")
 	}
 
-	return s, nil
+	return prefix, s, nil
 }
 
-func (t *term) quoteString(ap *fnutil.ArgParser, argn int) (s string, err *object.RuntimeError) {
+func (t *term) quoteString(ap *fnutil.ArgParser, argn int) (prefix, s string, err *object.RuntimeError) {
 	val, _ := ap.Get(argn)
 
 	switch val := val.(type) {
@@ -380,23 +364,23 @@ func (t *term) quoteString(ap *fnutil.ArgParser, argn int) (s string, err *objec
 	case object.Number:
 		s = strconv.FormatFloat(float64(val), 'f', -1, 64)
 	default:
-		return "", ap.ArgError(argn, "value has no literal form")
+		return "", "", ap.ArgError(argn, "value has no literal form")
 	}
 
-	return s, nil
+	return "", s, nil
 }
 
-func (t *term) string(th object.Thread, ap *fnutil.ArgParser, argn int) (s string, err *object.RuntimeError) {
+func (t *term) string(th object.Thread, ap *fnutil.ArgParser, argn int) (prefix, s string, err *object.RuntimeError) {
 	val, _ := ap.Get(argn)
 
 	if fn := th.GetMetaField(val, "__tostring"); fn != nil {
 		rets, err := th.Call(fn, nil)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 
 		if len(rets) == 0 {
-			return "", object.NewRuntimeError("'tostring' must return a string to 'print'")
+			return "", "", object.NewRuntimeError("'tostring' must return a string to 'print'")
 		}
 
 		val = rets[0]
@@ -408,5 +392,5 @@ func (t *term) string(th object.Thread, ap *fnutil.ArgParser, argn int) (s strin
 		s = s[:t.prec]
 	}
 
-	return s, nil
+	return "", s, nil
 }
