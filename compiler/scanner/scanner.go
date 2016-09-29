@@ -356,37 +356,22 @@ func (s *Scanner) skipBom() {
 }
 
 func (s *Scanner) scanSheBang() (shebang string) {
-	if s.peek(2) == "#!" {
-		s.mark()
-
-		s.next()
-		s.next()
-		for s.ch != '\n' {
-			if s.ch == -1 {
-				return string(s.capture())
-			}
-			s.next()
-		}
-
-		shebang = string(s.capture())
-
-		s.next()
-
-		return
-	}
+	s.mark()
 
 	s.next()
-
+	s.next()
 	for s.ch != '\n' {
 		if s.ch == -1 {
-			return ""
+			return string(s.capture())
 		}
 		s.next()
 	}
 
+	shebang = string(s.capture())
+
 	s.next()
 
-	return ""
+	return
 }
 
 func (s *Scanner) scanComment() (lit string) {
