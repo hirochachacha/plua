@@ -2,7 +2,6 @@ package string
 
 import (
 	"strings"
-	"unicode/utf8"
 
 	"github.com/hirochachacha/plua/internal/compiler_pool"
 	"github.com/hirochachacha/plua/internal/limits"
@@ -463,23 +462,12 @@ func reverse(th object.Thread, args ...object.Value) ([]object.Value, *object.Ru
 		return nil, err
 	}
 
-	bs := make([]byte, len(s))
-
-	var i int
-	var j int
-	var r rune
-	for {
-		r, j = utf8.DecodeLastRuneInString(s[:len(s)-i])
-		if r == utf8.RuneError {
-			break
-		}
-
-		utf8.EncodeRune(bs[i:], r)
-
-		i += j
+	b := make([]byte, len(s))
+	for i := 0; i < len(s); i++ {
+		b[i] = s[len(s)-1-i]
 	}
 
-	return []object.Value{object.String(bs)}, nil
+	return []object.Value{object.String(b)}, nil
 }
 
 func sub(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
