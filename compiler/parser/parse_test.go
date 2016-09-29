@@ -23,10 +23,15 @@ func TestParse(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer f.Close()
 
-		_, err = parser.Parse(scanner.NewScanner(f, "@"+fname, 0), 0)
+		ast, err := parser.Parse(scanner.NewScanner(f, "@"+fname, 0), 0)
 		if err != nil {
 			t.Error(err)
 		}
+
+		_ = ast
+
+		// printer.PrintTree(ast)
 	}
 }

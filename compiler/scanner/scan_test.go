@@ -23,6 +23,7 @@ func TestScan(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer f.Close()
 
 		s := scanner.NewScanner(f, "@"+fname, 0)
 		for {
