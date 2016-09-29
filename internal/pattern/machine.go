@@ -239,7 +239,7 @@ func (m *machine) findAll(input string) (matches []*MatchRange) {
 				},
 			})
 
-			ioff += idx + len(m.literal) + 1
+			ioff += idx + len(m.literal)
 		}
 		return matches
 	case matchPrefixLiteral:
