@@ -271,6 +271,10 @@ func Unquote(s string) (t string, err error) {
 
 			s = s[2 : n-2]
 
+			if len(s) > 0 && s[0] == '\n' {
+				s = s[1:]
+			}
+
 			return s, nil
 		case "[=":
 			j := 2
@@ -294,6 +298,10 @@ func Unquote(s string) (t string, err error) {
 			prefix = s[:j]
 
 			s = s[j : n-j]
+
+			if len(s) > 0 && s[0] == '\n' {
+				s = s[1:]
+			}
 
 			return s, nil
 		}
