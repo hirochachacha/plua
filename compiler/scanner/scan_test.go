@@ -1,6 +1,7 @@
 package scanner_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,6 +20,8 @@ func TestScan(t *testing.T) {
 			continue
 		}
 
+		fmt.Println("filename:", fname)
+
 		f, err := os.Open(fname)
 		if err != nil {
 			t.Fatal(err)
@@ -31,10 +34,12 @@ func TestScan(t *testing.T) {
 			if tok.Type == token.EOF {
 				break
 			}
-			// fmt.Printf("line: %d, column: %d, tok: %s, lit: %s\n", tok.Pos.Line, tok.Pos.Column, tok.Type, tok.Lit)
+			fmt.Printf("line: %d, column: %d, tok: %s, lit: %s\n", tok.Pos.Line, tok.Pos.Column, tok.Type, tok.Lit)
 		}
 		if err := s.Err(); err != nil {
 			t.Fatal(err)
 		}
+
+		fmt.Println()
 	}
 }

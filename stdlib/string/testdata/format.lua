@@ -9,7 +9,8 @@ assert(string.format("%x", 10123324) == "9a783c")
 assert(string.format('%q', '\\') == '"\\\\"')
 
 assert('\n' == '\n')
-assert(string.format('%q', '\n') == '"\\\n"')
+x = string.format('%q', '\n')
+assert(x == '"\\\n"' or x == [["\n"]]) -- prefer to use [["\n"]] for quote
 
 assert('\x10' == "\16")
 assert(string.format('%q', '\x10') == '"\\16"')

@@ -355,19 +355,25 @@ func (s *Scanner) skipBom() {
 	}
 }
 
+func trimRightCR(s string) string {
+	if len(s) > 0 && s[len(s)-1] == '\r' {
+		s = s[:len(s)-1]
+	}
+	return s
+}
+
 func (s *Scanner) scanSheBang() (shebang string) {
 	s.mark()
 
 	s.next()
-	s.next()
 	for s.ch != '\n' {
 		if s.ch == -1 {
-			return string(s.capture())
+			return trimRightCR(string(s.capture()))
 		}
 		s.next()
 	}
 
-	shebang = string(s.capture())
+	shebang = trimRightCR(string(s.capture()))
 
 	s.next()
 
@@ -406,11 +412,11 @@ func (s *Scanner) scanComment() (lit string) {
 		}
 	}
 
-	for s.ch != '\n' && s.ch != '\r' && s.ch >= 0 {
+	for s.ch != '\n' && s.ch >= 0 {
 		s.next()
 	}
 
-	lit = string(s.capture())
+	lit = trimRightCR(string(s.capture()))
 
 	return
 }
@@ -525,6 +531,8 @@ func (s *Scanner) scanString(quote int) (lit string) {
 
 	for s.ch != quote {
 		if s.ch == '\n' || s.ch == '\r' || s.ch < 0 {
+			lit = string(s.capture())
+
 			s.error(s.pos(), errUnterminatedString)
 
 			return
@@ -553,7 +561,12 @@ func (s *Scanner) skipEscape(quote int) {
 	var i, base, max uint32
 
 	switch s.ch {
-	case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '\r', '\n', '\'', '"':
+	case '\r':
+		s.next()
+		if s.ch == '\n' { // CRLN
+			s.next()
+		}
+	case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '\n', '\'', '"':
 		s.next()
 		return
 	case 'z':

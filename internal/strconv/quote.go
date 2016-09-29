@@ -73,19 +73,26 @@ func quoteWith(s string, quote byte) string {
 		}
 		switch r {
 		case '\a':
-			buf = append(buf, "\\\a"...)
+			// buf = append(buf, "\\\a"...)
+			buf = append(buf, `\a`...)
 		case '\b':
-			buf = append(buf, "\\\b"...)
+			// buf = append(buf, "\\\b"...)
+			buf = append(buf, `\b`...)
 		case '\f':
-			buf = append(buf, "\\\f"...)
+			// buf = append(buf, "\\\f"...)
+			buf = append(buf, `\f`...)
 		case '\n':
-			buf = append(buf, "\\\n"...)
+			// buf = append(buf, "\\\n"...)
+			buf = append(buf, `\n`...)
 		case '\r':
-			buf = append(buf, "\\\r"...)
+			// buf = append(buf, "\\\r"...)
+			buf = append(buf, `\r`...)
 		case '\t':
-			buf = append(buf, "\\\t"...)
+			// buf = append(buf, "\\\t"...)
+			buf = append(buf, `\t`...)
 		case '\v':
-			buf = append(buf, "\\\v"...)
+			// buf = append(buf, "\\\v"...)
+			buf = append(buf, `\v`...)
 		default:
 			if r <= 255 {
 				buf = append(buf, '\\')
@@ -131,7 +138,7 @@ func unhex(b byte) (v rune, ok bool) {
 // If set to a single quote, it permits the sequence \' and disallows unescaped '.
 // If set to a double quote, it permits \" and disallows unescaped ".
 // If set to zero, it does not permit either escape and allows both quote characters to appear unescaped.
-func UnquoteChar(s string, quote byte) (value rune, multibyte bool, tail string, err error) {
+func unquoteChar(s string, quote byte) (value rune, multibyte bool, tail string, err error) {
 	// easy cases
 	switch c := s[0]; {
 	case c == quote && (quote == '\'' || quote == '"'):
@@ -233,8 +240,14 @@ func UnquoteChar(s string, quote byte) (value rune, multibyte bool, tail string,
 		value = '\\'
 	case '\'', '"':
 		value = rune(c)
-	case '\n', '\r':
-		value = rune(c)
+	case '\n':
+		value = '\n'
+	case '\r':
+		value = '\r'
+		if len(s) > 0 && s[0] == '\n' {
+			value = '\n'
+			s = s[1:]
+		}
 	case 'z':
 		s = strings.TrimLeft(s, " \t\r\n")
 		value = -1
@@ -244,6 +257,60 @@ func UnquoteChar(s string, quote byte) (value rune, multibyte bool, tail string,
 	}
 	tail = s
 	return
+}
+
+func unquoteLong(s string) (t string, err error) {
+	n := len(s)
+
+	switch prefix := s[:2]; prefix {
+	case "[[":
+		if n < 4 {
+			return "", ErrSyntax
+		}
+		if "]]" != s[n-2:] {
+			return "", ErrSyntax
+		}
+
+		s = s[2 : n-2]
+
+		s = strings.Replace(s, "\r", "", -1)
+
+		if len(s) > 0 && s[0] == '\n' {
+			s = s[1:]
+		}
+
+		return s, nil
+	case "[=":
+		j := 2
+		if n == j {
+			return "", ErrSyntax
+		}
+		for s[j] == '=' {
+			j++
+			if n == j {
+				return "", ErrSyntax
+			}
+		}
+		if s[j] != '[' {
+			return "", ErrSyntax
+		}
+		j++
+		if n < 2*j {
+			return "", ErrSyntax
+		}
+
+		s = s[j : n-j]
+
+		s = strings.Replace(s, "\r", "", -1)
+
+		if len(s) > 0 && s[0] == '\n' {
+			s = s[1:]
+		}
+
+		return s, nil
+	}
+
+	return "", ErrSyntax
 }
 
 // Unquote interprets s as a single-quoted, double-quoted,
@@ -260,53 +327,7 @@ func Unquote(s string) (t string, err error) {
 	quote := s[0]
 
 	if quote == '[' {
-		switch prefix := s[:2]; prefix {
-		case "[[":
-			if n < 4 {
-				return "", ErrSyntax
-			}
-			if "]]" != s[n-2:] {
-				return "", ErrSyntax
-			}
-
-			s = s[2 : n-2]
-
-			if len(s) > 0 && s[0] == '\n' {
-				s = s[1:]
-			}
-
-			return s, nil
-		case "[=":
-			j := 2
-			if n == j {
-				return "", ErrSyntax
-			}
-			for s[j] == '=' {
-				j++
-				if n == j {
-					return "", ErrSyntax
-				}
-			}
-			if s[j] != '[' {
-				return "", ErrSyntax
-			}
-			j++
-			if n < 2*j {
-				return "", ErrSyntax
-			}
-
-			prefix = s[:j]
-
-			s = s[j : n-j]
-
-			if len(s) > 0 && s[0] == '\n' {
-				s = s[1:]
-			}
-
-			return s, nil
-		}
-
-		return "", ErrSyntax
+		return unquoteLong(s)
 	}
 
 	if quote != '"' && quote != '\'' {
@@ -327,7 +348,7 @@ func Unquote(s string) (t string, err error) {
 	var runeTmp [utf8.UTFMax]byte
 	buf := make([]byte, 0, 3*len(s)/2) // Try to avoid more allocations.
 	for len(s) > 0 {
-		c, multibyte, ss, err := UnquoteChar(s, quote)
+		c, multibyte, ss, err := unquoteChar(s, quote)
 		if err != nil {
 			return "", err
 		}
