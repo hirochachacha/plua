@@ -61,6 +61,11 @@ func quoteWith(s string, quote byte) string {
 		if r >= utf8.RuneSelf {
 			r, width = utf8.DecodeRuneInString(s)
 		}
+		if width == 1 && r == utf8.RuneError {
+			buf = append(buf, '\\')
+			buf = AppendInt(buf, int64(s[0]), 10)
+			continue
+		}
 		if r == rune(quote) || r == '\\' { // always backslashed
 			buf = append(buf, '\\')
 			buf = append(buf, byte(r))
@@ -94,7 +99,7 @@ func quoteWith(s string, quote byte) string {
 			// buf = append(buf, "\\\v"...)
 			buf = append(buf, `\v`...)
 		default:
-			if r <= 255 {
+			if r <= 0xff {
 				buf = append(buf, '\\')
 				buf = AppendInt(buf, int64(r), 10)
 			} else {
