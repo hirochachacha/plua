@@ -71,7 +71,7 @@ func (p *packer) pack() (string, *object.RuntimeError) {
 	return p.String(), nil
 }
 
-func (p *packer) packRaw(u64 uint64, opt *kOption) {
+func (p *packer) packUint64(u64 uint64, opt *kOption) {
 	switch opt.endian {
 	case littleEndian:
 		for j := 0; j < opt.size; j++ {
@@ -80,6 +80,21 @@ func (p *packer) packRaw(u64 uint64, opt *kOption) {
 	case bigEndian:
 		for j := 0; j < opt.size; j++ {
 			p.WriteByte(byte(u64 >> uint(8*(opt.size-1-j))))
+		}
+	default:
+		panic("unreachable")
+	}
+}
+
+func (p *packer) packInt64(i64 int64, opt *kOption) {
+	switch opt.endian {
+	case littleEndian:
+		for j := 0; j < opt.size; j++ {
+			p.WriteByte(^byte(^i64 >> uint(8*j)))
+		}
+	case bigEndian:
+		for j := 0; j < opt.size; j++ {
+			p.WriteByte(^byte(^i64 >> uint(8*(opt.size-1-j))))
 		}
 	default:
 		panic("unreachable")
@@ -102,7 +117,7 @@ func (p *packer) packUint(n int, opt *kOption) *object.RuntimeError {
 		}
 	}
 
-	p.packRaw(u64, opt)
+	p.packUint64(u64, opt)
 
 	return nil
 }
@@ -121,14 +136,7 @@ func (p *packer) packInt(n int, opt *kOption) *object.RuntimeError {
 		}
 	}
 
-	var u64 uint64
-	if i64 < 0 {
-		u64 = uint64((1 << uint(opt.size*8)) + i64)
-	} else {
-		u64 = uint64(i64)
-	}
-
-	p.packRaw(u64, opt)
+	p.packInt64(i64, opt)
 
 	return nil
 }
@@ -141,9 +149,9 @@ func (p *packer) packFloat(n int, opt *kOption) *object.RuntimeError {
 
 	switch opt.size {
 	case 4:
-		p.packRaw(uint64(math.Float32bits(float32(f))), opt)
+		p.packUint64(uint64(math.Float32bits(float32(f))), opt)
 	case 8:
-		p.packRaw(math.Float64bits(f), opt)
+		p.packUint64(math.Float64bits(f), opt)
 	default:
 		panic("unreachable")
 	}
@@ -180,7 +188,7 @@ func (p *packer) packString(n int, opt *kOption) *object.RuntimeError {
 		}
 	}
 
-	p.packRaw(uint64(len(s)), opt)
+	p.packUint64(uint64(len(s)), opt)
 
 	p.WriteString(s)
 
@@ -209,14 +217,14 @@ func (p *packer) packPadding() {
 
 type unpacker struct {
 	ap   *fnutil.ArgParser
-	fmt  string
+	s    string
 	opts []*kOption
 
 	off int
 }
 
-func newUnpacker(ap *fnutil.ArgParser, fmt string, opts []*kOption) *unpacker {
-	return &unpacker{fmt: fmt, ap: ap, opts: opts}
+func newUnpacker(ap *fnutil.ArgParser, s string, opts []*kOption) *unpacker {
+	return &unpacker{s: s, ap: ap, opts: opts}
 }
 
 func (u *unpacker) unpack() (rets []object.Value, err *object.RuntimeError) {
@@ -276,26 +284,50 @@ func (u *unpacker) unpack() (rets []object.Value, err *object.RuntimeError) {
 		}
 	}
 
-	rets = append(rets, object.Integer(u.off))
+	rets = append(rets, object.Integer(u.off+1))
 
 	return rets, nil
 }
 
-func (u *unpacker) unpackRaw(opt *kOption) (uint64, *object.RuntimeError) {
-	if len(u.fmt)-u.off < opt.size {
+func (u *unpacker) unpackUint64(opt *kOption) (uint64, *object.RuntimeError) {
+	if len(u.s)-u.off < opt.size {
 		return 0, u.ap.ArgError(0, "data string is too short")
 	}
+
+	s := u.s[u.off : u.off+opt.size]
 
 	var u64 uint64
 
 	switch opt.endian {
 	case littleEndian:
-		for i := 0; i < opt.size; i++ {
-			u64 |= uint64(u.fmt[u.off+i]) << uint(8*i)
+		if len(s) > 8 {
+			for i := 0; i < 8; i++ {
+				u64 |= uint64(s[i]) << uint(8*i)
+			}
+			for i := 8; i < len(s); i++ {
+				if s[i] != 0 {
+					return 0, object.NewRuntimeError("integer overflow")
+				}
+			}
+		} else {
+			for i := 0; i < len(s); i++ {
+				u64 |= uint64(s[i]) << uint(8*i)
+			}
 		}
 	case bigEndian:
-		for i := 0; i < opt.size; i++ {
-			u64 |= uint64(u.fmt[u.off+i]) << uint(8*(opt.size-1-i))
+		if len(s) > 8 {
+			for i := 0; i < len(s)-8; i++ {
+				if s[i] != 0 {
+					return 0, object.NewRuntimeError("integer overflow")
+				}
+			}
+			for i := len(s) - 8; i < len(s); i++ {
+				u64 |= uint64(s[i]) << uint(8*(len(s)-1-i))
+			}
+		} else {
+			for i := 0; i < len(s); i++ {
+				u64 |= uint64(s[i]) << uint(8*(len(s)-1-i))
+			}
 		}
 	default:
 		panic("unreachable")
@@ -304,8 +336,93 @@ func (u *unpacker) unpackRaw(opt *kOption) (uint64, *object.RuntimeError) {
 	return u64, nil
 }
 
+func (u *unpacker) unpackInt64(opt *kOption) (int64, *object.RuntimeError) {
+	if len(u.s)-u.off < opt.size {
+		return 0, u.ap.ArgError(0, "data string is too short")
+	}
+
+	s := u.s[u.off : u.off+opt.size]
+
+	var u64 uint64
+
+	switch opt.endian {
+	case littleEndian:
+		if s[len(s)-1]&0x80 != 0 {
+			if len(s) > 8 {
+				for i := 0; i < 8; i++ {
+					u64 |= uint64(s[i]) << uint(8*i)
+				}
+				for i := 8; i < len(s); i++ {
+					if s[i] != 0xff {
+						return 0, object.NewRuntimeError("integer overflow")
+					}
+				}
+				u64 = (u64 - (1<<64 - 1)) - 1
+			} else {
+				for i := 0; i < len(s); i++ {
+					u64 |= uint64(s[i]) << uint(8*i)
+				}
+				u64 = u64 - 1<<uint(len(s)*8)
+			}
+		} else {
+			if len(s) > 8 {
+				for i := 0; i < 8; i++ {
+					u64 |= uint64(s[i]) << uint(8*i)
+				}
+				for i := 8; i < len(s); i++ {
+					if s[i] != 0 {
+						return 0, object.NewRuntimeError("integer overflow")
+					}
+				}
+			} else {
+				for i := 0; i < len(s); i++ {
+					u64 |= uint64(s[i]) << uint(8*i)
+				}
+			}
+		}
+	case bigEndian:
+		if s[0]&0x80 != 0 {
+			if len(s) > 8 {
+				for i := 0; i < len(s)-8; i++ {
+					if s[i] != 0xff {
+						return 0, object.NewRuntimeError("integer overflow")
+					}
+				}
+				for i := len(s) - 8; i < len(s); i++ {
+					u64 |= uint64(s[i]) << uint(8*(len(s)-1-i))
+				}
+				u64 = (u64 - (1<<64 - 1)) - 1
+			} else {
+				for i := 0; i < len(s); i++ {
+					u64 |= uint64(s[i]) << uint(8*(len(s)-1-i))
+				}
+				u64 = u64 - 1<<uint(len(s)*8)
+			}
+		} else {
+			if len(s) > 8 {
+				for i := 0; i < len(s)-8; i++ {
+					if s[i] != 0 {
+						return 0, object.NewRuntimeError("integer overflow")
+					}
+				}
+				for i := len(s) - 8; i < len(s); i++ {
+					u64 |= uint64(s[i]) << uint(8*(len(s)-1-i))
+				}
+			} else {
+				for i := 0; i < len(s); i++ {
+					u64 |= uint64(s[i]) << uint(8*(len(s)-1-i))
+				}
+			}
+		}
+	default:
+		panic("unreachable")
+	}
+
+	return int64(u64), nil
+}
+
 func (u *unpacker) unpackUint(opt *kOption) (object.Value, *object.RuntimeError) {
-	u64, err := u.unpackRaw(opt)
+	u64, err := u.unpackUint64(opt)
 	if err != nil {
 		return nil, err
 	}
@@ -316,16 +433,9 @@ func (u *unpacker) unpackUint(opt *kOption) (object.Value, *object.RuntimeError)
 }
 
 func (u *unpacker) unpackInt(opt *kOption) (object.Value, *object.RuntimeError) {
-	u64, err := u.unpackRaw(opt)
+	i64, err := u.unpackInt64(opt)
 	if err != nil {
 		return nil, err
-	}
-
-	var i64 int64
-	if (u64 & (1 << (uint(opt.size*8) - 1))) != 0 {
-		i64 = -int64((1 << uint(opt.size*8)) - u64)
-	} else {
-		i64 = int64(u64)
 	}
 
 	u.off += opt.size
@@ -334,7 +444,7 @@ func (u *unpacker) unpackInt(opt *kOption) (object.Value, *object.RuntimeError) 
 }
 
 func (u *unpacker) unpackFloat(opt *kOption) (object.Value, *object.RuntimeError) {
-	u64, err := u.unpackRaw(opt)
+	u64, err := u.unpackUint64(opt)
 	if err != nil {
 		return nil, err
 	}
@@ -352,11 +462,11 @@ func (u *unpacker) unpackFloat(opt *kOption) (object.Value, *object.RuntimeError
 }
 
 func (u *unpacker) unpackChar(opt *kOption) (object.Value, *object.RuntimeError) {
-	if len(u.fmt)-u.off < opt.size {
+	if len(u.s)-u.off < opt.size {
 		return nil, u.ap.ArgError(0, "data string is too short")
 	}
 
-	val := object.String(u.fmt[u.off : u.off+opt.size])
+	val := object.String(u.s[u.off : u.off+opt.size])
 
 	u.off += opt.size
 
@@ -364,7 +474,7 @@ func (u *unpacker) unpackChar(opt *kOption) (object.Value, *object.RuntimeError)
 }
 
 func (u *unpacker) unpackString(opt *kOption) (object.Value, *object.RuntimeError) {
-	u64, err := u.unpackRaw(opt)
+	u64, err := u.unpackUint64(opt)
 	if err != nil {
 		return nil, err
 	}
@@ -375,11 +485,11 @@ func (u *unpacker) unpackString(opt *kOption) (object.Value, *object.RuntimeErro
 
 	slen := int(u64)
 
-	if len(u.fmt)-u.off < slen {
+	if len(u.s)-u.off < slen {
 		return nil, u.ap.ArgError(0, "data string is too short")
 	}
 
-	val := object.String(u.fmt[u.off : u.off+slen])
+	val := object.String(u.s[u.off : u.off+slen])
 
 	u.off += slen
 
@@ -387,12 +497,12 @@ func (u *unpacker) unpackString(opt *kOption) (object.Value, *object.RuntimeErro
 }
 
 func (u *unpacker) unpackZeroString() (object.Value, *object.RuntimeError) {
-	slen := strings.IndexByte(u.fmt[u.off:], 0x00)
+	slen := strings.IndexByte(u.s[u.off:], 0x00)
 	if slen == -1 {
 		return nil, u.ap.ArgError(0, "data string does not contains zero")
 	}
 
-	val := object.String(u.fmt[u.off : u.off+slen])
+	val := object.String(u.s[u.off : u.off+slen])
 
 	u.off += slen + 1
 
@@ -400,12 +510,12 @@ func (u *unpacker) unpackZeroString() (object.Value, *object.RuntimeError) {
 }
 
 func (u *unpacker) unpackPadding() *object.RuntimeError {
-	if len(u.fmt) <= u.off {
+	if len(u.s) <= u.off {
 		return u.ap.ArgError(0, "data string is too short")
 	}
 
-	if u.fmt[u.off] != 0x00 {
-		return u.ap.ArgError(0, fmt.Sprintf("expected 0x00, but 0x%x", u.fmt[u.off]))
+	if u.s[u.off] != 0x00 {
+		return u.ap.ArgError(0, fmt.Sprintf("expected 0x00, but 0x%x", u.s[u.off]))
 	}
 
 	u.off++

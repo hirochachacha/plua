@@ -39,8 +39,6 @@ type dummy struct {
 }
 
 func parsekOpts(ap *fnutil.ArgParser, s string) (opts []*kOption, err *object.RuntimeError) {
-	length := len(s)
-
 	var typ kType
 	var size int
 
@@ -52,7 +50,7 @@ func parsekOpts(ap *fnutil.ArgParser, s string) (opts []*kOption, err *object.Ru
 
 	i := 0
 	for {
-		if i == length {
+		if i == len(s) {
 			if inpadding {
 				return nil, ap.ArgError(0, "invalid next option for option 'X'")
 			}
@@ -112,107 +110,107 @@ func parsekOpts(ap *fnutil.ArgParser, s string) (opts []*kOption, err *object.Ru
 			typ = kFloat
 			i++
 		case 'i':
-			size = limits.IntSize
-			typ = kInt
 			i++
 
-			if i != length {
-				if isDigit(s[i]) {
-					size = int(s[i] - '0')
-					i++
+			size = limits.IntSize
 
-					if i != length {
-						for isDigit(s[i]) {
-							size = size*10 + int(s[i]-'0')
-							i++
+			typ = kInt
 
-							if i == length {
-								if size > maxIntSize {
-									return nil, object.NewRuntimeError(fmt.Sprintf("integral size (%d) out of limits [1, %d]", size, maxIntSize))
-								}
+			if i < len(s) && isDigit(s[i]) {
+				size = int(s[i] - '0')
 
-								break
-							}
-						}
+				i++
+
+				for i < len(s) && isDigit(s[i]) {
+					if (int(limits.MaxInt)-int(s[i]-'0'))/10 < size {
+						return nil, object.NewRuntimeError("integer overflow")
 					}
+
+					size = size*10 + int(s[i]-'0')
+					i++
+				}
+
+				if size == 0 || size > maxIntSize {
+					return nil, object.NewRuntimeError(fmt.Sprintf("integral size (%d) out of limits [1,%d]", size, maxIntSize))
 				}
 			}
 		case 'I':
-			size = limits.IntSize
-			typ = kUint
 			i++
 
-			if i != length {
-				if isDigit(s[i]) {
-					size = int(s[i] - '0')
-					i++
+			size = limits.IntSize
 
-					if i != length {
-						for isDigit(s[i]) {
-							size = size*10 + int(s[i]-'0')
-							i++
+			typ = kUint
 
-							if i == length {
-								if size > maxIntSize {
-									return nil, object.NewRuntimeError(fmt.Sprintf("integral size (%d) out of limits [1, %d]", size, maxIntSize))
-								}
+			if i < len(s) && isDigit(s[i]) {
+				size = int(s[i] - '0')
 
-								break
-							}
-						}
+				i++
+
+				for i < len(s) && isDigit(s[i]) {
+					if (int(limits.MaxInt)-int(s[i]-'0'))/10 < size {
+						return nil, object.NewRuntimeError("integer overflow")
 					}
+
+					size = size*10 + int(s[i]-'0')
+					i++
+				}
+
+				if size == 0 || size > maxIntSize {
+					return nil, object.NewRuntimeError(fmt.Sprintf("integral size (%d) out of limits [1,%d]", size, maxIntSize))
 				}
 			}
 		case 's':
-			size = 8
-			typ = kString
 			i++
 
-			if i != length {
-				if isDigit(s[i]) {
-					size = int(s[i] - '0')
-					i++
+			size = 8
 
-					if i != length {
-						for isDigit(s[i]) {
-							size = size*10 + int(s[i]-'0')
-							i++
+			typ = kString
 
-							if i == length {
-								break
-							}
-						}
+			if i < len(s) && isDigit(s[i]) {
+				size = int(s[i] - '0')
+
+				i++
+
+				for i < len(s) && isDigit(s[i]) {
+					if (int(limits.MaxInt)-int(s[i]-'0'))/10 < size {
+						return nil, object.NewRuntimeError("integer overflow")
 					}
+
+					size = size*10 + int(s[i]-'0')
+					i++
+				}
+
+				if size == 0 || size > maxIntSize {
+					return nil, object.NewRuntimeError(fmt.Sprintf("integral size (%d) out of limits [1,%d]", size, maxIntSize))
 				}
 			}
 		case 'c':
-			size = -1
-			typ = kChar
 			i++
 
-			if i != length {
-				if isDigit(s[i]) {
-					size = int(s[i] - '0')
-					i++
+			size = 0
 
-					if i != length {
-						for isDigit(s[i]) {
-							size = size*10 + int(s[i]-'0')
-							i++
+			typ = kChar
 
-							if i == length {
-								if size > maxIntSize {
-									return nil, object.NewRuntimeError(fmt.Sprintf("integral size (%d) out of limits [1, %d]", size, maxIntSize))
-								}
+			if i < len(s) && isDigit(s[i]) {
+				size = int(s[i] - '0')
 
-								break
-							}
-						}
+				i++
+
+				for i < len(s) && isDigit(s[i]) {
+					if (int(limits.MaxInt)-int(s[i]-'0'))/10 < size {
+						return nil, object.NewRuntimeError("integer overflow")
 					}
+
+					size = size*10 + int(s[i]-'0')
+					i++
+				}
+
+				if size == 0 || size > maxIntSize {
+					return nil, object.NewRuntimeError(fmt.Sprintf("integral size (%d) out of limits [1,%d]", size, maxIntSize))
 				}
 			}
 
-			if size == -1 {
+			if size == 0 {
 				return nil, object.NewRuntimeError("missing size for format option 'c'")
 			}
 		case 'z':
@@ -258,31 +256,25 @@ func parsekOpts(ap *fnutil.ArgParser, s string) (opts []*kOption, err *object.Ru
 			continue
 		case '!':
 			i++
+
 			maxAlign = nativeAlign
 
-			if i == length {
-				return
-			}
-
-			if isDigit(s[i]) {
+			if i < len(s) && isDigit(s[i]) {
 				maxAlign = int(s[i] - '0')
+
 				i++
 
-				if i == length {
-					return
+				for i < len(s) && isDigit(s[i]) {
+					if (int(limits.MaxInt)-int(s[i]-'0'))/10 < maxAlign {
+						return nil, object.NewRuntimeError("integer overflow")
+					}
+
+					maxAlign = maxAlign*10 + int(s[i]-'0')
+					i++
 				}
 
-				for isDigit(s[i]) {
-					maxAlign = size*10 + int(s[i]-'0')
-					i++
-
-					if i == length {
-						if size > maxIntSize {
-							return nil, object.NewRuntimeError(fmt.Sprintf("integral size (%d) out of limits [1, %d]", size, maxIntSize))
-						}
-
-						return
-					}
+				if maxAlign == 0 || maxAlign > maxIntSize {
+					return nil, object.NewRuntimeError(fmt.Sprintf("integral size (%d) out of limits [1,%d]", maxAlign, maxIntSize))
 				}
 			}
 
