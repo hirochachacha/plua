@@ -131,24 +131,24 @@ L:
 }
 
 func (m *concurrentMap) Get(key object.Value) object.Value {
-	hash := m.hash(key)
-	segment := m.segmentFor(hash)
+	sum := m.sum(key)
+	segment := m.segmentFor(sum)
 
-	return segment.get(hash, key)
+	return segment.get(sum, key)
 }
 
 func (m *concurrentMap) Set(key, val object.Value) {
-	hash := m.hash(key)
-	segment := m.segmentFor(hash)
+	sum := m.sum(key)
+	segment := m.segmentFor(sum)
 
-	segment.set(hash, key, val)
+	segment.set(sum, key, val)
 }
 
 func (m *concurrentMap) Delete(key object.Value) {
-	hash := m.hash(key)
-	segment := m.segmentFor(hash)
+	sum := m.sum(key)
+	segment := m.segmentFor(sum)
 
-	segment.delete(hash, key)
+	segment.delete(sum, key)
 }
 
 func (m *concurrentMap) Next(key object.Value) (nkey, nval object.Value, ok bool) {
@@ -199,16 +199,16 @@ func (m *concurrentMap) Next(key object.Value) (nkey, nval object.Value, ok bool
 		return
 	}
 
-	hash := m.hash(key)
-	sindex := hash >> segmentShift
+	sum := m.sum(key)
+	sindex := sum >> segmentShift
 	segment := m.segments[sindex]
 
 	if atomic.LoadInt32(&segment.length) != 0 {
 		buckets := *(*[]unsafe.Pointer)(atomic.LoadPointer(&segment.buckets))
-		index := hash & uint64(len(buckets)-1)
+		index := sum & uint64(len(buckets)-1)
 		elem := (*sbucket)(atomic.LoadPointer(&buckets[index]))
 		for elem != nil {
-			if elem.hash == hash && object.Equal(elem.key, key) {
+			if elem.sum == sum && object.Equal(elem.key, key) {
 				ok = true
 
 				m.nextIndex = int(index)
@@ -280,18 +280,18 @@ func (m *concurrentMap) advance() {
 	}
 }
 
-func (m *concurrentMap) segmentFor(hash uint64) *segment {
-	return m.segments[hash>>segmentShift]
+func (m *concurrentMap) segmentFor(sum uint64) *segment {
+	return m.segments[sum>>segmentShift]
 }
 
-func (m *concurrentMap) hash(key object.Value) uint64 {
-	return m.h.Hash(key)
+func (m *concurrentMap) sum(key object.Value) uint64 {
+	return m.h.Sum(key)
 }
 
 type sbucket struct {
 	key      object.Value
 	val      unsafe.Pointer
-	hash     uint64
+	sum      uint64
 	next     *sbucket
 	isActive bool
 }
@@ -306,13 +306,13 @@ type segment struct {
 	m sync.Mutex
 }
 
-func (s *segment) get(hash uint64, key object.Value) object.Value {
+func (s *segment) get(sum uint64, key object.Value) object.Value {
 	if atomic.LoadInt32(&s.length) != 0 {
 		buckets := *(*[]unsafe.Pointer)(atomic.LoadPointer(&s.buckets))
-		index := hash & uint64(len(buckets)-1)
+		index := sum & uint64(len(buckets)-1)
 		elem := (*sbucket)(atomic.LoadPointer(&buckets[index]))
 		for elem != nil {
-			if elem.hash == hash && object.Equal(elem.key, key) {
+			if elem.sum == sum && object.Equal(elem.key, key) {
 				val := *(*object.Value)(atomic.LoadPointer(&elem.val))
 				if val == nil {
 					s.m.Lock()
@@ -332,25 +332,25 @@ func (s *segment) get(hash uint64, key object.Value) object.Value {
 	return nil
 }
 
-func (s *segment) set(hash uint64, key, val object.Value) {
+func (s *segment) set(sum uint64, key, val object.Value) {
 	s.m.Lock()
 
-	s.unsafeSet(hash, key, val)
+	s.unsafeSet(sum, key, val)
 
 	s.m.Unlock()
 }
 
-func (s *segment) unsafeSet(hash uint64, key, val object.Value) {
+func (s *segment) unsafeSet(sum uint64, key, val object.Value) {
 	if s.length > s.threshold {
 		s.grow()
 	}
 
 	buckets := *(*[]unsafe.Pointer)(s.buckets)
-	index := hash & uint64(len(buckets)-1)
+	index := sum & uint64(len(buckets)-1)
 	first := (*sbucket)(buckets[index])
 	elem := first
 	for elem != nil {
-		if elem.hash == hash && object.Equal(elem.key, key) {
+		if elem.sum == sum && object.Equal(elem.key, key) {
 			atomic.StorePointer(&elem.val, unsafe.Pointer(&val))
 
 			return
@@ -362,7 +362,7 @@ func (s *segment) unsafeSet(hash uint64, key, val object.Value) {
 	bucket := &sbucket{
 		key:  key,
 		val:  unsafe.Pointer(&val),
-		hash: hash,
+		sum:  sum,
 		next: first,
 	}
 
@@ -372,16 +372,16 @@ func (s *segment) unsafeSet(hash uint64, key, val object.Value) {
 	atomic.AddInt32(&s.length, 1)
 }
 
-func (s *segment) delete(hash uint64, key object.Value) {
+func (s *segment) delete(sum uint64, key object.Value) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	buckets := *(*[]unsafe.Pointer)(s.buckets)
-	index := hash & uint64(len(buckets)-1)
+	index := sum & uint64(len(buckets)-1)
 	first := (*sbucket)(buckets[index])
 	elem := first
 	for elem != nil {
-		if elem.hash == hash && object.Equal(elem.key, key) {
+		if elem.sum == sum && object.Equal(elem.key, key) {
 			s.modCount++
 
 			bucket := elem.next
@@ -389,7 +389,7 @@ func (s *segment) delete(hash uint64, key object.Value) {
 				bucket = &sbucket{
 					key:  p.key,
 					val:  p.val,
-					hash: p.hash,
+					sum:  p.sum,
 					next: bucket,
 				}
 			}
@@ -417,7 +417,7 @@ func (s *segment) grow() {
 		if elem != nil {
 			next := elem.next
 
-			index := elem.hash & uint64(length-1)
+			index := elem.sum & uint64(length-1)
 
 			if next == nil {
 				buckets[index] = unsafe.Pointer(elem)
@@ -426,7 +426,7 @@ func (s *segment) grow() {
 				lastIndex := index
 
 				for last := next; last != nil; last = last.next {
-					i := last.hash & uint64(length-1)
+					i := last.sum & uint64(length-1)
 					if i != lastIndex {
 						lastIndex = i
 						lastElem = last
@@ -436,9 +436,9 @@ func (s *segment) grow() {
 				buckets[lastIndex] = unsafe.Pointer(lastElem)
 
 				for p := elem; p != lastElem; p = p.next {
-					i := p.hash & uint64(length-1)
+					i := p.sum & uint64(length-1)
 					n := buckets[i]
-					buckets[i] = unsafe.Pointer(&sbucket{key: p.key, hash: p.hash, val: p.val, next: (*sbucket)(n)})
+					buckets[i] = unsafe.Pointer(&sbucket{key: p.key, sum: p.sum, val: p.val, next: (*sbucket)(n)})
 				}
 			}
 		}

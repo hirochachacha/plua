@@ -1,40 +1,36 @@
 package hash
 
 import (
+	"hash"
 	"reflect"
 	"unsafe"
 
-	"github.com/hirochachacha/plua/internal/hash/aes"
-	"github.com/hirochachacha/plua/internal/hash/sip"
+	"github.com/dchest/siphash"
+
 	"github.com/hirochachacha/plua/internal/limits"
 	"github.com/hirochachacha/plua/internal/rand"
 
 	"github.com/hirochachacha/plua/object"
 )
 
-type iHash interface {
-	Hash([]byte) uint64
-}
-
 type Hash struct {
-	h iHash
+	h hash.Hash64
 }
 
 func New() *Hash {
-	if aes.CanUse() {
-		return &Hash{h: newAESHash()}
-	}
-	return &Hash{newSipHash()}
+	return &Hash{h: siphash.New(rand.Bytes(16))}
 }
 
-func (h *Hash) Hash(key object.Value) (sum uint64) {
+func (h *Hash) Sum(key object.Value) (sum uint64) {
+	h.h.Reset()
+
 	switch key := key.(type) {
 	case nil:
 		return 0
 	case object.Integer:
-		sum = h.h.Hash((*(*[8]byte)(unsafe.Pointer(&key)))[:])
+		h.h.Write((*(*[8]byte)(unsafe.Pointer(&key)))[:])
 	case object.Number:
-		sum = h.h.Hash((*(*[8]byte)(unsafe.Pointer(&key)))[:])
+		h.h.Write((*(*[8]byte)(unsafe.Pointer(&key)))[:])
 	case object.String:
 		sheader := (*reflect.StringHeader)(unsafe.Pointer(&key))
 
@@ -44,35 +40,19 @@ func (h *Hash) Hash(key object.Value) (sum uint64) {
 			Cap:  sheader.Len,
 		}
 
-		sum = h.h.Hash(*(*[]byte)(unsafe.Pointer(bheader)))
+		h.h.Write(*(*[]byte)(unsafe.Pointer(bheader)))
 	case object.Boolean:
-		sum = h.h.Hash((*(*[1]byte)(unsafe.Pointer(&key)))[:])
+		h.h.Write((*(*[1]byte)(unsafe.Pointer(&key)))[:])
 	case object.LightUserdata:
 		ikey := uintptr(key.Pointer)
-		sum = h.h.Hash((*(*[limits.PtrSize]byte)(unsafe.Pointer(&ikey)))[:])
+		h.h.Write((*(*[limits.PtrSize]byte)(unsafe.Pointer(&ikey)))[:])
 	case object.GoFunction:
 		ikey := uintptr(reflect.ValueOf(key).Pointer())
-		sum = h.h.Hash((*(*[limits.PtrSize]byte)(unsafe.Pointer(&ikey)))[:])
+		h.h.Write((*(*[limits.PtrSize]byte)(unsafe.Pointer(&ikey)))[:])
 	default:
 		ikey := uintptr(reflect.ValueOf(key).Pointer())
-		sum = h.h.Hash((*(*[limits.PtrSize]byte)(unsafe.Pointer(&ikey)))[:])
+		h.h.Write((*(*[limits.PtrSize]byte)(unsafe.Pointer(&ikey)))[:])
 	}
 
-	return sum + 1
-}
-
-func newAESHash() iHash {
-	var seed uintptr
-
-	if limits.PtrSize == 4 {
-		seed = uintptr(rand.Int63() >> 31)
-	} else {
-		seed = uintptr(rand.Int63())
-	}
-
-	return aes.New(seed)
-}
-
-func newSipHash() iHash {
-	return sip.New(rand.Bytes(16))
+	return h.h.Sum64() + 1
 }

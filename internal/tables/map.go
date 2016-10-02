@@ -20,7 +20,7 @@ const (
 type bucket struct {
 	key      object.Value
 	val      object.Value
-	hash     uint64
+	sum      uint64
 	next     *bucket
 	isActive bool
 }
@@ -63,10 +63,10 @@ func (m *luaMap) Cap() int {
 }
 
 func (m *luaMap) Get(key object.Value) object.Value {
-	hash := m.hash(key)
-	index := m.mod(hash)
+	sum := m.sum(key)
+	index := m.mod(sum)
 
-	_, elem := m.findBucket(index, hash, key, nil)
+	_, elem := m.findBucket(index, sum, key, nil)
 	if elem == nil {
 		return nil
 	}
@@ -75,17 +75,17 @@ func (m *luaMap) Get(key object.Value) object.Value {
 }
 
 func (m *luaMap) Set(key, val object.Value) (elem *bucket) {
-	return m.setBucket(m.hash(key), key, val)
+	return m.setBucket(m.sum(key), key, val)
 }
 
 func (m *luaMap) Delete(key object.Value) {
-	hash := m.hash(key)
-	index := m.mod(hash)
+	sum := m.sum(key)
+	index := m.mod(sum)
 
 	var i int
 	var elem, prev *bucket
 
-	i, elem = m.findBucket(index, hash, key, &prev)
+	i, elem = m.findBucket(index, sum, key, &prev)
 	if elem == nil {
 		return
 	}
@@ -131,17 +131,17 @@ func (m *luaMap) Next(key object.Value) (nkey, nval object.Value, ok bool) {
 	return
 }
 
-func (m *luaMap) hash(key object.Value) uint64 {
-	return m.h.Hash(key)
+func (m *luaMap) sum(key object.Value) uint64 {
+	return m.h.Sum(key)
 }
 
 // a % 2^n == a & (2^n-1)
-func (m *luaMap) mod(hash uint64) int {
-	return int(hash & uint64(m.Cap()-1))
+func (m *luaMap) mod(sum uint64) int {
+	return int(sum & uint64(m.Cap()-1))
 }
 
 func (m *luaMap) index(key object.Value) int {
-	return m.mod(m.hash(key))
+	return m.mod(m.sum(key))
 }
 
 func (m *luaMap) insertBucket(index int, key object.Value) (elem *bucket) {
@@ -153,13 +153,11 @@ func (m *luaMap) insertBucket(index int, key object.Value) (elem *bucket) {
 		if _new == nil {
 			m.grow()
 
-			elem = m.insertBucket(m.index(key), key)
-
-			return
+			return m.insertBucket(m.index(key), key)
 		}
 
 		other := &m.buckets[m.index(elem.key)]
-		if other != nil && other != elem {
+		if other != elem {
 			for other.next != elem {
 				other = other.next
 			}
@@ -167,7 +165,7 @@ func (m *luaMap) insertBucket(index int, key object.Value) (elem *bucket) {
 			_new.isActive = true
 			_new.key = elem.key
 			_new.val = elem.val
-			_new.hash = elem.hash
+			_new.sum = elem.sum
 			_new.next = elem.next
 
 			elem.next = nil
@@ -187,13 +185,13 @@ func (m *luaMap) insertBucket(index int, key object.Value) (elem *bucket) {
 	return
 }
 
-func (m *luaMap) findBucket(index int, hash uint64, key object.Value, prev **bucket) (i int, elem *bucket) {
+func (m *luaMap) findBucket(index int, sum uint64, key object.Value, prev **bucket) (i int, elem *bucket) {
 	var _prev *bucket
 
 	elem = &m.buckets[index]
 
 	for elem != nil {
-		if elem.hash == hash && object.Equal(elem.key, key) {
+		if elem.sum == sum && object.Equal(elem.key, key) {
 			break
 		}
 
@@ -225,16 +223,16 @@ func (m *luaMap) findEmptyBucket() (elem *bucket) {
 	return nil
 }
 
-func (m *luaMap) setBucket(hash uint64, key, val object.Value) *bucket {
-	index := m.mod(hash)
+func (m *luaMap) setBucket(sum uint64, key, val object.Value) *bucket {
+	index := m.mod(sum)
 
-	_, elem := m.findBucket(index, hash, key, nil)
+	_, elem := m.findBucket(index, sum, key, nil)
 	if elem == nil {
 		elem = m.insertBucket(index, key)
 	}
 
 	elem.val = val
-	elem.hash = hash
+	elem.sum = sum
 
 	return elem
 }
@@ -249,7 +247,7 @@ func (m *luaMap) deleteBucket(elem, prev *bucket) {
 		if _next == elem {
 			elem.key = next.key
 			elem.val = next.val
-			elem.hash = next.hash
+			elem.sum = next.sum
 			elem.next = next.next
 
 			elem = next
@@ -259,15 +257,15 @@ func (m *luaMap) deleteBucket(elem, prev *bucket) {
 	elem.isActive = false
 	elem.key = nil
 	elem.val = nil
-	elem.hash = 0
+	elem.sum = 0
 	elem.next = nil
 
 	m.length--
 }
 
 func (m *luaMap) findIndex(key object.Value) int {
-	hash := m.hash(key)
-	index := m.mod(hash)
+	sum := m.sum(key)
+	index := m.mod(sum)
 
 	elem := &m.buckets[index]
 	base := int64(uintptr(unsafe.Pointer(elem)))
@@ -277,7 +275,7 @@ func (m *luaMap) findIndex(key object.Value) int {
 			return -1
 		}
 
-		if elem.hash == hash && object.Equal(elem.key, key) {
+		if elem.sum == sum && object.Equal(elem.key, key) {
 			break
 		}
 
@@ -311,7 +309,7 @@ func (m *luaMap) grow() {
 
 	for _, elem := range old {
 		if elem.isActive {
-			m.setBucket(elem.hash, elem.key, elem.val)
+			m.setBucket(elem.sum, elem.key, elem.val)
 		}
 	}
 }
@@ -344,7 +342,7 @@ func roundup(x int) int {
 // for i := 0; i < m.Cap(); i++ {
 // e := &m.buckets[i]
 // if e.isActive {
-// fmt.Printf("%4d: index: %4d, hash: %20d, key: %10v, val: %10v\n", i, m.mod(e.hash), e.hash, e.key, e.val)
+// fmt.Printf("%4d: index: %4d, sum: %20d, key: %10v, val: %10v\n", i, m.mod(e.sum), e.sum, e.key, e.val)
 // }
 // }
 // fmt.Println("")
