@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/hirochachacha/plua/internal/compiler_pool"
-	"github.com/hirochachacha/plua/internal/limits"
 	"github.com/hirochachacha/plua/internal/pattern"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/object/fnutil"
@@ -358,64 +357,6 @@ func match(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 	return rets, nil
 }
 
-// pack(fmt, v1, v2, ...)
-func pack(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	ap := fnutil.NewArgParser(th, args)
-
-	fmt, err := ap.ToGoString(0)
-	if err != nil {
-		return nil, err
-	}
-
-	opts, err := parsekOpts(ap, fmt)
-	if err != nil {
-		return nil, err
-	}
-
-	p := newPacker(ap, opts)
-
-	s, err := p.pack()
-	if err != nil {
-		return nil, err
-	}
-
-	return []object.Value{object.String(s)}, nil
-}
-
-// packsize(fmt)
-func packsize(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	ap := fnutil.NewArgParser(th, args)
-
-	fmt, err := ap.ToGoString(0)
-	if err != nil {
-		return nil, err
-	}
-
-	opts, err := parsekOpts(ap, fmt)
-	if err != nil {
-		return nil, err
-	}
-
-	total := int64(0)
-
-	for _, opt := range opts {
-		switch opt.typ {
-		case kString, kZeroString:
-			return nil, ap.ArgError(0, "variable-length format")
-		default:
-			size := int64(opt.size + opt.padding)
-
-			if total > limits.MaxInt64-size {
-				return nil, ap.ArgError(0, "format result too large")
-			}
-
-			total += size
-		}
-	}
-
-	return []object.Value{object.Integer(total)}, nil
-}
-
 func rep(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
@@ -505,43 +446,6 @@ func sub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 	}
 
 	return []object.Value{object.String(s[i-1 : j])}, nil
-}
-
-// unpack(fmt, s, [, pos])
-func unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	ap := fnutil.NewArgParser(th, args)
-
-	fmt, err := ap.ToGoString(0)
-	if err != nil {
-		return nil, err
-	}
-
-	s, err := ap.ToGoString(1)
-	if err != nil {
-		return nil, err
-	}
-
-	pos, err := ap.OptGoInt(2, 1)
-	if err != nil {
-		return nil, err
-	}
-
-	if pos < 0 {
-		pos = len(s) + 1 + pos
-	}
-
-	if pos <= 0 || len(s) < pos-1 {
-		return nil, ap.ArgError(2, "initial position out of string")
-	}
-
-	opts, err := parsekOpts(ap, fmt)
-	if err != nil {
-		return nil, err
-	}
-
-	u := newUnpacker(ap, s[pos-1:], opts)
-
-	return u.unpack()
 }
 
 func upper(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
