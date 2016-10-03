@@ -34,7 +34,18 @@ func FormatUint(u uint64, base int) string {
 }
 
 func FormatFloat(f float64, fmt byte, prec, bitSize int) string {
-	return strconv.FormatFloat(f, fmt, prec, bitSize)
+	s := strconv.FormatFloat(f, fmt, prec, bitSize)
+
+	switch s {
+	case "NaN":
+		return "nan"
+	case "-Inf":
+		return "-inf"
+	case "+Inf":
+		return "inf"
+	}
+
+	return s
 }
 
 func ParseUint(s string) (uint64, error) {
