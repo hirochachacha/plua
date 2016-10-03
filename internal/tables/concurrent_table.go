@@ -59,19 +59,19 @@ func (t *concurrentTable) ikey(key object.Value) (object.Integer, bool) {
 }
 
 func (t *concurrentTable) Get(key object.Value) object.Value {
-	return t.get(key)
+	return t.get(normKey(key))
 }
 
 func (t *concurrentTable) Set(key, val object.Value) {
-	t.set(key, val)
+	t.set(normKey(key), val)
 }
 
 func (t *concurrentTable) Del(key object.Value) {
-	t.del(key)
+	t.del(normKey(key))
 }
 
 func (t *concurrentTable) Next(key object.Value) (nkey, nval object.Value, ok bool) {
-	return t.next(key)
+	return t.next(normKey(key))
 }
 
 func (t *concurrentTable) Sort(less func(x, y object.Value) bool) {

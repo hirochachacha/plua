@@ -58,6 +58,7 @@ func (t *table) ikey(key object.Value) (object.Integer, bool) {
 }
 
 func (t *table) Get(key object.Value) object.Value {
+	key = normKey(key)
 	if ikey, ok := t.ikey(key); ok {
 		i := int(ikey)
 		if 0 < i && i <= len(t.a) {
@@ -69,6 +70,7 @@ func (t *table) Get(key object.Value) object.Value {
 }
 
 func (t *table) Set(key, val object.Value) {
+	key = normKey(key)
 	if ikey, ok := t.ikey(key); ok {
 		i := int(ikey)
 		if val == nil {
@@ -124,6 +126,7 @@ func (t *table) Set(key, val object.Value) {
 }
 
 func (t *table) Del(key object.Value) {
+	key = normKey(key)
 	if ikey, ok := t.ikey(key); ok {
 		i := int(ikey)
 		switch {
@@ -144,6 +147,7 @@ func (t *table) Del(key object.Value) {
 }
 
 func (t *table) Next(key object.Value) (nkey, nval object.Value, ok bool) {
+	key = normKey(key)
 	if key == nil {
 		if t.alen > 0 {
 			return object.Integer(1), t.a[0], true

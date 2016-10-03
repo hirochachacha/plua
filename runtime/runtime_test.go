@@ -70,6 +70,18 @@ var testExec = []struct {
 		`,
 		[]object.Value{object.Integer(1), object.Integer(2), object.Integer(3), object.Integer(4)},
 	},
+	{
+		`
+		local x = {}
+		i = 1
+		assert(math.type(i) == "integer")
+		x[i] = 5
+		i = i + 0.0
+		assert(math.type(i) == "float")
+		return x[1]
+		`,
+		[]object.Value{object.Integer(5)},
+	},
 }
 
 func TestExec(t *testing.T) {
