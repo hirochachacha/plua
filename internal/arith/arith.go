@@ -8,10 +8,6 @@ import (
 
 func Unm(x object.Value) object.Value {
 	if x, ok := x.(object.Integer); ok {
-		if x == object.MinInteger {
-			return object.Infinity
-		}
-
 		return -x
 	}
 
@@ -145,13 +141,6 @@ func GreaterThanOrEqualTo(x, y object.Value) object.Value {
 func Add(x, y object.Value) object.Value {
 	if x, ok := x.(object.Integer); ok {
 		if y, ok := y.(object.Integer); ok {
-			switch {
-			case y > 0 && x > (object.MaxInteger-y):
-				return object.Infinity
-			case y < 0 && x < (object.MinInteger-y):
-				return -object.Infinity
-			}
-
 			return x + y
 		}
 	}
@@ -168,13 +157,6 @@ func Add(x, y object.Value) object.Value {
 func Sub(x, y object.Value) object.Value {
 	if x, ok := x.(object.Integer); ok {
 		if y, ok := y.(object.Integer); ok {
-			switch {
-			case y < 0 && x > (object.MaxInteger+y):
-				return object.Infinity
-			case y > 0 && x < (object.MinInteger+y):
-				return -object.Infinity
-			}
-
 			return x - y
 		}
 	}
@@ -191,28 +173,6 @@ func Sub(x, y object.Value) object.Value {
 func Mul(x, y object.Value) object.Value {
 	if x, ok := x.(object.Integer); ok {
 		if y, ok := y.(object.Integer); ok {
-			if x > 0 {
-				if y > 0 {
-					if x > object.MaxInteger/y {
-						return object.Infinity
-					}
-				} else {
-					if y < object.MinInteger/x {
-						return -object.Infinity
-					}
-				}
-			} else {
-				if y > 0 {
-					if x < object.MinInteger/y {
-						return -object.Infinity
-					}
-				} else {
-					if x != 0 && y < object.MaxInteger/x {
-						return object.Infinity
-					}
-				}
-			}
-
 			return x * y
 		}
 	}
@@ -241,10 +201,6 @@ func Idiv(x, y object.Value) (object.Value, bool) {
 		if y, ok := y.(object.Integer); ok {
 			if y == 0 {
 				return nil, false
-			}
-
-			if x == object.MinInteger && y == -1 {
-				return object.Infinity, true
 			}
 
 			return x / y, true
