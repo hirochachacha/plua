@@ -17,10 +17,6 @@ func abs(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 	}
 
 	if i, ok := args[0].(object.Integer); ok {
-		if i == object.MinInteger {
-			return []object.Value{object.Infinity}, nil
-		}
-
 		if i < 0 {
 			return []object.Value{-i}, nil
 		}
@@ -127,7 +123,7 @@ func fmod(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		return nil, err
 	}
 
-	y, err := ap.ToGoFloat64(0)
+	y, err := ap.ToGoFloat64(1)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +140,7 @@ func log(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 		return nil, err
 	}
 
-	if _, ok := ap.Get(0); !ok {
+	if len(args) == 1 {
 		return []object.Value{object.Number(math.Log(f))}, nil
 	}
 
@@ -257,26 +253,39 @@ func rad(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 func random(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
-	m := int64(1)
+	switch len(args) {
+	case 0:
+		return []object.Value{object.Number(rand.Float64())}, nil
+	case 1:
+		m := int64(1)
 
-	n, err := ap.ToGoInt64(0)
-	if err != nil {
-		return nil, err
-	}
-
-	if _, ok := ap.Get(1); ok {
-		m = n
-		n, err = ap.ToGoInt64(1)
+		n, err := ap.ToGoInt64(0)
 		if err != nil {
 			return nil, err
 		}
-	}
 
-	if n < m {
-		return nil, ap.ArgError(1, "interval is empty")
-	}
+		if n < m {
+			return nil, ap.ArgError(1, "interval is empty")
+		}
 
-	return []object.Value{object.Integer(rand.Int63n(n-m) + m)}, nil
+		return []object.Value{object.Integer(rand.Int63n(n-m) + m)}, nil
+	default:
+		m, err := ap.ToGoInt64(0)
+		if err != nil {
+			return nil, err
+		}
+
+		n, err := ap.ToGoInt64(1)
+		if err != nil {
+			return nil, err
+		}
+
+		if n < m {
+			return nil, ap.ArgError(1, "interval is empty")
+		}
+
+		return []object.Value{object.Integer(rand.Int63n(n-m) + m)}, nil
+	}
 }
 
 func randomseed(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -330,7 +339,7 @@ func tointeger(th object.Thread, args ...object.Value) ([]object.Value, *object.
 
 	i, err := ap.ToInteger(0)
 	if err != nil {
-		if _, ok := ap.Get(0); ok {
+		if len(args) != 0 {
 			return []object.Value{nil}, nil
 		}
 		return nil, err
@@ -344,7 +353,7 @@ func _type(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 
 	val, err := ap.ToTypes(0, object.TNUMBER)
 	if err != nil {
-		if _, ok := ap.Get(0); ok {
+		if len(args) != 0 {
 			return []object.Value{nil}, nil
 		}
 
