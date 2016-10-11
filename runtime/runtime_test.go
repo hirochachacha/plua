@@ -82,6 +82,46 @@ var testExec = []struct {
 		`,
 		[]object.Value{object.Integer(5)},
 	},
+	{
+		`
+		return #{nil, nil}
+		`,
+		[]object.Value{object.Integer(0)},
+	},
+	{
+		`
+		return #{1, nil, 3, nil}
+		`,
+		[]object.Value{object.Integer(3)},
+	},
+	{
+		`
+		t = {1, nil, 3, nil}
+		t[3] = nil
+		return #t
+		`,
+		[]object.Value{object.Integer(1)},
+	},
+	{
+		`
+		function f()
+		  return 2, 3
+		end
+		t = {1, f()}
+		return #t
+		`,
+		[]object.Value{object.Integer(3)},
+	},
+	{
+		`
+		function f()
+		  return 2, 3
+		end
+		t = {1, f(), nil}
+		return #t
+		`,
+		[]object.Value{object.Integer(2)},
+	},
 }
 
 func TestExec(t *testing.T) {

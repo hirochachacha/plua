@@ -277,6 +277,19 @@ func (g *generator) genTableLit(expr *ast.TableLit) (r int) {
 		}
 	}
 
+	var skipped bool
+	for len(a) > 0 {
+		if lit, ok := a[len(a)-1].(*ast.BasicLit); ok && lit.Token.Type == token.NIL {
+			a = a[:len(a)-1]
+
+			skipped = true
+
+			continue
+		}
+
+		break
+	}
+
 	g.pushInst(opcode.ABC(opcode.NEWTABLE, g.sp, opcode.IntToLog(len(a)), opcode.IntToLog(len(m))))
 
 	tp := g.sp
@@ -313,11 +326,19 @@ func (g *generator) genTableLit(expr *ast.TableLit) (r int) {
 					break
 				}
 
-				for _, e := range a[:len(a)-1] {
-					g.genExpr(e, genMove)
-				}
+				var isVar bool
 
-				isVar := g.genExprN(a[len(a)-1], -1)
+				if skipped {
+					for _, e := range a {
+						g.genExpr(e, genMove)
+					}
+				} else {
+					for _, e := range a[:len(a)-1] {
+						g.genExpr(e, genMove)
+					}
+
+					isVar = g.genExprN(a[len(a)-1], -1)
+				}
 
 				n := len(a)
 				if isVar {

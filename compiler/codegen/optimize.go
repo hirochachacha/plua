@@ -149,7 +149,7 @@ func (g *generator) foldUnary(expr *ast.UnaryExpr) (val object.Value, ok bool) {
 				val = object.Integer(len(unquoteString(tok.Lit)))
 			}
 		case *ast.TableLit:
-			alen := 0
+			var a []ast.Expr
 			for _, e := range x.Fields {
 				if _, ok := e.(*ast.KeyValueExpr); !ok {
 					if _, ok := g.foldExpr(e); !ok {
@@ -157,10 +157,21 @@ func (g *generator) foldUnary(expr *ast.UnaryExpr) (val object.Value, ok bool) {
 
 						return nil, false
 					}
-					alen++
+					a = append(a, e)
 				}
 			}
-			val = object.Integer(alen)
+
+			for len(a) > 0 {
+				if lit, ok := a[len(a)-1].(*ast.BasicLit); ok && lit.Token.Type == token.NIL {
+					a = a[:len(a)-1]
+
+					continue
+				}
+
+				break
+			}
+
+			val = object.Integer(len(a))
 		}
 	default:
 		panic("unreachable")

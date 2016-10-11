@@ -147,6 +147,12 @@ func (t *concurrentTable) iset(i int, val object.Value) {
 		case 0 < i && i <= acap:
 			if alen > i-1 {
 				t.alen = i - 1
+				for j := i - 2; j >= 0; j-- {
+					if t.a[j] != nil {
+						break
+					}
+					t.alen--
+				}
 			}
 			t.a[i-1] = nil
 		case i == acap+1:

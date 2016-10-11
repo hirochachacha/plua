@@ -78,6 +78,12 @@ func (t *table) Set(key, val object.Value) {
 			case 0 < i && i <= len(t.a):
 				if t.alen > i-1 {
 					t.alen = i - 1
+					for j := i - 2; j >= 0; j-- {
+						if t.a[j] != nil {
+							break
+						}
+						t.alen--
+					}
 				}
 				t.a[i-1] = nil
 			case i == len(t.a)+1:
