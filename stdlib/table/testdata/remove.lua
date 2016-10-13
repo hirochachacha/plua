@@ -16,3 +16,8 @@ assert(table.remove(a, 1) == nil)
 a = {1, 2, 3}
 assert(table.remove(a, 3) == 3)
 assert(table.remove(a, 3) == nil)
+
+a = {[0] = 0, [1] = 1}
+assert(table.remove(a) == 1)
+assert(table.remove(a) == 0)
+assert(table.remove(a) == nil)

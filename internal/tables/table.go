@@ -43,6 +43,18 @@ func (t *table) Len() int {
 	return t.alen
 }
 
+func (t *table) Get(key object.Value) object.Value {
+	return t.get(normKey(key))
+}
+
+func (t *table) Set(key, val object.Value) {
+	t.set(normKey(key), val)
+}
+
+func (t *table) Del(key object.Value) {
+	t.del(normKey(key))
+}
+
 func (t *table) ikey(key object.Value) (object.Integer, bool) {
 	if ikey, ok := key.(object.Integer); ok {
 		return ikey, !(int64(ikey) > limits.MaxInt || int64(ikey) < limits.MinInt)
@@ -57,98 +69,89 @@ func (t *table) ikey(key object.Value) (object.Integer, bool) {
 	return 0, false
 }
 
-func (t *table) Get(key object.Value) object.Value {
-	key = normKey(key)
+func (t *table) get(key object.Value) object.Value {
 	if ikey, ok := t.ikey(key); ok {
-		i := int(ikey)
-		if 0 < i && i <= len(t.a) {
-			return t.a[i-1]
-		}
+		return t.iget(ikey)
 	}
-
 	return t.m.Get(key)
 }
 
-func (t *table) Set(key, val object.Value) {
-	key = normKey(key)
+func (t *table) iget(ikey object.Integer) object.Value {
+	i := int(ikey)
+	if 0 < i && i <= len(t.a) {
+		return t.a[i-1]
+	}
+	return t.m.Get(ikey)
+}
+
+func (t *table) set(key, val object.Value) {
+	if val == nil {
+		t.del(key)
+
+		return
+	}
+
 	if ikey, ok := t.ikey(key); ok {
-		i := int(ikey)
-		if val == nil {
-			switch {
-			case 0 < i && i <= len(t.a):
-				if t.alen > i-1 {
-					t.alen = i - 1
-					for j := i - 2; j >= 0; j-- {
-						if t.a[j] != nil {
-							break
-						}
-						t.alen--
-					}
-				}
-				t.a[i-1] = nil
-			case i == len(t.a)+1:
-				// do nothing
-			default:
-				t.m.Delete(ikey)
-			}
-		} else {
-			switch {
-			case 0 < i && i <= len(t.a):
-				if t.a[i-1] == nil && t.alen == i {
-					for j := i; j < len(t.a); j++ {
-						t.alen++
-						if t.a[j] == nil {
-							break
-						}
-					}
-				}
-
-				t.a[i-1] = val
-			case i == len(t.a)+1:
-				t.a = append(t.a, val)
-
-				// migration from map to array
-				for {
-					ikey++
-					val := t.m.Get(ikey)
-					if val == nil {
-						break
-					}
-					t.a = append(t.a, val)
-					t.m.Delete(ikey)
-				}
-				t.alen = len(t.a)
-			default:
-				t.m.Set(ikey, val)
-			}
-		}
+		t.iset(ikey, val)
 	} else {
-		if val == nil {
-			t.m.Delete(key)
-		} else {
-			t.m.Set(key, val)
-		}
+		t.m.Set(key, val)
 	}
 }
 
-func (t *table) Del(key object.Value) {
-	key = normKey(key)
-	if ikey, ok := t.ikey(key); ok {
-		i := int(ikey)
-		switch {
-		case 0 < i && i <= len(t.a):
-			copy(t.a[i-1:], t.a[i:])
+func (t *table) iset(ikey object.Integer, val object.Value) {
+	i := int(ikey)
+	switch {
+	case 0 < i && i <= len(t.a):
+		if t.a[i-1] == nil && t.alen == i {
+			for j := i; j < len(t.a); j++ {
+				t.alen++
+				if t.a[j] == nil {
+					break
+				}
+			}
+		}
 
-			t.a[len(t.a)-1] = nil
+		t.a[i-1] = val
+	case i == len(t.a)+1:
+		t.a = append(t.a, val)
 
-			t.alen--
-		case i == len(t.a)+1:
-			// do nothing
-		default:
+		// migration from map to array
+		for {
+			ikey++
+			val := t.m.Get(ikey)
+			if val == nil {
+				break
+			}
+			t.a = append(t.a, val)
 			t.m.Delete(ikey)
 		}
+
+		t.alen = len(t.a)
+	default:
+		t.m.Set(ikey, val)
+	}
+}
+
+func (t *table) del(key object.Value) {
+	if ikey, ok := t.ikey(key); ok {
+		t.idel(ikey)
 	} else {
 		t.m.Delete(key)
+	}
+}
+
+func (t *table) idel(ikey object.Integer) {
+	i := int(ikey)
+	switch {
+	case 0 < i && i <= len(t.a):
+		if i <= t.alen {
+			t.alen = i - 1
+		}
+		t.a[i-1] = nil
+	case i == len(t.a)+1:
+		// do nothing
+	default:
+		t.m.Delete(ikey)
 	}
 }
 
@@ -163,8 +166,9 @@ func (t *table) Next(key object.Value) (nkey, nval object.Value, ok bool) {
 	}
 
 	if ikey, ok := t.ikey(key); ok {
-		if ikey < object.Integer(t.alen) {
-			return ikey + 1, t.a[int(ikey)], true
+		i := int(ikey)
+		if 0 <= i && i < t.alen {
+			return ikey + 1, t.a[i], true
 		}
 		if ikey == object.Integer(t.alen) {
 			return t.m.Next(nil)

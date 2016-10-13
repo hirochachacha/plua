@@ -22,12 +22,12 @@ func concat(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	i, err := ap.OptGoInt64(2, 1)
+	i, err := ap.OptGoInt(2, 1)
 	if err != nil {
 		return nil, err
 	}
 
-	j, err := ap.OptGoInt64(3, int64(t.Len()))
+	j, err := ap.OptGoInt(3, t.Len())
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +64,7 @@ func concat(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	return []object.Value{object.String(buf.String())}, nil
 }
 
+// table.insert (list, [pos,] value)
 func insert(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
@@ -72,6 +73,8 @@ func insert(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
+	tlen := t.Len()
+
 	val, ok := ap.Get(2)
 	if !ok {
 		val, err := ap.ToValue(1)
@@ -79,14 +82,22 @@ func insert(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 			return nil, err
 		}
 
-		t.Set(object.Integer(t.Len()+1), val)
+		t.Set(object.Integer(tlen+1), val)
 
 		return nil, nil
 	}
 
-	pos, err := ap.OptGoInt(1, t.Len())
+	pos, err := ap.OptGoInt(1, tlen+1)
 	if err != nil {
 		return nil, err
+	}
+
+	if pos < 1 || pos > tlen+1 {
+		return nil, ap.ArgError(1, "position out of bounds")
+	}
+
+	for i := tlen + 1; i > pos; i-- {
+		t.Set(object.Integer(i), t.Get(object.Integer(i-1)))
 	}
 
 	t.Set(object.Integer(pos), val)
@@ -156,13 +167,25 @@ func remove(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	if pos <= tlen {
+	if tlen == pos {
 		val := t.Get(object.Integer(pos))
-		t.Del(object.Integer(pos))
+		if val != nil {
+			t.Del(object.Integer(pos))
+		}
 		return []object.Value{val}, nil
 	}
 
-	return nil, nil
+	if pos < 1 || pos > tlen+1 {
+		return nil, ap.ArgError(1, "position out of bounds")
+	}
+
+	val := t.Get(object.Integer(pos))
+
+	for i := pos; i < tlen+1; i++ {
+		t.Set(object.Integer(i), t.Get(object.Integer(i+1)))
+	}
+
+	return []object.Value{val}, nil
 }
 
 func sort(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -237,12 +260,12 @@ func unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	i, err := ap.OptGoInt64(1, 1)
+	i, err := ap.OptGoInt(1, 1)
 	if err != nil {
 		return nil, err
 	}
 
-	j, err := ap.OptGoInt64(2, int64(t.Len()))
+	j, err := ap.OptGoInt(2, t.Len())
 	if err != nil {
 		return nil, err
 	}
