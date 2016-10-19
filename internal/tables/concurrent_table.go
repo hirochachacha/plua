@@ -199,6 +199,12 @@ func (t *concurrentTable) idel(ikey object.Integer) {
 			t.alen = i - 1
 		}
 		t.a[i-1] = nil
+		for j := i - 2; j > 0; j-- {
+			if t.a[j] != nil {
+				break
+			}
+			t.alen--
+		}
 
 		t.Unlock()
 	case i == len(t.a)+1:

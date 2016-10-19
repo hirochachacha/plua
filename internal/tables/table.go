@@ -148,6 +148,12 @@ func (t *table) idel(ikey object.Integer) {
 			t.alen = i - 1
 		}
 		t.a[i-1] = nil
+		for j := i - 2; j > 0; j-- {
+			if t.a[j] != nil {
+				break
+			}
+			t.alen--
+		}
 	case i == len(t.a)+1:
 		// do nothing
 	default:
