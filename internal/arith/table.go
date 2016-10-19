@@ -9,9 +9,9 @@ import (
 func CallGettable(th object.Thread, t, key object.Value) (object.Value, *object.RuntimeError) {
 	for i := 0; i < version.MAX_TAG_LOOP; i++ {
 		var tm object.Value
-		if t, ok := t.(object.Table); ok {
-			val := t.Get(key)
-			tm = gettm(t.Metatable(), object.TM_INDEX)
+		if tab, ok := t.(object.Table); ok {
+			val := tab.Get(key)
+			tm = gettm(tab.Metatable(), object.TM_INDEX)
 			if val != nil || tm == nil {
 				return val, nil
 			}
@@ -36,9 +36,9 @@ func CallGettable(th object.Thread, t, key object.Value) (object.Value, *object.
 func CallSettable(th object.Thread, t, key, val object.Value) *object.RuntimeError {
 	for i := 0; i < version.MAX_TAG_LOOP; i++ {
 		var tm object.Value
-		if t, ok := t.(object.Table); ok {
-			old := t.Get(key)
-			tm = gettm(t.Metatable(), object.TM_NEWINDEX)
+		if tab, ok := t.(object.Table); ok {
+			old := tab.Get(key)
+			tm = gettm(tab.Metatable(), object.TM_NEWINDEX)
 			if old != nil || tm == nil {
 				if key == nil {
 					return errors.ErrNilIndex
@@ -48,7 +48,7 @@ func CallSettable(th object.Thread, t, key, val object.Value) *object.RuntimeErr
 					return errors.ErrNaNIndex
 				}
 
-				t.Set(key, val)
+				tab.Set(key, val)
 
 				return nil
 			}
