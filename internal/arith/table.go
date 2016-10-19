@@ -37,9 +37,8 @@ func CallSettable(th object.Thread, t, key, val object.Value) *object.RuntimeErr
 	for i := 0; i < version.MAX_TAG_LOOP; i++ {
 		var tm object.Value
 		if tab, ok := t.(object.Table); ok {
-			old := tab.Get(key)
 			tm = gettm(tab.Metatable(), object.TM_NEWINDEX)
-			if old != nil || tm == nil {
+			if tm == nil {
 				if key == nil {
 					return errors.ErrNilIndex
 				}

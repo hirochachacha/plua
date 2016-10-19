@@ -60,16 +60,6 @@ func (t *concurrentTable) Next(key object.Value) (nkey, nval object.Value, ok bo
 	return t.next(normKey(key))
 }
 
-func (t *concurrentTable) Sort(less func(x, y object.Value) bool) {
-	t.Lock()
-
-	ts := &tableSorter{a: t.a[:t.alen], less: less}
-
-	ts.Sort()
-
-	t.Unlock()
-}
-
 func (t *concurrentTable) SetList(base int, src []object.Value) {
 	t.setList(base, src)
 }

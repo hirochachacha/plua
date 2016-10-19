@@ -184,12 +184,6 @@ func (t *table) Next(key object.Value) (nkey, nval object.Value, ok bool) {
 	return t.m.Next(key)
 }
 
-func (t *table) Sort(less func(x, y object.Value) bool) {
-	ts := &tableSorter{a: t.a[:t.alen], less: less}
-
-	ts.Sort()
-}
-
 func (t *table) SetList(base int, src []object.Value) {
 	if len(src) < len(t.a)-base {
 		copy(t.a[base:], src)

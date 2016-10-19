@@ -5,7 +5,6 @@ type Table interface {
 
 	// Sequence APIs
 	Len() int
-	Sort(less func(x, y Value) bool)
 	SetList(base int, src []Value)
 
 	// Map APIs

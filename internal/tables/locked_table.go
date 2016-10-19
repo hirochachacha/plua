@@ -72,16 +72,6 @@ func (t *lockedTable) Next(key object.Value) (nkey, nval object.Value, ok bool) 
 	return
 }
 
-func (t *lockedTable) Sort(less func(x, y object.Value) bool) {
-	t.m.Lock()
-
-	ts := &tableSorter{a: t.t.a[:t.t.alen], less: less}
-
-	ts.Sort()
-
-	t.m.Unlock()
-}
-
 func (t *lockedTable) SetList(base int, src []object.Value) {
 	t.m.Lock()
 

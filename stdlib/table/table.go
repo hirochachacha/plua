@@ -27,7 +27,12 @@ func concat(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	j, err := ap.OptGoInt(3, t.Len())
+	tlen, err := callLen(th, t)
+	if err != nil {
+		return nil, err
+	}
+
+	j, err := ap.OptGoInt(3, tlen)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +48,10 @@ func concat(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	var tmp string
 
 	for {
-		val = t.Get(object.Integer(i))
+		val, err = arith.CallGettable(th, t, object.Integer(i))
+		if err != nil {
+			return nil, err
+		}
 
 		tmp, ok = object.ToGoString(val)
 		if !ok {
@@ -73,7 +81,10 @@ func insert(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	tlen := t.Len()
+	tlen, err := callLen(th, t)
+	if err != nil {
+		return nil, err
+	}
 
 	val, ok := ap.Get(2)
 	if !ok {
@@ -82,7 +93,10 @@ func insert(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 			return nil, err
 		}
 
-		t.Set(object.Integer(tlen+1), val)
+		err = arith.CallSettable(th, t, object.Integer(tlen+1), val)
+		if err != nil {
+			return nil, err
+		}
 
 		return nil, nil
 	}
@@ -97,10 +111,20 @@ func insert(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	}
 
 	for i := tlen + 1; i > pos; i-- {
-		t.Set(object.Integer(i), t.Get(object.Integer(i-1)))
+		v, err := arith.CallGettable(th, t, object.Integer(i-1))
+		if err != nil {
+			return nil, err
+		}
+		err = arith.CallSettable(th, t, object.Integer(i), v)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	t.Set(object.Integer(pos), val)
+	err = arith.CallSettable(th, t, object.Integer(pos), val)
+	if err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
@@ -138,7 +162,14 @@ func move(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	}
 
 	for i := 0; i <= e-f; i++ {
-		a2.Set(object.Integer(t+i), a1.Get(object.Integer(f+i)))
+		v, err := arith.CallGettable(th, a1, object.Integer(f+i))
+		if err != nil {
+			return nil, err
+		}
+		err = arith.CallSettable(th, a2, object.Integer(t+i), v)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil
@@ -160,7 +191,10 @@ func remove(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	tlen := t.Len()
+	tlen, err := callLen(th, t)
+	if err != nil {
+		return nil, err
+	}
 
 	pos, err := ap.OptGoInt(1, tlen)
 	if err != nil {
@@ -168,9 +202,15 @@ func remove(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	}
 
 	if tlen == pos {
-		val := t.Get(object.Integer(pos))
+		val, err := arith.CallGettable(th, t, object.Integer(pos))
+		if err != nil {
+			return nil, err
+		}
 		if val != nil {
-			t.Del(object.Integer(pos))
+			err = arith.CallSettable(th, t, object.Integer(pos), nil)
+			if err != nil {
+				return nil, err
+			}
 		}
 		return []object.Value{val}, nil
 	}
@@ -179,77 +219,23 @@ func remove(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, ap.ArgError(1, "position out of bounds")
 	}
 
-	val := t.Get(object.Integer(pos))
-
-	for i := pos; i < tlen+1; i++ {
-		t.Set(object.Integer(i), t.Get(object.Integer(i+1)))
-	}
-
-	return []object.Value{val}, nil
-}
-
-func sort(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	ap := fnutil.NewArgParser(th, args)
-
-	t, err := ap.ToTable(0)
+	val, err := arith.CallGettable(th, t, object.Integer(pos))
 	if err != nil {
 		return nil, err
 	}
 
-	var less func(x, y object.Value) bool
-
-	if _, ok := ap.Get(1); ok {
-		cmp, err := ap.ToFunction(1)
+	for i := pos; i < tlen+1; i++ {
+		v, err := arith.CallGettable(th, t, object.Integer(i+1))
 		if err != nil {
 			return nil, err
 		}
-
-		less = func(x, y object.Value) bool {
-			rets, err := th.Call(cmp, nil, x, y)
-			if err != nil {
-				return false
-			}
-
-			if len(rets) == 0 {
-				return false
-			}
-
-			return object.ToGoBool(rets[0])
-		}
-	} else {
-		less = func(x, y object.Value) bool {
-			if b := arith.LessThan(x, y); b != nil {
-				return bool(b.(object.Boolean))
-			}
-
-			tm := th.GetMetaField(x, "__lt")
-			if tm == nil {
-				tm = th.GetMetaField(y, "__lt")
-				if tm == nil {
-					tm = th.GetMetaField(x, "__le")
-					if tm == nil {
-						tm = th.GetMetaField(y, "__le")
-					}
-					x, y = y, x
-				}
-			}
-
-			rets, err := th.Call(tm, nil, x, y)
-			if err != nil {
-				return false
-			}
-
-			if len(rets) == 0 {
-				return false
-			}
-
-			return object.ToGoBool(rets[0])
+		err = arith.CallSettable(th, t, object.Integer(i), v)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	t.Sort(less)
-
-	return nil, nil
+	return []object.Value{val}, nil
 }
 
 func unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -265,7 +251,12 @@ func unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	j, err := ap.OptGoInt(2, t.Len())
+	tlen, err := callLen(th, t)
+	if err != nil {
+		return nil, err
+	}
+
+	j, err := ap.OptGoInt(2, tlen)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +270,10 @@ func unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	var val object.Value
 
 	for {
-		val = t.Get(object.Integer(i))
+		val, err = arith.CallGettable(th, t, object.Integer(i))
+		if err != nil {
+			return nil, err
+		}
 
 		rets = append(rets, val)
 
