@@ -7,6 +7,7 @@ import (
 	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/opcode"
+	"github.com/hirochachacha/plua/runtime/internal/errors"
 )
 
 func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bool) {
@@ -34,7 +35,7 @@ func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bo
 		ci.top = ci.base + cl.MaxStackSize
 
 		if !ctx.growStack(0) {
-			panic(errStackOverflow)
+			panic(errors.ErrStackOverflow)
 		}
 
 		copy(ctx.stack[ci.base:], args)
@@ -214,7 +215,7 @@ func (th *thread) doExecute(fn, errh object.Value, args []object.Value, isHook b
 // execute with current context
 func (th *thread) execute0() (rets []object.Value) {
 	if th.depth >= version.MAX_VM_RECURSION {
-		th.error(errStackOverflow)
+		th.error(errors.ErrStackOverflow)
 
 		return nil
 	}
@@ -246,7 +247,7 @@ func (th *thread) execute0() (rets []object.Value) {
 		case opcode.LOADKX:
 			extra := ci.Code[ci.pc]
 			if extra.OpCode() != opcode.EXTRAARG {
-				th.error(errInvalidByteCode)
+				th.error(errors.ErrInvalidByteCode)
 
 				return nil
 			}
@@ -381,7 +382,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if sum := arith.Add(rb, rc); sum != nil {
 				ctx.setRA(inst, sum)
 			} else {
-				if err := th.callbintm(inst.A(), rb, rc, TM_ADD); err != nil {
+				if err := th.callbintm(inst.A(), rb, rc, object.TM_ADD); err != nil {
 					th.error(err)
 
 					return nil
@@ -394,7 +395,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if diff := arith.Sub(rb, rc); diff != nil {
 				ctx.setRA(inst, diff)
 			} else {
-				if err := th.callbintm(inst.A(), rb, rc, TM_SUB); err != nil {
+				if err := th.callbintm(inst.A(), rb, rc, object.TM_SUB); err != nil {
 					th.error(err)
 
 					return nil
@@ -407,7 +408,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if prod := arith.Mul(rb, rc); prod != nil {
 				ctx.setRA(inst, prod)
 			} else {
-				if err := th.callbintm(inst.A(), rb, rc, TM_MUL); err != nil {
+				if err := th.callbintm(inst.A(), rb, rc, object.TM_MUL); err != nil {
 					th.error(err)
 
 					return nil
@@ -420,7 +421,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if quo := arith.Div(rb, rc); quo != nil {
 				ctx.setRA(inst, quo)
 			} else {
-				if err := th.callbintm(inst.A(), rb, rc, TM_DIV); err != nil {
+				if err := th.callbintm(inst.A(), rb, rc, object.TM_DIV); err != nil {
 					th.error(err)
 
 					return nil
@@ -432,7 +433,7 @@ func (th *thread) execute0() (rets []object.Value) {
 
 			quo, ok := arith.Idiv(rb, rc)
 			if !ok {
-				th.error(errZeroDivision)
+				th.error(errors.ErrZeroDivision)
 
 				return nil
 			}
@@ -440,7 +441,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if quo != nil {
 				ctx.setRA(inst, quo)
 			} else {
-				if err := th.callbintm(inst.A(), rb, rc, TM_IDIV); err != nil {
+				if err := th.callbintm(inst.A(), rb, rc, object.TM_IDIV); err != nil {
 					th.error(err)
 
 					return nil
@@ -453,7 +454,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if band := arith.Band(rb, rc); band != nil {
 				ctx.setRA(inst, band)
 			} else {
-				if err := th.callbintm(inst.A(), rb, rc, TM_BAND); err != nil {
+				if err := th.callbintm(inst.A(), rb, rc, object.TM_BAND); err != nil {
 					th.error(err)
 
 					return nil
@@ -466,7 +467,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if bor := arith.Bor(rb, rc); bor != nil {
 				ctx.setRA(inst, bor)
 			} else {
-				if err := th.callbintm(inst.A(), rb, rc, TM_BOR); err != nil {
+				if err := th.callbintm(inst.A(), rb, rc, object.TM_BOR); err != nil {
 					th.error(err)
 
 					return nil
@@ -479,7 +480,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if bxor := arith.Bxor(rb, rc); bxor != nil {
 				ctx.setRA(inst, bxor)
 			} else {
-				if err := th.callbintm(inst.A(), rb, rc, TM_BXOR); err != nil {
+				if err := th.callbintm(inst.A(), rb, rc, object.TM_BXOR); err != nil {
 					th.error(err)
 
 					return nil
@@ -492,7 +493,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if shl := arith.Shl(rb, rc); shl != nil {
 				ctx.setRA(inst, shl)
 			} else {
-				if err := th.callbintm(inst.A(), rb, rc, TM_SHL); err != nil {
+				if err := th.callbintm(inst.A(), rb, rc, object.TM_SHL); err != nil {
 					th.error(err)
 
 					return nil
@@ -505,7 +506,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if shr := arith.Shr(rb, rc); shr != nil {
 				ctx.setRA(inst, shr)
 			} else {
-				if err := th.callbintm(inst.A(), rb, rc, TM_SHR); err != nil {
+				if err := th.callbintm(inst.A(), rb, rc, object.TM_SHR); err != nil {
 					th.error(err)
 
 					return nil
@@ -517,7 +518,7 @@ func (th *thread) execute0() (rets []object.Value) {
 
 			rem, ok := arith.Mod(rb, rc)
 			if !ok {
-				th.error(errModuloByZero)
+				th.error(errors.ErrModuloByZero)
 
 				return nil
 			}
@@ -525,7 +526,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if rem != nil {
 				ctx.setRA(inst, rem)
 			} else {
-				if err := th.callbintm(inst.A(), rb, rc, TM_MOD); err != nil {
+				if err := th.callbintm(inst.A(), rb, rc, object.TM_MOD); err != nil {
 					th.error(err)
 
 					return nil
@@ -538,7 +539,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if prod := arith.Pow(rb, rc); prod != nil {
 				ctx.setRA(inst, prod)
 			} else {
-				if err := th.callbintm(inst.A(), rb, rc, TM_POW); err != nil {
+				if err := th.callbintm(inst.A(), rb, rc, object.TM_POW); err != nil {
 					th.error(err)
 
 					return nil
@@ -550,7 +551,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if unm := arith.Unm(rb); unm != nil {
 				ctx.setRA(inst, unm)
 			} else {
-				if err := th.calluntm(inst.A(), rb, TM_UNM); err != nil {
+				if err := th.calluntm(inst.A(), rb, object.TM_UNM); err != nil {
 					th.error(err)
 
 					return nil
@@ -562,7 +563,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if bnot := arith.Bnot(rb); bnot != nil {
 				ctx.setRA(inst, bnot)
 			} else {
-				if err := th.calluntm(inst.A(), rb, TM_BNOT); err != nil {
+				if err := th.calluntm(inst.A(), rb, object.TM_BNOT); err != nil {
 					th.error(err)
 
 					return nil
@@ -580,7 +581,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			switch rb := rb.(type) {
 			case object.Table:
 				mt := rb.Metatable()
-				tm = th.fasttm(mt, TM_LEN)
+				tm = th.fasttm(mt, object.TM_LEN)
 				if tm != nil {
 					if err := th.calltm(inst.A(), tm, rb); err != nil {
 						th.error(err)
@@ -593,7 +594,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			case object.String:
 				ctx.setRA(inst, object.Integer(len(rb)))
 			default:
-				if err := th.calluntm(inst.A(), rb, TM_LEN); err != nil {
+				if err := th.calluntm(inst.A(), rb, object.TM_LEN); err != nil {
 					th.error(err)
 
 					return nil
@@ -627,7 +628,7 @@ func (th *thread) execute0() (rets []object.Value) {
 					jmp := ci.Code[ci.pc]
 
 					if jmp.OpCode() != opcode.JMP {
-						th.error(errInvalidByteCode)
+						th.error(errors.ErrInvalidByteCode)
 
 						return nil
 					}
@@ -650,7 +651,7 @@ func (th *thread) execute0() (rets []object.Value) {
 					jmp := ci.Code[ci.pc]
 
 					if jmp.OpCode() != opcode.JMP {
-						th.error(errInvalidByteCode)
+						th.error(errors.ErrInvalidByteCode)
 
 						return nil
 					}
@@ -660,7 +661,7 @@ func (th *thread) execute0() (rets []object.Value) {
 					th.dojmp(jmp)
 				}
 			} else {
-				if err := th.callordertm(not, rb, rc, TM_LT); err != nil {
+				if err := th.callordertm(not, rb, rc, object.TM_LT); err != nil {
 					th.error(err)
 
 					return nil
@@ -679,7 +680,7 @@ func (th *thread) execute0() (rets []object.Value) {
 					jmp := ci.Code[ci.pc]
 
 					if jmp.OpCode() != opcode.JMP {
-						th.error(errInvalidByteCode)
+						th.error(errors.ErrInvalidByteCode)
 
 						return nil
 					}
@@ -689,7 +690,7 @@ func (th *thread) execute0() (rets []object.Value) {
 					th.dojmp(jmp)
 				}
 			} else {
-				if err := th.callordertm(not, rb, rc, TM_LE); err != nil {
+				if err := th.callordertm(not, rb, rc, object.TM_LE); err != nil {
 					th.error(err)
 
 					return nil
@@ -704,7 +705,7 @@ func (th *thread) execute0() (rets []object.Value) {
 				jmp := ci.Code[ci.pc]
 
 				if jmp.OpCode() != opcode.JMP {
-					th.error(errInvalidByteCode)
+					th.error(errors.ErrInvalidByteCode)
 
 					return nil
 				}
@@ -724,7 +725,7 @@ func (th *thread) execute0() (rets []object.Value) {
 				jmp := ci.Code[ci.pc]
 
 				if jmp.OpCode() != opcode.JMP {
-					th.error(errInvalidByteCode)
+					th.error(errors.ErrInvalidByteCode)
 
 					return nil
 				}
@@ -845,21 +846,21 @@ func (th *thread) execute0() (rets []object.Value) {
 			{
 				init, ok := object.ToNumber(init)
 				if !ok {
-					th.error(th.forLoopError("initial"))
+					th.error(errors.ForLoopError("initial"))
 
 					return nil
 				}
 
 				plimit, ok := object.ToNumber(plimit)
 				if !ok {
-					th.error(th.forLoopError("limit"))
+					th.error(errors.ForLoopError("limit"))
 
 					return nil
 				}
 
 				pstep, ok := object.ToNumber(pstep)
 				if !ok {
-					th.error(th.forLoopError("step"))
+					th.error(errors.ForLoopError("step"))
 
 					return nil
 				}
@@ -883,7 +884,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			tloop := ci.Code[ci.pc]
 
 			if tloop.OpCode() != opcode.TFORLOOP {
-				th.error(errInvalidByteCode)
+				th.error(errors.ErrInvalidByteCode)
 
 				return nil
 			}
@@ -907,7 +908,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if c == 0 {
 				extra := ci.Code[ci.pc]
 				if extra.OpCode() != opcode.EXTRAARG {
-					th.error(errInvalidByteCode)
+					th.error(errors.ErrInvalidByteCode)
 
 					return nil
 				}
@@ -926,7 +927,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			bx := inst.Bx()
 
 			if len(ci.Protos) <= bx {
-				th.error(errInvalidByteCode)
+				th.error(errors.ErrInvalidByteCode)
 
 				return nil
 			}
@@ -944,18 +945,18 @@ func (th *thread) execute0() (rets []object.Value) {
 			}
 
 			if !ctx.growStack(len(varargs)) {
-				th.error(errStackOverflow)
+				th.error(errors.ErrStackOverflow)
 			}
 
 			copy(ctx.stack[ci.base+a:], varargs)
 
 			ctx.ci.top = ci.base + a + len(varargs)
 		case opcode.EXTRAARG:
-			th.error(errInvalidByteCode)
+			th.error(errors.ErrInvalidByteCode)
 
 			return nil
 		default:
-			th.error(errInvalidByteCode)
+			th.error(errors.ErrInvalidByteCode)
 
 			return nil
 		}
@@ -967,14 +968,14 @@ func (th *thread) gettable(t, key object.Value) (val object.Value, tm object.Val
 		if t, ok := t.(object.Table); ok {
 			val := t.Get(key)
 			mt := t.Metatable()
-			if val != nil || th.fasttm(mt, TM_INDEX) == nil {
+			if val != nil || th.fasttm(mt, object.TM_INDEX) == nil {
 				return val, nil, nil
 			}
 		}
 
-		tm := th.gettmbyobj(t, TM_INDEX)
+		tm := th.gettmbyobj(t, object.TM_INDEX)
 		if tm == nil {
-			return nil, nil, th.indexError(t)
+			return nil, nil, errors.IndexError(t)
 		}
 
 		if isFunction(tm) {
@@ -984,7 +985,7 @@ func (th *thread) gettable(t, key object.Value) (val object.Value, tm object.Val
 		t = tm
 	}
 
-	return nil, nil, errGetTable
+	return nil, nil, errors.ErrGetTable
 }
 
 func (th *thread) settable(t, key, val object.Value) (tm object.Value, err *object.RuntimeError) {
@@ -992,13 +993,13 @@ func (th *thread) settable(t, key, val object.Value) (tm object.Value, err *obje
 		if t, ok := t.(object.Table); ok {
 			old := t.Get(key)
 			mt := t.Metatable()
-			if old != nil || th.fasttm(mt, TM_NEWINDEX) == nil {
+			if old != nil || th.fasttm(mt, object.TM_NEWINDEX) == nil {
 				if key == nil {
-					return nil, errNilIndex
+					return nil, errors.ErrNilIndex
 				}
 
 				if key == object.NaN {
-					return nil, errNaNIndex
+					return nil, errors.ErrNaNIndex
 				}
 
 				t.Set(key, val)
@@ -1007,9 +1008,9 @@ func (th *thread) settable(t, key, val object.Value) (tm object.Value, err *obje
 			}
 		}
 
-		tm := th.gettmbyobj(t, TM_NEWINDEX)
+		tm := th.gettmbyobj(t, object.TM_NEWINDEX)
 		if tm == nil {
-			return nil, th.indexError(t)
+			return nil, errors.IndexError(t)
 		}
 
 		if isFunction(tm) {
@@ -1019,7 +1020,7 @@ func (th *thread) settable(t, key, val object.Value) (tm object.Value, err *obje
 		t = tm
 	}
 
-	return nil, errSetTable
+	return nil, errors.ErrSetTable
 }
 
 func (th *thread) dojmp(inst opcode.Instruction) {
@@ -1045,12 +1046,12 @@ func (th *thread) concat(a, b, c int) *object.RuntimeError {
 			continue
 		}
 
-		tm := th.gettmbyobj(rb, TM_CONCAT)
+		tm := th.gettmbyobj(rb, object.TM_CONCAT)
 		if tm == nil {
-			tm = th.gettmbyobj(rc, TM_CONCAT)
+			tm = th.gettmbyobj(rc, object.TM_CONCAT)
 
 			if tm == nil {
-				return th.binaryError(TM_CONCAT, rb, rc)
+				return errors.BinaryError(object.TM_CONCAT, rb, rc)
 			}
 		}
 
@@ -1077,9 +1078,9 @@ func (th *thread) eq(rb, rc object.Value) (b bool, tm object.Value) {
 	switch rb := rb.(type) {
 	case object.Table:
 		if rc, ok := rc.(object.Table); ok {
-			tm := th.fasttm(rb.Metatable(), TM_EQ)
+			tm := th.fasttm(rb.Metatable(), object.TM_EQ)
 			if tm == nil {
-				tm = th.fasttm(rc.Metatable(), TM_EQ)
+				tm = th.fasttm(rc.Metatable(), object.TM_EQ)
 				if tm == nil {
 					return false, nil
 				}
@@ -1091,9 +1092,9 @@ func (th *thread) eq(rb, rc object.Value) (b bool, tm object.Value) {
 		return false, nil
 	case *object.Userdata:
 		if rc, ok := rc.(*object.Userdata); ok {
-			tm := th.fasttm(rb.Metatable, TM_EQ)
+			tm := th.fasttm(rb.Metatable, object.TM_EQ)
 			if tm == nil {
-				tm = th.fasttm(rc.Metatable, TM_EQ)
+				tm = th.fasttm(rc.Metatable, object.TM_EQ)
 				if tm == nil {
 					return false, nil
 				}

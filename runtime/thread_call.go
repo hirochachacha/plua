@@ -1,6 +1,9 @@
 package runtime
 
-import "github.com/hirochachacha/plua/object"
+import (
+	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/runtime/internal/errors"
+)
 
 // call a callable by stack index.
 func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
@@ -12,21 +15,21 @@ func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
 
 	switch fn := fn.(type) {
 	case nil:
-		return th.callError(fn)
+		return errors.CallError(fn)
 	case object.GoFunction:
 		return th.callGo(fn, f, nargs, nrets, false)
 	case object.Closure:
 		return th.callLua(fn, f, nargs, nrets)
 	}
 
-	tm := th.gettmbyobj(fn, TM_CALL)
+	tm := th.gettmbyobj(fn, object.TM_CALL)
 
 	if !isFunction(tm) {
-		return th.callError(fn)
+		return errors.CallError(fn)
 	}
 
 	if !ctx.growStack(1) {
-		return errStackOverflow
+		return errors.ErrStackOverflow
 	}
 
 	ctx.ci.top++
@@ -78,7 +81,7 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 	}
 
 	if !ctx.growStack(len(rets) - 1 - nargs) {
-		return errStackOverflow
+		return errors.ErrStackOverflow
 	}
 
 	copy(ctx.stack[ctx.ci.base-1:], rets)
@@ -114,7 +117,7 @@ func (th *thread) callLua(c object.Closure, f, nargs, nrets int) (err *object.Ru
 	ci := ctx.ci
 
 	if !ctx.growStack(0) {
-		return errStackOverflow
+		return errors.ErrStackOverflow
 	}
 
 	if nvarargs := nargs - cl.NParams; nvarargs > 0 {
@@ -152,21 +155,21 @@ func (th *thread) tailcall(a, nargs int) (err *object.RuntimeError) {
 
 	switch fn := ctx.stack[f].(type) {
 	case nil:
-		return th.callError(fn)
+		return errors.CallError(fn)
 	case object.GoFunction:
 		return th.callGo(fn, f, nargs, -1, true)
 	case object.Closure:
 		return th.tailcallLua(fn, f, nargs)
 	}
 
-	tm := th.gettmbyobj(fn, TM_CALL)
+	tm := th.gettmbyobj(fn, object.TM_CALL)
 
 	if !isFunction(tm) {
-		return th.callError(fn)
+		return errors.CallError(fn)
 	}
 
 	if !ctx.growStack(1) {
-		return errStackOverflow
+		return errors.ErrStackOverflow
 	}
 
 	copy(ctx.stack[f+1:], ctx.stack[f:f+1+nargs])
@@ -192,7 +195,7 @@ func (th *thread) tailcallLua(c object.Closure, f, nargs int) (err *object.Runti
 	ci.isTailCall = true
 
 	if !ctx.growStack(0) {
-		return errStackOverflow
+		return errors.ErrStackOverflow
 	}
 
 	copy(ctx.stack[ci.base-1:ci.base+cl.NParams], ctx.stack[f:f+1+cl.NParams])
@@ -230,7 +233,7 @@ func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 
 	switch fn := fn.(type) {
 	case nil:
-		return th.callError(fn)
+		return errors.CallError(fn)
 	case object.GoFunction:
 		copy(ctx.stack[f+3:], ctx.stack[f:f+3])
 
@@ -256,10 +259,10 @@ func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 		return nil
 	}
 
-	tm := th.gettmbyobj(fn, TM_CALL)
+	tm := th.gettmbyobj(fn, object.TM_CALL)
 
 	if !isFunction(tm) {
-		return th.callError(fn)
+		return errors.CallError(fn)
 	}
 
 	ctx.growStack(1)
@@ -316,7 +319,7 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 func (th *thread) docall(fn, errh object.Value, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	switch fn := fn.(type) {
 	case nil:
-		return th.dohandle(errh, th.callError(fn))
+		return th.dohandle(errh, errors.CallError(fn))
 	case object.GoFunction:
 		rets, err := th.docallGo(fn, args...)
 		if err != nil {
@@ -328,7 +331,7 @@ func (th *thread) docall(fn, errh object.Value, args ...object.Value) (rets []ob
 		return th.docallLua(fn, errh, args...)
 	}
 
-	tm := th.gettmbyobj(fn, TM_CALL)
+	tm := th.gettmbyobj(fn, object.TM_CALL)
 
 	return th.docall(tm, errh, append([]object.Value{fn}, args...)...)
 }
@@ -389,18 +392,18 @@ func (th *thread) dohandle(errh object.Value, err *object.RuntimeError) ([]objec
 	case object.GoFunction:
 		rets, err := th.docallGo(errh, err.Positioned())
 		if err != nil {
-			return nil, errInErrorHandling
+			return nil, errors.ErrInErrorHandling
 		}
 
 		return rets, nil
 	case object.Closure:
 		rets, err := th.docallLua(errh, nil, err.Positioned())
 		if err != nil {
-			return nil, errInErrorHandling
+			return nil, errors.ErrInErrorHandling
 		}
 
 		return rets, nil
 	default:
-		return nil, errInErrorHandling
+		return nil, errors.ErrInErrorHandling
 	}
 }

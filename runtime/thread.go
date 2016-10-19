@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/runtime/internal/errors"
 )
 
 type threadType uint
@@ -53,10 +54,10 @@ func (th *thread) String() string {
 func (th *thread) Yield(args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	switch th.typ {
 	case threadMain:
-		return nil, errYieldMainThread
+		return nil, errors.ErrYieldMainThread
 	case threadCo:
 		if th.status != object.THREAD_RUNNING {
-			return nil, errYieldFromOutside
+			return nil, errors.ErrYieldFromOutside
 		}
 
 		th.status = object.THREAD_SUSPENDED
@@ -69,7 +70,7 @@ func (th *thread) Yield(args ...object.Value) (rets []object.Value, err *object.
 
 		return rets, nil
 	case threadGo:
-		return nil, errYieldGoThread
+		return nil, errors.ErrYieldGoThread
 	default:
 		panic("unreachable")
 	}
@@ -79,7 +80,7 @@ func (th *thread) Resume(args ...object.Value) (rets []object.Value, err *object
 	switch th.typ {
 	case threadMain, threadCo:
 		if !(th.status == object.THREAD_INIT || th.status == object.THREAD_SUSPENDED) {
-			return nil, errDeadCoroutine
+			return nil, errors.ErrDeadCoroutine
 		}
 
 		th.resume <- args
@@ -94,7 +95,7 @@ func (th *thread) Resume(args ...object.Value) (rets []object.Value, err *object
 		return rets, err
 	case threadGo:
 		if th.status != object.THREAD_INIT {
-			return nil, errGoroutineTwice
+			return nil, errors.ErrGoroutineTwice
 		}
 
 		th.resume <- args

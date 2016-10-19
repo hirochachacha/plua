@@ -433,7 +433,7 @@ func setUpInfo(d *object.DebugInfo, cl *closure) {
 }
 
 func setFuncName(d *object.DebugInfo, ci *callInfo) {
-	var tag tagType
+	var tag object.TagType
 
 	inst := ci.Code[ci.pc-1]
 
@@ -448,47 +448,47 @@ func setFuncName(d *object.DebugInfo, ci *callInfo) {
 
 		return
 	case opcode.SELF, opcode.GETTABUP, opcode.GETTABLE:
-		tag = TM_INDEX
+		tag = object.TM_INDEX
 	case opcode.SETTABUP, opcode.SETTABLE:
-		tag = TM_NEWINDEX
+		tag = object.TM_NEWINDEX
 	case opcode.ADD:
-		tag = TM_ADD
+		tag = object.TM_ADD
 	case opcode.SUB:
-		tag = TM_SUB
+		tag = object.TM_SUB
 	case opcode.MUL:
-		tag = TM_MUL
+		tag = object.TM_MUL
 	case opcode.MOD:
-		tag = TM_MOD
+		tag = object.TM_MOD
 	case opcode.POW:
-		tag = TM_POW
+		tag = object.TM_POW
 	case opcode.DIV:
-		tag = TM_DIV
+		tag = object.TM_DIV
 	case opcode.IDIV:
-		tag = TM_IDIV
+		tag = object.TM_IDIV
 	case opcode.BAND:
-		tag = TM_BAND
+		tag = object.TM_BAND
 	case opcode.BOR:
-		tag = TM_BOR
+		tag = object.TM_BOR
 	case opcode.BXOR:
-		tag = TM_BXOR
+		tag = object.TM_BXOR
 	case opcode.SHL:
-		tag = TM_SHL
+		tag = object.TM_SHL
 	case opcode.SHR:
-		tag = TM_SHR
+		tag = object.TM_SHR
 	case opcode.UNM:
-		tag = TM_UNM
+		tag = object.TM_UNM
 	case opcode.BNOT:
-		tag = TM_BNOT
+		tag = object.TM_BNOT
 	case opcode.LEN:
-		tag = TM_LEN
+		tag = object.TM_LEN
 	case opcode.CONCAT:
-		tag = TM_CONCAT
+		tag = object.TM_CONCAT
 	case opcode.EQ:
-		tag = TM_EQ
+		tag = object.TM_EQ
 	case opcode.LT:
-		tag = TM_LT
+		tag = object.TM_LT
 	case opcode.LE:
-		tag = TM_LE
+		tag = object.TM_LE
 	default:
 		return
 	}
