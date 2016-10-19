@@ -3,8 +3,8 @@ package runtime
 import (
 	"fmt"
 
+	"github.com/hirochachacha/plua/internal/errors"
 	"github.com/hirochachacha/plua/object"
-	"github.com/hirochachacha/plua/runtime/internal/errors"
 )
 
 type threadType uint

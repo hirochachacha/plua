@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/hirochachacha/plua/internal/arith"
+	"github.com/hirochachacha/plua/internal/errors"
 	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/opcode"
-	"github.com/hirochachacha/plua/runtime/internal/errors"
 )
 
 func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bool) {
@@ -271,58 +271,36 @@ func (th *thread) execute0() (rets []object.Value) {
 			t := ctx.getUB(inst)
 			key := ctx.getRKC(inst)
 
-			val, tm, err := th.gettable(t, key)
+			val, err := arith.CallGettable(th, t, key)
 			if err != nil {
 				th.error(err)
 
 				return nil
 			}
-			if tm != nil {
-				if err := th.calltm(inst.A(), tm, t, key); err != nil {
-					th.error(err)
 
-					return nil
-				}
-			} else {
-				ctx.setRA(inst, val)
-			}
+			ctx.setRA(inst, val)
 		case opcode.GETTABLE:
 			t := ctx.getRB(inst)
 			key := ctx.getRKC(inst)
 
-			val, tm, err := th.gettable(t, key)
+			val, err := arith.CallGettable(th, t, key)
 			if err != nil {
 				th.error(err)
 
 				return nil
 			}
-			if tm != nil {
-				if err := th.calltm(inst.A(), tm, t, key); err != nil {
-					th.error(err)
 
-					return nil
-				}
-			} else {
-				ctx.setRA(inst, val)
-			}
+			ctx.setRA(inst, val)
 		case opcode.SETTABUP:
 			t := ctx.getUA(inst)
 			key := ctx.getRKB(inst)
 			val := ctx.getRKC(inst)
 
-			tm, err := th.settable(t, key, val)
+			err := arith.CallSettable(th, t, key, val)
 			if err != nil {
 				th.error(err)
 
 				return nil
-			}
-
-			if tm != nil {
-				if err := th.calltm(inst.A(), tm, t, key, val); err != nil {
-					th.error(err)
-
-					return nil
-				}
 			}
 		case opcode.SETUPVAL:
 			ctx.setUB(inst, ctx.getRA(inst))
@@ -331,19 +309,11 @@ func (th *thread) execute0() (rets []object.Value) {
 			key := ctx.getRKB(inst)
 			val := ctx.getRKC(inst)
 
-			tm, err := th.settable(t, key, val)
+			err := arith.CallSettable(th, t, key, val)
 			if err != nil {
 				th.error(err)
 
 				return nil
-			}
-
-			if tm != nil {
-				if err := th.calltm(inst.A(), tm, t, key, val); err != nil {
-					th.error(err)
-
-					return nil
-				}
 			}
 		case opcode.NEWTABLE:
 			asize := opcode.LogToInt(inst.B())
@@ -356,219 +326,183 @@ func (th *thread) execute0() (rets []object.Value) {
 			a := inst.A()
 
 			t := ctx.getRB(inst)
-			ctx.setR(a+1, t)
-
 			key := ctx.getRKC(inst)
 
-			val, tm, err := th.gettable(t, key)
+			val, err := arith.CallGettable(th, t, key)
 			if err != nil {
 				th.error(err)
 
 				return nil
 			}
-			if tm != nil {
-				if err := th.calltm(a, tm, t, key); err != nil {
-					th.error(err)
 
-					return nil
-				}
-			} else {
-				ctx.setR(a, val)
-			}
+			ctx.setR(a+1, t)
+			ctx.setR(a, val)
 		case opcode.ADD:
 			rb := ctx.getRKB(inst)
 			rc := ctx.getRKC(inst)
 
-			if sum := arith.Add(rb, rc); sum != nil {
-				ctx.setRA(inst, sum)
-			} else {
-				if err := th.callbintm(inst.A(), rb, rc, object.TM_ADD); err != nil {
-					th.error(err)
+			sum, err := arith.CallAdd(th, rb, rc)
+			if err != nil {
+				th.error(err)
 
-					return nil
-				}
+				return nil
 			}
+
+			ctx.setRA(inst, sum)
 		case opcode.SUB:
 			rb := ctx.getRKB(inst)
 			rc := ctx.getRKC(inst)
 
-			if diff := arith.Sub(rb, rc); diff != nil {
-				ctx.setRA(inst, diff)
-			} else {
-				if err := th.callbintm(inst.A(), rb, rc, object.TM_SUB); err != nil {
-					th.error(err)
+			diff, err := arith.CallSub(th, rb, rc)
+			if err != nil {
+				th.error(err)
 
-					return nil
-				}
+				return nil
 			}
+
+			ctx.setRA(inst, diff)
 		case opcode.MUL:
 			rb := ctx.getRKB(inst)
 			rc := ctx.getRKC(inst)
 
-			if prod := arith.Mul(rb, rc); prod != nil {
-				ctx.setRA(inst, prod)
-			} else {
-				if err := th.callbintm(inst.A(), rb, rc, object.TM_MUL); err != nil {
-					th.error(err)
+			prod, err := arith.CallMul(th, rb, rc)
+			if err != nil {
+				th.error(err)
 
-					return nil
-				}
+				return nil
 			}
+
+			ctx.setRA(inst, prod)
 		case opcode.DIV:
 			rb := ctx.getRKB(inst)
 			rc := ctx.getRKC(inst)
 
-			if quo := arith.Div(rb, rc); quo != nil {
-				ctx.setRA(inst, quo)
-			} else {
-				if err := th.callbintm(inst.A(), rb, rc, object.TM_DIV); err != nil {
-					th.error(err)
+			quo, err := arith.CallDiv(th, rb, rc)
+			if err != nil {
+				th.error(err)
 
-					return nil
-				}
+				return nil
 			}
+
+			ctx.setRA(inst, quo)
 		case opcode.IDIV:
 			rb := ctx.getRKB(inst)
 			rc := ctx.getRKC(inst)
 
-			quo, ok := arith.Idiv(rb, rc)
-			if !ok {
-				th.error(errors.ErrZeroDivision)
+			quo, err := arith.CallIdiv(th, rb, rc)
+			if err != nil {
+				th.error(err)
 
 				return nil
 			}
 
-			if quo != nil {
-				ctx.setRA(inst, quo)
-			} else {
-				if err := th.callbintm(inst.A(), rb, rc, object.TM_IDIV); err != nil {
-					th.error(err)
-
-					return nil
-				}
-			}
+			ctx.setRA(inst, quo)
 		case opcode.BAND:
 			rb := ctx.getRKB(inst)
 			rc := ctx.getRKC(inst)
 
-			if band := arith.Band(rb, rc); band != nil {
-				ctx.setRA(inst, band)
-			} else {
-				if err := th.callbintm(inst.A(), rb, rc, object.TM_BAND); err != nil {
-					th.error(err)
-
-					return nil
-				}
-			}
-		case opcode.BOR:
-			rb := ctx.getRKB(inst)
-			rc := ctx.getRKC(inst)
-
-			if bor := arith.Bor(rb, rc); bor != nil {
-				ctx.setRA(inst, bor)
-			} else {
-				if err := th.callbintm(inst.A(), rb, rc, object.TM_BOR); err != nil {
-					th.error(err)
-
-					return nil
-				}
-			}
-		case opcode.BXOR:
-			rb := ctx.getRKB(inst)
-			rc := ctx.getRKC(inst)
-
-			if bxor := arith.Bxor(rb, rc); bxor != nil {
-				ctx.setRA(inst, bxor)
-			} else {
-				if err := th.callbintm(inst.A(), rb, rc, object.TM_BXOR); err != nil {
-					th.error(err)
-
-					return nil
-				}
-			}
-		case opcode.SHL:
-			rb := ctx.getRKB(inst)
-			rc := ctx.getRKC(inst)
-
-			if shl := arith.Shl(rb, rc); shl != nil {
-				ctx.setRA(inst, shl)
-			} else {
-				if err := th.callbintm(inst.A(), rb, rc, object.TM_SHL); err != nil {
-					th.error(err)
-
-					return nil
-				}
-			}
-		case opcode.SHR:
-			rb := ctx.getRKB(inst)
-			rc := ctx.getRKC(inst)
-
-			if shr := arith.Shr(rb, rc); shr != nil {
-				ctx.setRA(inst, shr)
-			} else {
-				if err := th.callbintm(inst.A(), rb, rc, object.TM_SHR); err != nil {
-					th.error(err)
-
-					return nil
-				}
-			}
-		case opcode.MOD:
-			rb := ctx.getRKB(inst)
-			rc := ctx.getRKC(inst)
-
-			rem, ok := arith.Mod(rb, rc)
-			if !ok {
-				th.error(errors.ErrModuloByZero)
+			band, err := arith.CallBand(th, rb, rc)
+			if err != nil {
+				th.error(err)
 
 				return nil
 			}
 
-			if rem != nil {
-				ctx.setRA(inst, rem)
-			} else {
-				if err := th.callbintm(inst.A(), rb, rc, object.TM_MOD); err != nil {
-					th.error(err)
+			ctx.setRA(inst, band)
+		case opcode.BOR:
+			rb := ctx.getRKB(inst)
+			rc := ctx.getRKC(inst)
 
-					return nil
-				}
+			bor, err := arith.CallBor(th, rb, rc)
+			if err != nil {
+				th.error(err)
+
+				return nil
 			}
+
+			ctx.setRA(inst, bor)
+		case opcode.BXOR:
+			rb := ctx.getRKB(inst)
+			rc := ctx.getRKC(inst)
+
+			bxor, err := arith.CallBxor(th, rb, rc)
+			if err != nil {
+				th.error(err)
+
+				return nil
+			}
+
+			ctx.setRA(inst, bxor)
+		case opcode.SHL:
+			rb := ctx.getRKB(inst)
+			rc := ctx.getRKC(inst)
+
+			shl, err := arith.CallShl(th, rb, rc)
+			if err != nil {
+				th.error(err)
+
+				return nil
+			}
+
+			ctx.setRA(inst, shl)
+		case opcode.SHR:
+			rb := ctx.getRKB(inst)
+			rc := ctx.getRKC(inst)
+
+			shr, err := arith.CallShr(th, rb, rc)
+			if err != nil {
+				th.error(err)
+
+				return nil
+			}
+
+			ctx.setRA(inst, shr)
+		case opcode.MOD:
+			rb := ctx.getRKB(inst)
+			rc := ctx.getRKC(inst)
+
+			rem, err := arith.CallMod(th, rb, rc)
+			if err != nil {
+				th.error(err)
+
+				return nil
+			}
+
+			ctx.setRA(inst, rem)
 		case opcode.POW:
 			rb := ctx.getRKB(inst)
 			rc := ctx.getRKC(inst)
 
-			if prod := arith.Pow(rb, rc); prod != nil {
-				ctx.setRA(inst, prod)
-			} else {
-				if err := th.callbintm(inst.A(), rb, rc, object.TM_POW); err != nil {
-					th.error(err)
+			prod, err := arith.CallPow(th, rb, rc)
+			if err != nil {
+				th.error(err)
 
-					return nil
-				}
+				return nil
 			}
+
+			ctx.setRA(inst, prod)
 		case opcode.UNM:
 			rb := ctx.getRB(inst)
 
-			if unm := arith.Unm(rb); unm != nil {
-				ctx.setRA(inst, unm)
-			} else {
-				if err := th.calluntm(inst.A(), rb, object.TM_UNM); err != nil {
-					th.error(err)
+			unm, err := arith.CallUnm(th, rb)
+			if err != nil {
+				th.error(err)
 
-					return nil
-				}
+				return nil
 			}
+
+			ctx.setRA(inst, unm)
 		case opcode.BNOT:
 			rb := ctx.getRB(inst)
 
-			if bnot := arith.Bnot(rb); bnot != nil {
-				ctx.setRA(inst, bnot)
-			} else {
-				if err := th.calluntm(inst.A(), rb, object.TM_BNOT); err != nil {
-					th.error(err)
+			bnot, err := arith.CallBnot(th, rb)
+			if err != nil {
+				th.error(err)
 
-					return nil
-				}
+				return nil
 			}
+
+			ctx.setRA(inst, bnot)
 		case opcode.NOT:
 			rb := ctx.getRB(inst)
 
@@ -576,30 +510,14 @@ func (th *thread) execute0() (rets []object.Value) {
 		case opcode.LEN:
 			rb := ctx.getRB(inst)
 
-			var tm object.Value
+			len, err := arith.CallLen(th, rb)
+			if err != nil {
+				th.error(err)
 
-			switch rb := rb.(type) {
-			case object.Table:
-				mt := rb.Metatable()
-				tm = th.fasttm(mt, object.TM_LEN)
-				if tm != nil {
-					if err := th.calltm(inst.A(), tm, rb); err != nil {
-						th.error(err)
-
-						return nil
-					}
-				} else {
-					ctx.setRA(inst, object.Integer(rb.Len()))
-				}
-			case object.String:
-				ctx.setRA(inst, object.Integer(len(rb)))
-			default:
-				if err := th.calluntm(inst.A(), rb, object.TM_LEN); err != nil {
-					th.error(err)
-
-					return nil
-				}
+				return nil
 			}
+
+			ctx.setRA(inst, len)
 		case opcode.CONCAT:
 			if err := th.concat(inst.A(), inst.B(), inst.C()); err != nil {
 				th.error(err)
@@ -612,89 +530,79 @@ func (th *thread) execute0() (rets []object.Value) {
 			rb := ctx.getRKB(inst)
 			rc := ctx.getRKC(inst)
 
-			not := inst.A() != 0
+			b, err := arith.CallEqual(th, inst.A() != 0, rb, rc)
+			if err != nil {
+				th.error(err)
 
-			b, tm := th.eq(rb, rc)
-			if tm != nil {
-				if err := th.callcmptm(not, tm, rb, rc); err != nil {
-					th.error(err)
+				return nil
+			}
+
+			if b {
+				ci.pc++
+			} else {
+				jmp := ci.Code[ci.pc]
+
+				if jmp.OpCode() != opcode.JMP {
+					th.error(errors.ErrInvalidByteCode)
 
 					return nil
 				}
-			} else {
-				if b != not {
-					ci.pc++
-				} else {
-					jmp := ci.Code[ci.pc]
 
-					if jmp.OpCode() != opcode.JMP {
-						th.error(errors.ErrInvalidByteCode)
+				ci.pc++
 
-						return nil
-					}
-
-					ci.pc++
-
-					th.dojmp(jmp)
-				}
+				th.dojmp(jmp)
 			}
 		case opcode.LT:
 			rb := ctx.getRKB(inst)
 			rc := ctx.getRKC(inst)
 
-			not := inst.A() != 0
+			b, err := arith.CallLessThan(th, inst.A() != 0, rb, rc)
+			if err != nil {
+				th.error(err)
 
-			if b := arith.LessThan(rb, rc); b != nil {
-				if bool(b.(object.Boolean)) != not {
-					ci.pc++
-				} else {
-					jmp := ci.Code[ci.pc]
+				return nil
+			}
 
-					if jmp.OpCode() != opcode.JMP {
-						th.error(errors.ErrInvalidByteCode)
-
-						return nil
-					}
-
-					ci.pc++
-
-					th.dojmp(jmp)
-				}
+			if b {
+				ci.pc++
 			} else {
-				if err := th.callordertm(not, rb, rc, object.TM_LT); err != nil {
-					th.error(err)
+				jmp := ci.Code[ci.pc]
+
+				if jmp.OpCode() != opcode.JMP {
+					th.error(errors.ErrInvalidByteCode)
 
 					return nil
 				}
+
+				ci.pc++
+
+				th.dojmp(jmp)
 			}
 		case opcode.LE:
 			rb := ctx.getRKB(inst)
 			rc := ctx.getRKC(inst)
 
-			not := inst.A() != 0
+			b, err := arith.CallLessThanOrEqualTo(th, inst.A() != 0, rb, rc)
+			if err != nil {
+				th.error(err)
 
-			if b := arith.LessThanOrEqualTo(rb, rc); b != nil {
-				if bool(b.(object.Boolean)) != not {
-					ci.pc++
-				} else {
-					jmp := ci.Code[ci.pc]
+				return nil
+			}
 
-					if jmp.OpCode() != opcode.JMP {
-						th.error(errors.ErrInvalidByteCode)
-
-						return nil
-					}
-
-					ci.pc++
-
-					th.dojmp(jmp)
-				}
+			if b {
+				ci.pc++
 			} else {
-				if err := th.callordertm(not, rb, rc, object.TM_LE); err != nil {
-					th.error(err)
+				jmp := ci.Code[ci.pc]
+
+				if jmp.OpCode() != opcode.JMP {
+					th.error(errors.ErrInvalidByteCode)
 
 					return nil
 				}
+
+				ci.pc++
+
+				th.dojmp(jmp)
 			}
 		case opcode.TEST:
 			ra := ctx.getRA(inst)
@@ -963,66 +871,6 @@ func (th *thread) execute0() (rets []object.Value) {
 	}
 }
 
-func (th *thread) gettable(t, key object.Value) (val object.Value, tm object.Value, err *object.RuntimeError) {
-	for i := 0; i < version.MAX_TAG_LOOP; i++ {
-		if t, ok := t.(object.Table); ok {
-			val := t.Get(key)
-			mt := t.Metatable()
-			if val != nil || th.fasttm(mt, object.TM_INDEX) == nil {
-				return val, nil, nil
-			}
-		}
-
-		tm := th.gettmbyobj(t, object.TM_INDEX)
-		if tm == nil {
-			return nil, nil, errors.IndexError(t)
-		}
-
-		if isFunction(tm) {
-			return nil, tm, nil
-		}
-
-		t = tm
-	}
-
-	return nil, nil, errors.ErrGetTable
-}
-
-func (th *thread) settable(t, key, val object.Value) (tm object.Value, err *object.RuntimeError) {
-	for i := 0; i < version.MAX_TAG_LOOP; i++ {
-		if t, ok := t.(object.Table); ok {
-			old := t.Get(key)
-			mt := t.Metatable()
-			if old != nil || th.fasttm(mt, object.TM_NEWINDEX) == nil {
-				if key == nil {
-					return nil, errors.ErrNilIndex
-				}
-
-				if key == object.NaN {
-					return nil, errors.ErrNaNIndex
-				}
-
-				t.Set(key, val)
-
-				return nil, nil
-			}
-		}
-
-		tm := th.gettmbyobj(t, object.TM_NEWINDEX)
-		if tm == nil {
-			return nil, errors.IndexError(t)
-		}
-
-		if isFunction(tm) {
-			return tm, nil
-		}
-
-		t = tm
-	}
-
-	return nil, errors.ErrSetTable
-}
-
 func (th *thread) dojmp(inst opcode.Instruction) {
 	a := inst.A()
 	sbx := inst.SBx()
@@ -1032,7 +880,7 @@ func (th *thread) dojmp(inst opcode.Instruction) {
 	th.ci.pc += sbx
 }
 
-func (th *thread) concat(a, b, c int) *object.RuntimeError {
+func (th *thread) concat(a, b, c int) (err *object.RuntimeError) {
 	ctx := th.context
 	ci := ctx.ci
 
@@ -1040,73 +888,15 @@ func (th *thread) concat(a, b, c int) *object.RuntimeError {
 	for r := b + 1; r <= c; r++ {
 		rc := ctx.stack[ci.base+r]
 
-		if con := arith.Concat(rb, rc); con != nil {
-			rb = con
-
-			continue
-		}
-
-		tm := th.gettmbyobj(rb, object.TM_CONCAT)
-		if tm == nil {
-			tm = th.gettmbyobj(rc, object.TM_CONCAT)
-
-			if tm == nil {
-				return errors.BinaryError(object.TM_CONCAT, rb, rc)
-			}
-		}
-
-		rets, err := th.docall(tm, nil, rb, rc)
+		rb, err = arith.CallConcat(th, rb, rc)
 		if err != nil {
 			return err
 		}
-
-		rb = rets[0]
 	}
 
 	ctx.setR(a, rb)
 
 	return nil
-}
-
-func (th *thread) eq(rb, rc object.Value) (b bool, tm object.Value) {
-	// fast path for avoiding assertI2I2
-	eq := object.Equal(rb, rc)
-	if eq {
-		return true, nil
-	}
-
-	switch rb := rb.(type) {
-	case object.Table:
-		if rc, ok := rc.(object.Table); ok {
-			tm := th.fasttm(rb.Metatable(), object.TM_EQ)
-			if tm == nil {
-				tm = th.fasttm(rc.Metatable(), object.TM_EQ)
-				if tm == nil {
-					return false, nil
-				}
-			}
-
-			return false, tm
-		}
-
-		return false, nil
-	case *object.Userdata:
-		if rc, ok := rc.(*object.Userdata); ok {
-			tm := th.fasttm(rb.Metatable, object.TM_EQ)
-			if tm == nil {
-				tm = th.fasttm(rc.Metatable, object.TM_EQ)
-				if tm == nil {
-					return false, nil
-				}
-			}
-
-			return false, tm
-		}
-
-		return false, nil
-	default:
-		return eq, nil
-	}
 }
 
 func isFunction(val object.Value) bool {

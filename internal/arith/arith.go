@@ -6,6 +6,17 @@ import (
 	"github.com/hirochachacha/plua/object"
 )
 
+func Len(x object.Value) object.Value {
+	switch x := x.(type) {
+	case object.String:
+		return object.Integer(len(x))
+	case object.Table:
+		return object.Integer(x.Len())
+	default:
+		return nil
+	}
+}
+
 func Unm(x object.Value) object.Value {
 	if x, ok := x.(object.Integer); ok {
 		return -x

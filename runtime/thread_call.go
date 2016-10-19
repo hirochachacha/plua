@@ -1,8 +1,8 @@
 package runtime
 
 import (
+	"github.com/hirochachacha/plua/internal/errors"
 	"github.com/hirochachacha/plua/object"
-	"github.com/hirochachacha/plua/runtime/internal/errors"
 )
 
 // call a callable by stack index.
@@ -406,4 +406,13 @@ func (th *thread) dohandle(errh object.Value, err *object.RuntimeError) ([]objec
 	default:
 		return nil, errors.ErrInErrorHandling
 	}
+}
+
+func (th *thread) gettmbyobj(val object.Value, tag object.TagType) object.Value {
+	mt := th.GetMetatable(val)
+	if mt == nil {
+		return nil
+	}
+
+	return mt.Get(object.String(tag.String()))
 }
