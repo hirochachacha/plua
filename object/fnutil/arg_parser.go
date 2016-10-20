@@ -479,45 +479,7 @@ func (ap *ArgParser) ArgError(n int, extramsg string) *object.RuntimeError {
 	}
 
 	if d.Name == "" {
-		loaded := ap.th.Loaded()
-
-		var key object.Value
-		var val object.Value
-		for {
-			key, val, _ = loaded.Next(key)
-			if val == nil {
-				break
-			}
-
-			if modname, ok := key.(object.String); ok {
-				if module, ok := val.(object.Table); ok {
-					var mkey object.Value
-					var mval object.Value
-					for {
-						mkey, mval, _ = module.Next(mkey)
-						if mval == nil {
-							break
-						}
-
-						if fname, ok := mkey.(object.String); ok {
-							if object.Equal(mval, d.Func) {
-								if modname == "_G" {
-									d.Name = string(fname)
-								} else {
-									d.Name = string(modname) + "." + string(fname)
-								}
-
-								goto found
-							}
-						}
-					}
-				}
-			}
-		}
-
-		d.Name = "?"
-
-	found:
+		d.Name = ap.getFuncName(d.Func)
 	}
 
 	return object.NewRuntimeError(fmt.Sprintf("bad argument #%d to '%s' (%s)", n, d.Name, extramsg))
@@ -554,4 +516,41 @@ func (ap *ArgParser) TypeError(n int, tname string) *object.RuntimeError {
 
 func (ap *ArgParser) OptionError(n int, opt string) *object.RuntimeError {
 	return ap.ArgError(n, fmt.Sprintf("invalid option '%s'", opt))
+}
+
+func (ap *ArgParser) getFuncName(fn object.Value) string {
+	loaded := ap.th.Loaded()
+
+	var key object.Value
+	var val object.Value
+	for {
+		key, val, _ = loaded.Next(key)
+		if val == nil {
+			break
+		}
+
+		if modname, ok := key.(object.String); ok {
+			if module, ok := val.(object.Table); ok {
+				var mkey object.Value
+				var mval object.Value
+				for {
+					mkey, mval, _ = module.Next(mkey)
+					if mval == nil {
+						break
+					}
+
+					if fname, ok := mkey.(object.String); ok {
+						if object.Equal(mval, fn) {
+							if modname == "_G" {
+								return string(fname)
+							}
+							return string(modname) + "." + string(fname)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return "?"
 }
