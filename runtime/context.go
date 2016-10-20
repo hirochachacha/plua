@@ -23,16 +23,9 @@ type context struct {
 	hookState hookState
 
 	status object.ThreadStatus
-	data   interface{} // *object.RuntimeError or []object.Value or nil
+	err    *object.RuntimeError
 	errh   object.Value
 	prev   *context
-}
-
-func (ctx *context) err() *object.RuntimeError {
-	if ctx.status == object.THREAD_ERROR {
-		return ctx.data.(*object.RuntimeError)
-	}
-	return nil
 }
 
 func (ctx *context) isRoot() bool {

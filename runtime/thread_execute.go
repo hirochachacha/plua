@@ -71,7 +71,7 @@ func (th *thread) resumeExecute(args []object.Value) {
 		args = args[:ci.nrets]
 	}
 
-	ctx.data = nil
+	ctx.err = nil
 
 	copy(ctx.stack[ci.base-1:], args)
 
@@ -126,8 +126,6 @@ func (th *thread) execute() {
 				return
 			}
 
-			err := ctx.data.(*object.RuntimeError)
-
 			for ctx.errh == nil {
 				ctx.closeUpvals(0) // close all upvalues on this context
 				ctx = ctx.prev
@@ -135,7 +133,7 @@ func (th *thread) execute() {
 				if ctx.isRoot() {
 					th.context = ctx
 
-					th.error(err)
+					th.error(ctx.err)
 
 					return
 				}
@@ -143,7 +141,7 @@ func (th *thread) execute() {
 
 			ctx.closeUpvals(0) // close all upvalues on this context
 
-			rets, err = th.dohandle(ctx.errh, err)
+			rets, err := th.dohandle(ctx.errh, ctx.err)
 			if err != nil {
 				rets = []object.Value{err.Positioned()}
 			}
@@ -177,7 +175,7 @@ func (th *thread) doExecute(fn, errh object.Value, args []object.Value, isHook b
 		case object.THREAD_RETURN:
 			return rets, nil
 		case object.THREAD_ERROR:
-			return nil, ctx.data.(*object.RuntimeError)
+			return nil, ctx.err
 		default:
 			panic("unexpected")
 		}
@@ -193,12 +191,10 @@ func (th *thread) doExecute(fn, errh object.Value, args []object.Value, isHook b
 
 		return rets, nil
 	case object.THREAD_ERROR:
-		err := ctx.data.(*object.RuntimeError)
-
 		ctx.closeUpvals(0) // close all upvalues on this context
 
 		if ctx.errh != nil {
-			rets, err = th.dohandle(ctx.errh, err)
+			rets, err = th.dohandle(ctx.errh, ctx.err)
 			if err != nil {
 				return nil, err
 			}
@@ -206,7 +202,7 @@ func (th *thread) doExecute(fn, errh object.Value, args []object.Value, isHook b
 			return rets, nil
 		}
 
-		return nil, err
+		return nil, ctx.err
 	default:
 		panic("unreachable")
 	}

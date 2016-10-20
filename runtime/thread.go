@@ -33,16 +33,6 @@ type thread struct {
 	depth int
 }
 
-func (th *thread) err() *object.RuntimeError {
-	ctx := th.context
-
-	if ctx.isRoot() {
-		return ctx.err()
-	}
-
-	return nil
-}
-
 func (th *thread) Type() object.Type {
 	return object.TTHREAD
 }
@@ -87,12 +77,15 @@ func (th *thread) Resume(args ...object.Value) (rets []object.Value, err *object
 
 		rets, ok := <-th.yield
 		if !ok {
-			err = th.err()
-			if err != nil {
-				return nil, err
+			ctx := th.context
+			if ctx.isRoot() {
+				err := ctx.err
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
-		return rets, err
+		return rets, nil
 	case threadGo:
 		if th.status != object.THREAD_INIT {
 			return nil, errors.ErrGoroutineTwice

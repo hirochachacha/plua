@@ -25,6 +25,6 @@ func (th *thread) error(err *object.RuntimeError) {
 		}
 
 		th.status = object.THREAD_ERROR
-		th.data = err
+		th.err = err
 	}
 }
