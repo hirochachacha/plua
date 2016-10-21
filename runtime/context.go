@@ -121,3 +121,7 @@ func (ctx *context) growStack(size int) bool {
 
 	return true
 }
+
+func dup(stack []object.Value) []object.Value {
+	return append([]object.Value(nil), stack...)
+}

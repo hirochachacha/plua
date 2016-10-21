@@ -38,23 +38,22 @@ func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bo
 			panic(errors.ErrStackOverflow)
 		}
 
-		copy(ctx.stack[ci.base:], args)
-
-		if nvarargs := len(args) - cl.NParams; nvarargs > 0 {
+		if len(args) > cl.NParams {
 			if cl.IsVararg {
-				ci.varargs = make([]object.Value, nvarargs)
-
-				copy(ci.varargs, ctx.stack[ci.base+cl.NParams:ci.base+len(args)])
+				ci.varargs = args[cl.NParams:]
+			} else {
+				ci.varargs = nil
 			}
-
-			for r := ci.top - 1; r >= ci.base+cl.NParams; r-- {
+			for r := ci.base - 1 + len(args); r > ci.base-1+cl.NParams; r-- {
 				ctx.stack[r] = nil
 			}
+			args = args[:cl.NParams]
 		} else {
-			for r := ci.top - 1; r >= ci.base+len(args); r-- {
+			for r := ci.base - 1 + cl.NParams; r > ci.base-1+len(args); r-- {
 				ctx.stack[r] = nil
 			}
 		}
+		copy(ctx.stack[ci.base:], args)
 	default:
 		panic("unreachable")
 	}
@@ -62,22 +61,22 @@ func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bo
 	return
 }
 
-func (th *thread) resumeExecute(args []object.Value) {
+func (th *thread) resumeExecute(rets []object.Value) {
 	ctx := th.context
 
 	ci := ctx.ci
 
-	if ci.nrets != -1 && ci.nrets < len(args) {
-		args = args[:ci.nrets]
+	if ci.nrets != -1 && ci.nrets < len(rets) {
+		rets = rets[:ci.nrets]
 	}
 
 	ctx.err = nil
 
-	copy(ctx.stack[ci.base-1:], args)
+	copy(ctx.stack[ci.base-1:], rets)
 
-	top := ctx.ci.base - 1 + len(args)
+	top := ctx.ci.base - 1 + len(rets)
 
-	for r := ci.top; r >= top; r-- {
+	for r := ctx.ci.base + ctx.ci.nrets; r >= top; r-- {
 		ctx.stack[r] = nil
 	}
 
@@ -118,8 +117,6 @@ func (th *thread) execute() {
 
 			ctx.closeUpvals(0) // close all upvalues on this context
 
-			args = rets
-
 			th.popContext()
 		case object.THREAD_ERROR:
 			if ctx.isRoot() {
@@ -141,12 +138,11 @@ func (th *thread) execute() {
 
 			ctx.closeUpvals(0) // close all upvalues on this context
 
-			rets, err := th.dohandle(ctx.errh, ctx.err)
+			var err *object.RuntimeError
+			rets, err = th.dohandle(ctx.errh, ctx.err)
 			if err != nil {
 				rets = []object.Value{err.Positioned()}
 			}
-
-			args = rets
 
 			th.popContext()
 		default:
@@ -157,7 +153,7 @@ func (th *thread) execute() {
 			panic("unexpected")
 		}
 
-		th.resumeExecute(args)
+		th.resumeExecute(rets)
 	}
 }
 
@@ -701,12 +697,16 @@ func (th *thread) execute0() (rets []object.Value) {
 						ci.pc += inst.SBx()
 						ctx.setR(a, idx)
 						ctx.setR(a+3, idx)
+
+						break
 					}
 				} else {
 					if idx >= limit {
 						ci.pc += inst.SBx()
 						ctx.setR(a, idx)
 						ctx.setR(a+3, idx)
+
+						break
 					}
 				}
 			} else {
@@ -719,15 +719,25 @@ func (th *thread) execute0() (rets []object.Value) {
 						ci.pc += inst.SBx()
 						ctx.setR(a, idx)
 						ctx.setR(a+3, idx)
+
+						break
 					}
 				} else {
 					if idx >= limit {
 						ci.pc += inst.SBx()
 						ctx.setR(a, idx)
 						ctx.setR(a+3, idx)
+
+						break
 					}
 				}
 			}
+
+			// break loop; clean up registers
+			ctx.setR(a, nil)
+			ctx.setR(a+1, nil)
+			ctx.setR(a+2, nil)
+			ctx.setR(a+3, nil)
 		case opcode.FORPREP:
 			a := inst.A()
 			init := ctx.getR(a)
@@ -741,8 +751,7 @@ func (th *thread) execute0() (rets []object.Value) {
 
 						ci.pc += inst.SBx()
 
-						continue
-
+						break
 					}
 				}
 			}
@@ -800,7 +809,15 @@ func (th *thread) execute0() (rets []object.Value) {
 				ctx.setR(a, raplus)
 
 				ci.pc += inst.SBx()
+
+				break
 			}
+
+			// break loop; clean up registers
+			ctx.setR(a, nil)
+			ctx.setR(a+1, nil)
+			ctx.setR(a+2, nil)
+			ctx.setR(a+3, nil)
 		case opcode.SETLIST:
 			a := inst.A()
 			length := inst.B()
