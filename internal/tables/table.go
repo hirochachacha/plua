@@ -8,26 +8,23 @@ import (
 )
 
 type table struct {
-	alen int
-	a    []object.Value
-	m    *luaMap
+	a []object.Value
+	m *luaMap
 
 	mt object.Table
 }
 
 func NewTableSize(asize, msize int) object.Table {
 	return &table{
-		alen: 0,
-		a:    make([]object.Value, 0, asize),
-		m:    newMapSize(msize),
+		a: make([]object.Value, 0, asize),
+		m: newMapSize(msize),
 	}
 }
 
 func NewTableArray(a []object.Value) object.Table {
 	return &table{
-		alen: len(a),
-		a:    a,
-		m:    newMapSize(0),
+		a: a,
+		m: newMapSize(0),
 	}
 }
 
@@ -40,7 +37,7 @@ func (t *table) String() string {
 }
 
 func (t *table) Len() int {
-	return t.alen
+	return len(t.a)
 }
 
 func (t *table) Get(key object.Value) object.Value {
@@ -53,6 +50,10 @@ func (t *table) Set(key, val object.Value) {
 
 func (t *table) Del(key object.Value) {
 	t.del(normKey(key))
+}
+
+func (t *table) Next(key object.Value) (nkey, nval object.Value, ok bool) {
+	return t.next(normKey(key))
 }
 
 func (t *table) ikey(key object.Value) (object.Integer, bool) {
@@ -102,15 +103,6 @@ func (t *table) iset(ikey object.Integer, val object.Value) {
 	i := int(ikey)
 	switch {
 	case 0 < i && i <= len(t.a):
-		if t.a[i-1] == nil && t.alen == i {
-			for j := i; j < len(t.a); j++ {
-				t.alen++
-				if t.a[j] == nil {
-					break
-				}
-			}
-		}
-
 		t.a[i-1] = val
 	case i == len(t.a)+1:
 		t.a = append(t.a, val)
@@ -125,8 +117,6 @@ func (t *table) iset(ikey object.Integer, val object.Value) {
 			t.a = append(t.a, val)
 			t.m.Delete(ikey)
 		}
-
-		t.alen = len(t.a)
 	default:
 		t.m.Set(ikey, val)
 	}
@@ -143,16 +133,12 @@ func (t *table) del(key object.Value) {
 func (t *table) idel(ikey object.Integer) {
 	i := int(ikey)
 	switch {
-	case 0 < i && i <= len(t.a):
-		if i <= t.alen {
-			t.alen = i - 1
-		}
+	case 0 < i && i < len(t.a):
 		t.a[i-1] = nil
-		for j := i - 2; j > 0; j-- {
-			if t.a[j] != nil {
-				break
-			}
-			t.alen--
+	case 0 < i && i == len(t.a):
+		t.a = t.a[:len(t.a)-1]
+		for len(t.a) > 0 && t.a[len(t.a)-1] == nil {
+			t.a = t.a[:len(t.a)-1]
 		}
 	case i == len(t.a)+1:
 		// do nothing
@@ -161,22 +147,26 @@ func (t *table) idel(ikey object.Integer) {
 	}
 }
 
-func (t *table) Next(key object.Value) (nkey, nval object.Value, ok bool) {
-	key = normKey(key)
+func (t *table) next(key object.Value) (nkey, nval object.Value, ok bool) {
 	if key == nil {
-		if t.alen > 0 {
-			return object.Integer(1), t.a[0], true
+		for i := 0; i < len(t.a); i++ {
+			v := t.a[i]
+			if v != nil {
+				return object.Integer(i + 1), v, true
+			}
 		}
-
 		return t.m.Next(nil)
 	}
 
 	if ikey, ok := t.ikey(key); ok {
 		i := int(ikey)
-		if 0 <= i && i < t.alen {
-			return ikey + 1, t.a[i], true
+		for ; i < len(t.a); i++ {
+			v := t.a[i]
+			if v != nil {
+				return object.Integer(i + 1), t.a[i], true
+			}
 		}
-		if ikey == object.Integer(t.alen) {
+		if i == len(t.a) {
 			return t.m.Next(nil)
 		}
 	}
@@ -189,10 +179,6 @@ func (t *table) SetList(base int, src []object.Value) {
 		copy(t.a[base:], src)
 	} else {
 		t.a = append(t.a[:base], src...)
-	}
-
-	if t.alen < base+len(src) {
-		t.alen = base + len(src)
 	}
 }
 

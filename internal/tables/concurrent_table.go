@@ -9,9 +9,8 @@ import (
 )
 
 type concurrentTable struct {
-	alen int
-	a    []object.Value
-	m    *concurrentMap
+	a []object.Value
+	m *concurrentMap
 
 	sync.Mutex
 
@@ -20,9 +19,8 @@ type concurrentTable struct {
 
 func NewConcurrentTableSize(asize, msize int) object.Table {
 	return &concurrentTable{
-		alen: 0,
-		a:    make([]object.Value, asize),
-		m:    newConcurrentMapSize(msize),
+		a: make([]object.Value, asize),
+		m: newConcurrentMapSize(msize),
 	}
 }
 
@@ -37,11 +35,11 @@ func (t *concurrentTable) String() string {
 func (t *concurrentTable) Len() int {
 	t.Lock()
 
-	alen := t.alen
+	n := len(t.a)
 
 	t.Unlock()
 
-	return int(alen)
+	return n
 }
 
 func (t *concurrentTable) Get(key object.Value) object.Value {
@@ -128,24 +126,13 @@ func (t *concurrentTable) set(key, val object.Value) {
 }
 
 func (t *concurrentTable) iset(ikey object.Integer, val object.Value) {
-	i := int(ikey)
-
 	t.Lock()
+	defer t.Unlock()
 
+	i := int(ikey)
 	switch {
 	case 0 < i && i <= len(t.a):
-		if t.a[i-1] == nil && t.alen == i {
-			for j := i; j < len(t.a); j++ {
-				t.alen++
-				if t.a[j] == nil {
-					break
-				}
-			}
-		}
-
 		t.a[i-1] = val
-
-		t.Unlock()
 	case i == len(t.a)+1:
 		t.a = append(t.a, val)
 
@@ -159,13 +146,7 @@ func (t *concurrentTable) iset(ikey object.Integer, val object.Value) {
 			t.a = append(t.a, val)
 			t.m.Delete(ikey)
 		}
-
-		t.alen = len(t.a)
-
-		t.Unlock()
 	default:
-		t.Unlock()
-
 		t.m.Set(ikey, val)
 	}
 }
@@ -179,30 +160,21 @@ func (t *concurrentTable) del(key object.Value) {
 }
 
 func (t *concurrentTable) idel(ikey object.Integer) {
-	i := int(ikey)
-
 	t.Lock()
+	defer t.Unlock()
 
+	i := int(ikey)
 	switch {
-	case 0 < i && i <= len(t.a):
-		if i <= t.alen {
-			t.alen = i - 1
-		}
+	case 0 < i && i < len(t.a):
 		t.a[i-1] = nil
-		for j := i - 2; j > 0; j-- {
-			if t.a[j] != nil {
-				break
-			}
-			t.alen--
+	case 0 < i && i == len(t.a):
+		t.a = t.a[:len(t.a)-1]
+		for len(t.a) > 0 && t.a[len(t.a)-1] == nil {
+			t.a = t.a[:len(t.a)-1]
 		}
-
-		t.Unlock()
 	case i == len(t.a)+1:
-		t.Unlock()
 		// do nothing
 	default:
-		t.Unlock()
-
 		t.m.Delete(ikey)
 	}
 }
@@ -211,21 +183,25 @@ func (t *concurrentTable) next(key object.Value) (nkey, nval object.Value, ok bo
 	t.Lock()
 	defer t.Unlock()
 
-	alen := t.alen
-
 	if key == nil {
-		if alen > 0 {
-			return object.Integer(1), t.a[0], true
+		for i := 0; i < len(t.a); i++ {
+			v := t.a[i]
+			if v != nil {
+				return object.Integer(i + 1), v, true
+			}
 		}
-
 		return t.m.Next(nil)
 	}
 
 	if ikey, ok := t.ikey(key); ok {
-		if 0 <= ikey && ikey < object.Integer(alen) {
-			return ikey + 1, t.a[int(ikey)], true
+		i := int(ikey)
+		for ; i < len(t.a); i++ {
+			v := t.a[i]
+			if v != nil {
+				return object.Integer(i + 1), t.a[i], true
+			}
 		}
-		if ikey == object.Integer(alen) {
+		if i == len(t.a) {
 			return t.m.Next(nil)
 		}
 	}
@@ -241,10 +217,6 @@ func (t *concurrentTable) setList(base int, src []object.Value) {
 		copy(t.a[base:], src)
 	} else {
 		t.a = append(t.a[base:], src...)
-	}
-
-	if t.alen < base+len(src) {
-		t.alen = base + len(src)
 	}
 }
 
