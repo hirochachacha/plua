@@ -508,7 +508,7 @@ func rawset(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	val, err := ap.ToValue(1)
+	val, err := ap.ToValue(2)
 	if err != nil {
 		return nil, err
 	}
