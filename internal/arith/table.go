@@ -11,9 +11,12 @@ func CallGettable(th object.Thread, t, key object.Value) (object.Value, *object.
 		var tm object.Value
 		if tab, ok := t.(object.Table); ok {
 			val := tab.Get(key)
-			tm = gettm(tab.Metatable(), object.TM_INDEX)
-			if val != nil || tm == nil {
+			if val != nil {
 				return val, nil
+			}
+			tm = gettm(tab.Metatable(), object.TM_INDEX)
+			if tm == nil {
+				return nil, nil
 			}
 		} else {
 			tm = gettmbyobj(th, t, object.TM_INDEX)
@@ -38,7 +41,7 @@ func CallSettable(th object.Thread, t, key, val object.Value) *object.RuntimeErr
 		var tm object.Value
 		if tab, ok := t.(object.Table); ok {
 			tm = gettm(tab.Metatable(), object.TM_NEWINDEX)
-			if tm == nil {
+			if tm == nil || tab.Get(key) != nil {
 				if key == nil {
 					return errors.ErrNilIndex
 				}
