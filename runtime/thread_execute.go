@@ -738,10 +738,10 @@ func (th *thread) execute0() (rets []object.Value) {
 			ra2 := ctx.getR(a + 2)
 
 			if init, ok := ra.(object.Integer); ok {
-				if pstep, ok := ra2.(object.Integer); ok {
+				if step, ok := ra2.(object.Integer); ok {
 					ilimit, ok := object.ToInteger(ra1)
 					if !ok {
-						plimit, ok := object.ToNumber(ra1)
+						nlimit, ok := object.ToNumber(ra1)
 						if !ok {
 							th.error(errors.ForLoopError("limit"))
 
@@ -749,28 +749,34 @@ func (th *thread) execute0() (rets []object.Value) {
 						}
 
 						switch {
-						case plimit < object.Number(object.MinInteger):
+						case nlimit < object.Number(object.MinInteger):
 							ilimit = object.MinInteger
-						case plimit > object.Number(object.MaxInteger):
+							if step >= 0 {
+								init = 0
+							}
+						case nlimit > object.Number(object.MaxInteger):
 							ilimit = object.MaxInteger
+							if step < 0 {
+								init = 0
+							}
 						default:
-							if pstep < 0 {
-								if plimit < 0 {
-									ilimit = object.Integer(plimit)
+							if step < 0 {
+								if nlimit < 0 {
+									ilimit = object.Integer(nlimit)
 								} else {
-									ilimit = object.Integer(plimit + 1)
+									ilimit = object.Integer(nlimit + 1)
 								}
 							} else {
-								if plimit < 0 {
-									ilimit = object.Integer(plimit - 1)
+								if nlimit < 0 {
+									ilimit = object.Integer(nlimit - 1)
 								} else {
-									ilimit = object.Integer(plimit)
+									ilimit = object.Integer(nlimit)
 								}
 							}
 						}
 					}
 
-					ctx.setR(a, init-pstep)
+					ctx.setR(a, init-step)
 					ctx.setR(a+1, ilimit)
 
 					ci.pc += inst.SBx()
@@ -786,23 +792,23 @@ func (th *thread) execute0() (rets []object.Value) {
 				return nil
 			}
 
-			plimit, ok := object.ToNumber(ra1)
+			limit, ok := object.ToNumber(ra1)
 			if !ok {
 				th.error(errors.ForLoopError("limit"))
 
 				return nil
 			}
 
-			pstep, ok := object.ToNumber(ra2)
+			step, ok := object.ToNumber(ra2)
 			if !ok {
 				th.error(errors.ForLoopError("step"))
 
 				return nil
 			}
 
-			ctx.setR(a, init-pstep)
-			ctx.setR(a+1, plimit)
-			ctx.setR(a+2, pstep)
+			ctx.setR(a, init-step)
+			ctx.setR(a+1, limit)
+			ctx.setR(a+2, step)
 
 			ci.pc += inst.SBx()
 		case opcode.TFORCALL:
