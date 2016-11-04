@@ -248,10 +248,11 @@ func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 			rets = rets[:nrets]
 		}
 
-		if len(rets) == 0 {
-			ctx.stack[f+3] = nil
-		} else {
-			copy(ctx.stack[f+3:], rets)
+		copy(ctx.stack[f+3:], rets)
+
+		// clear unused stack
+		for r := f + 3 + nrets; r >= f+3+len(rets); r-- {
+			ctx.stack[r] = nil
 		}
 
 		return nil
