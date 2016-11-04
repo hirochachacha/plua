@@ -43,7 +43,7 @@ func trimDotZero(s string) string {
 }
 
 func stringToInteger(s String) (Integer, bool) {
-	i, err := strconv.ParseInt(trimDotZero(string(s)))
+	i, err := strconv.ParseInt(trimDotZero(strings.TrimSpace(string(s))))
 	if err != nil {
 		return 0, false
 	}
@@ -51,7 +51,7 @@ func stringToInteger(s String) (Integer, bool) {
 }
 
 func stringToNumber(s String) (Number, bool) {
-	f, err := strconv.ParseFloat(string(s))
+	f, err := strconv.ParseFloat(strings.TrimSpace(string(s)))
 	if err != nil {
 		if err == strconv.ErrRange {
 			return Number(f), true
@@ -62,7 +62,7 @@ func stringToNumber(s String) (Number, bool) {
 }
 
 func stringToGoUint(s String) (uint64, bool) {
-	u, err := strconv.ParseUint(trimDotZero(string(s)))
+	u, err := strconv.ParseUint(trimDotZero(strings.TrimSpace(string(s))))
 	if err != nil {
 		return 0, false
 	}
