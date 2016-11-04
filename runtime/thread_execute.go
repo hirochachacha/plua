@@ -682,16 +682,15 @@ func (th *thread) execute0() (rets []object.Value) {
 		case opcode.FORLOOP:
 			a := inst.A()
 			ra := ctx.getR(a)
-			step := ctx.getR(a + 2)
-			limit := ctx.getR(a + 1)
+			ra1 := ctx.getR(a + 1)
+			ra2 := ctx.getR(a + 2)
 
 			// forprep already convert val to integer or number.
 			// so there are no need to check types.
-			if _, ok := ra.(object.Integer); ok {
-				ra := ra.(object.Integer)
-				step := step.(object.Integer)
-				limit := limit.(object.Integer)
-				idx := ra + step
+			if idx, ok := ra.(object.Integer); ok {
+				limit := ra1.(object.Integer)
+				step := ra2.(object.Integer)
+				idx += step
 				if 0 < step {
 					if idx <= limit {
 						ci.pc += inst.SBx()
@@ -710,10 +709,10 @@ func (th *thread) execute0() (rets []object.Value) {
 					}
 				}
 			} else {
-				ra := ra.(object.Number)
-				step := step.(object.Number)
-				limit := limit.(object.Number)
-				idx := ra + step
+				idx := ra.(object.Number)
+				limit := ra1.(object.Number)
+				step := ra2.(object.Number)
+				idx += step
 				if 0 < step {
 					if idx <= limit {
 						ci.pc += inst.SBx()
@@ -734,48 +733,76 @@ func (th *thread) execute0() (rets []object.Value) {
 			}
 		case opcode.FORPREP:
 			a := inst.A()
-			init := ctx.getR(a)
-			plimit := ctx.getR(a + 1)
-			pstep := ctx.getR(a + 2)
+			ra := ctx.getR(a)
+			ra1 := ctx.getR(a + 1)
+			ra2 := ctx.getR(a + 2)
 
-			if init, ok := init.(object.Integer); ok {
-				if pstep, ok := pstep.(object.Integer); ok {
-					if _, ok := plimit.(object.Integer); ok {
-						ctx.setR(a, init-pstep)
+			if init, ok := ra.(object.Integer); ok {
+				if pstep, ok := ra2.(object.Integer); ok {
+					ilimit, ok := object.ToInteger(ra1)
+					if !ok {
+						plimit, ok := object.ToNumber(ra1)
+						if !ok {
+							th.error(errors.ForLoopError("limit"))
 
-						ci.pc += inst.SBx()
+							return nil
+						}
 
-						break
+						switch {
+						case plimit < object.Number(object.MinInteger):
+							ilimit = object.MinInteger
+						case plimit > object.Number(object.MaxInteger):
+							ilimit = object.MaxInteger
+						default:
+							if pstep < 0 {
+								if plimit < 0 {
+									ilimit = object.Integer(plimit)
+								} else {
+									ilimit = object.Integer(plimit + 1)
+								}
+							} else {
+								if plimit < 0 {
+									ilimit = object.Integer(plimit - 1)
+								} else {
+									ilimit = object.Integer(plimit)
+								}
+							}
+						}
 					}
+
+					ctx.setR(a, init-pstep)
+					ctx.setR(a+1, ilimit)
+
+					ci.pc += inst.SBx()
+
+					break
 				}
 			}
 
-			{
-				init, ok := object.ToNumber(init)
-				if !ok {
-					th.error(errors.ForLoopError("initial"))
+			init, ok := object.ToNumber(ra)
+			if !ok {
+				th.error(errors.ForLoopError("initial"))
 
-					return nil
-				}
-
-				plimit, ok := object.ToNumber(plimit)
-				if !ok {
-					th.error(errors.ForLoopError("limit"))
-
-					return nil
-				}
-
-				pstep, ok := object.ToNumber(pstep)
-				if !ok {
-					th.error(errors.ForLoopError("step"))
-
-					return nil
-				}
-
-				ctx.setR(a, init-pstep)
-				ctx.setR(a+1, plimit)
-				ctx.setR(a+2, pstep)
+				return nil
 			}
+
+			plimit, ok := object.ToNumber(ra1)
+			if !ok {
+				th.error(errors.ForLoopError("limit"))
+
+				return nil
+			}
+
+			pstep, ok := object.ToNumber(ra2)
+			if !ok {
+				th.error(errors.ForLoopError("step"))
+
+				return nil
+			}
+
+			ctx.setR(a, init-pstep)
+			ctx.setR(a+1, plimit)
+			ctx.setR(a+2, pstep)
 
 			ci.pc += inst.SBx()
 		case opcode.TFORCALL:
