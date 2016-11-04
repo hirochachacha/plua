@@ -171,17 +171,23 @@ func makeINext(tm object.Value) object.GoFunction {
 			return nil, err
 		}
 
-		key, err := ap.OptGoInt(1, 0)
+		i, err := ap.OptGoInt(1, 0)
 		if err != nil {
 			return nil, err
 		}
 
-		rets, err := th.Call(tm, nil, t, object.Integer(key+1))
+		i++
+
+		rets, err := th.Call(tm, nil, t, object.Integer(i))
 		if err != nil {
 			return nil, err
 		}
 
-		return rets, nil
+		if len(rets) == 0 || rets[0] == nil {
+			return nil, nil
+		}
+
+		return append([]object.Value{object.Integer(i)}, rets...), nil
 	}
 
 	return object.GoFunction(inext)
@@ -196,7 +202,15 @@ func ipairs(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	// TODO expose getTable, setTable?
+	if fn := th.GetMetaField(t, "__ipairs"); fn != nil {
+		rets, err := th.Call(fn, nil, args...)
+		if err != nil {
+			return nil, err
+		}
+
+		return rets, nil
+	}
+
 	for i := 0; i < version.MAX_TAG_LOOP; i++ {
 		tm := th.GetMetaField(t, "__index")
 		if tm == nil {
