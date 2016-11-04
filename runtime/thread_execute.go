@@ -732,12 +732,6 @@ func (th *thread) execute0() (rets []object.Value) {
 					}
 				}
 			}
-
-			// break loop; clean up registers
-			ctx.setR(a, nil)
-			ctx.setR(a+1, nil)
-			ctx.setR(a+2, nil)
-			ctx.setR(a+3, nil)
 		case opcode.FORPREP:
 			a := inst.A()
 			init := ctx.getR(a)
@@ -812,12 +806,6 @@ func (th *thread) execute0() (rets []object.Value) {
 
 				break
 			}
-
-			// break loop; clean up registers
-			ctx.setR(a, nil)
-			ctx.setR(a+1, nil)
-			ctx.setR(a+2, nil)
-			ctx.setR(a+3, nil)
 		case opcode.SETLIST:
 			a := inst.A()
 			length := inst.B()
