@@ -404,11 +404,11 @@ func (th *thread) dohandle(errh object.Value, err *object.RuntimeError) ([]objec
 	}
 }
 
-func (th *thread) gettmbyobj(val object.Value, tag object.TagType) object.Value {
+func (th *thread) gettmbyobj(val object.Value, tag object.Value) object.Value {
 	mt := th.GetMetatable(val)
 	if mt == nil {
 		return nil
 	}
 
-	return mt.Get(object.String(tag.String()))
+	return mt.Get(tag)
 }

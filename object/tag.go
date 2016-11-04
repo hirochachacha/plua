@@ -1,63 +1,28 @@
 package object
 
-const MaxTagType = TM_CALL + 1
-
-type TagType uint
-
-func (t TagType) String() string {
-	return tagNames[t]
-}
-
-const (
-	TM_INDEX TagType = iota
-	TM_NEWINDEX
-	TM_GC
-	TM_MODE
-	TM_LEN
-	TM_EQ
-	TM_ADD
-	TM_SUB
-	TM_MUL
-	TM_MOD
-	TM_POW
-	TM_DIV
-	TM_IDIV
-	TM_BAND
-	TM_BOR
-	TM_BXOR
-	TM_SHL
-	TM_SHR
-	TM_UNM
-	TM_BNOT
-	TM_LT
-	TM_LE
-	TM_CONCAT
-	TM_CALL
+var (
+	TM_INDEX    Value = String("__index")
+	TM_NEWINDEX Value = String("__newindex")
+	TM_GC       Value = String("__gc")
+	TM_MODE     Value = String("__mode")
+	TM_LEN      Value = String("__len")
+	TM_EQ       Value = String("__eq")
+	TM_ADD      Value = String("__add")
+	TM_SUB      Value = String("__sub")
+	TM_MUL      Value = String("__mul")
+	TM_MOD      Value = String("__mod")
+	TM_POW      Value = String("__pow")
+	TM_DIV      Value = String("__div")
+	TM_IDIV     Value = String("__idiv")
+	TM_BAND     Value = String("__band")
+	TM_BOR      Value = String("__bor")
+	TM_BXOR     Value = String("__bxor")
+	TM_SHL      Value = String("__shl")
+	TM_SHR      Value = String("__shr")
+	TM_UNM      Value = String("__unm")
+	TM_BNOT     Value = String("__bnot")
+	TM_LT       Value = String("__lt")
+	TM_LE       Value = String("__le")
+	TM_CONCAT   Value = String("__concat")
+	TM_CALL     Value = String("__call")
 )
-
-var tagNames = [...]string{
-	TM_INDEX:    "__index",
-	TM_NEWINDEX: "__newindex",
-	TM_GC:       "__gc",
-	TM_MODE:     "__mode",
-	TM_LEN:      "__len",
-	TM_EQ:       "__eq",
-	TM_ADD:      "__add",
-	TM_SUB:      "__sub",
-	TM_MUL:      "__mul",
-	TM_MOD:      "__mod",
-	TM_POW:      "__pow",
-	TM_DIV:      "__div",
-	TM_IDIV:     "__idiv",
-	TM_BAND:     "__band",
-	TM_BOR:      "__bor",
-	TM_BXOR:     "__bxor",
-	TM_SHL:      "__shl",
-	TM_SHR:      "__shr",
-	TM_UNM:      "__unm",
-	TM_BNOT:     "__bnot",
-	TM_LT:       "__lt",
-	TM_LE:       "__le",
-	TM_CONCAT:   "__concat",
-	TM_CALL:     "__call",
-}

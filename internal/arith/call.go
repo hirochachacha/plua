@@ -195,14 +195,14 @@ func CallConcat(th object.Thread, x, y object.Value) (object.Value, *object.Runt
 	return calltm(th, tm, x, y)
 }
 
-func gettm(mt object.Table, tag object.TagType) object.Value {
+func gettm(mt object.Table, tag object.Value) object.Value {
 	if mt == nil {
 		return nil
 	}
-	return mt.Get(object.String(tag.String()))
+	return mt.Get(tag)
 }
 
-func gettmbyobj(th object.Thread, x object.Value, tag object.TagType) object.Value {
+func gettmbyobj(th object.Thread, x object.Value, tag object.Value) object.Value {
 	mt := th.GetMetatable(x)
 	if mt == nil {
 		return nil
@@ -236,7 +236,7 @@ func callcmptm(th object.Thread, not bool, tm object.Value, x, y object.Value) (
 	return object.ToGoBool(ret) != not, nil
 }
 
-func calluntm(th object.Thread, x object.Value, tag object.TagType) (object.Value, *object.RuntimeError) {
+func calluntm(th object.Thread, x object.Value, tag object.Value) (object.Value, *object.RuntimeError) {
 	tm := gettmbyobj(th, x, tag)
 	if tm == nil {
 		return nil, errors.UnaryError(tag, x)
@@ -244,7 +244,7 @@ func calluntm(th object.Thread, x object.Value, tag object.TagType) (object.Valu
 	return calltm(th, tm)
 }
 
-func callbintm(th object.Thread, x, y object.Value, tag object.TagType) (object.Value, *object.RuntimeError) {
+func callbintm(th object.Thread, x, y object.Value, tag object.Value) (object.Value, *object.RuntimeError) {
 	tm := gettmbyobj(th, x, tag)
 	if tm == nil {
 		tm = gettmbyobj(th, y, tag)
@@ -255,7 +255,7 @@ func callbintm(th object.Thread, x, y object.Value, tag object.TagType) (object.
 	return calltm(th, tm, x, y)
 }
 
-func callordertm(th object.Thread, not bool, x, y object.Value, tag object.TagType) (bool, *object.RuntimeError) {
+func callordertm(th object.Thread, not bool, x, y object.Value, tag object.Value) (bool, *object.RuntimeError) {
 	tm := gettmbyobj(th, x, tag)
 	if tm == nil {
 		tm = gettmbyobj(th, y, tag)

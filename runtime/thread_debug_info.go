@@ -433,7 +433,7 @@ func setUpInfo(d *object.DebugInfo, cl *closure) {
 }
 
 func setFuncName(d *object.DebugInfo, ci *callInfo) {
-	var tag object.TagType
+	var tag object.Value
 
 	inst := ci.Code[ci.pc-1]
 

@@ -39,7 +39,7 @@ func IndexError(t object.Value) *object.RuntimeError {
 	return TypeError("index", t)
 }
 
-func UnaryError(tag object.TagType, x object.Value) *object.RuntimeError {
+func UnaryError(tag object.Value, x object.Value) *object.RuntimeError {
 	switch tag {
 	case object.TM_LEN:
 		return LengthError(x)
@@ -52,7 +52,7 @@ func UnaryError(tag object.TagType, x object.Value) *object.RuntimeError {
 	}
 }
 
-func BinaryError(tag object.TagType, x, y object.Value) *object.RuntimeError {
+func BinaryError(tag object.Value, x, y object.Value) *object.RuntimeError {
 	switch tag {
 	case object.TM_ADD, object.TM_SUB, object.TM_MUL, object.TM_MOD, object.TM_POW, object.TM_DIV:
 		return ArithError(x, y)
