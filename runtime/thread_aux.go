@@ -21,12 +21,3 @@ func (th *thread) Require(name string, open object.GoFunction) (object.Value, bo
 
 	return rets[0], true
 }
-
-func (th *thread) GetMetaField(val object.Value, field string) object.Value {
-	mt := th.GetMetatable(val)
-	if mt == nil {
-		return nil
-	}
-
-	return mt.Get(object.String(field))
-}

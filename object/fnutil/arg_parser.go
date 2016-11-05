@@ -493,22 +493,25 @@ func (ap *ArgParser) TypeError(n int, tname string) *object.RuntimeError {
 
 	var typearg string
 
-	if field := ap.th.GetMetaField(arg, "__name"); field != nil {
-		if _name, ok := field.(object.String); ok {
-			typearg = string(_name)
-		} else {
-			if _, ok := arg.(object.LightUserdata); ok {
-				typearg = "light userdata"
+	if mt := ap.th.GetMetatable(arg); mt != nil {
+		if name := mt.Get(object.TM_NAME); name != nil {
+			if name, ok := name.(object.String); ok {
+				typearg = string(name)
 			} else {
-				typearg = object.ToType(arg).String()
+				if _, ok := arg.(object.LightUserdata); ok {
+					typearg = "light userdata"
+				} else {
+					typearg = object.ToType(arg).String()
+				}
 			}
+			return ap.ArgError(n, fmt.Sprintf("%s expected, got %s", tname, typearg))
 		}
+	}
+
+	if _, ok := arg.(object.LightUserdata); ok {
+		typearg = "light userdata"
 	} else {
-		if _, ok := arg.(object.LightUserdata); ok {
-			typearg = "light userdata"
-		} else {
-			typearg = object.ToType(arg).String()
-		}
+		typearg = object.ToType(arg).String()
 	}
 
 	return ap.ArgError(n, fmt.Sprintf("%s expected, got %s", tname, typearg))

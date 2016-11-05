@@ -33,7 +33,6 @@ type Thread interface {
 
 	// aux APIs
 
-	GetMetaField(val Value, field string) Value
 	Require(name string, open GoFunction) (Value, bool)
 
 	// ↓ thread specific APIs

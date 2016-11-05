@@ -373,17 +373,19 @@ func (t *term) quoteString(ap *fnutil.ArgParser, argn int) (prefix, s string, er
 func (t *term) string(th object.Thread, ap *fnutil.ArgParser, argn int) (prefix, s string, err *object.RuntimeError) {
 	val, _ := ap.Get(argn)
 
-	if fn := th.GetMetaField(val, "__tostring"); fn != nil {
-		rets, err := th.Call(fn, nil)
-		if err != nil {
-			return "", "", err
-		}
+	if mt := th.GetMetatable(val); mt != nil {
+		if tm := mt.Get(object.TM_TOSTRING); tm != nil {
+			rets, err := th.Call(tm, nil)
+			if err != nil {
+				return "", "", err
+			}
 
-		if len(rets) == 0 {
-			return "", "", object.NewRuntimeError("'tostring' must return a string to 'print'")
-		}
+			if len(rets) == 0 {
+				return "", "", object.NewRuntimeError("'tostring' must return a string to 'print'")
+			}
 
-		val = rets[0]
+			val = rets[0]
+		}
 	}
 
 	s = object.Repr(val)

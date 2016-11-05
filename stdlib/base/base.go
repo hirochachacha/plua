@@ -202,8 +202,14 @@ func ipairs(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	if fn := th.GetMetaField(t, "__ipairs"); fn != nil {
-		rets, err := th.Call(fn, nil, args...)
+	mt := th.GetMetatable(t)
+
+	if mt == nil {
+		return []object.Value{object.GoFunction(inext), t, object.Integer(0)}, nil
+	}
+
+	if tm := mt.Get(object.TM_IPAIRS); tm != nil {
+		rets, err := th.Call(tm, nil, args...)
 		if err != nil {
 			return nil, err
 		}
@@ -212,7 +218,7 @@ func ipairs(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	}
 
 	for i := 0; i < version.MAX_TAG_LOOP; i++ {
-		tm := th.GetMetaField(t, "__index")
+		tm := mt.Get(object.TM_INDEX)
 		if tm == nil {
 			return []object.Value{object.GoFunction(inext), t, object.Integer(0)}, nil
 		}
@@ -262,18 +268,15 @@ func pairs(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 		return nil, err
 	}
 
-	if fn := th.GetMetaField(t, "__pairs"); fn != nil {
-		rets, err := th.Call(fn, nil, args...)
-		if err != nil {
-			return nil, err
+	if mt := th.GetMetatable(t); mt != nil {
+		if tm := mt.Get(object.TM_PAIRS); tm != nil {
+			rets, err := th.Call(tm, nil, args...)
+			if err != nil {
+				return nil, err
+			}
+
+			return rets, nil
 		}
-
-		return rets, nil
-	}
-
-	t, err = ap.ToTable(0)
-	if err != nil {
-		return nil, err
 	}
 
 	return []object.Value{object.GoFunction(next), t, nil}, nil
@@ -577,8 +580,10 @@ func setmetatable(th object.Thread, args ...object.Value) ([]object.Value, *obje
 		return nil, err
 	}
 
-	if th.GetMetaField(t, "__metatable") != nil {
-		return nil, object.NewRuntimeError("cannot change a protected metatable")
+	if old := th.GetMetatable(t); old != nil {
+		if old.Get(object.TM_METATABLE) != nil {
+			return nil, object.NewRuntimeError("cannot change a protected metatable")
+		}
 	}
 
 	switch mt := mt.(type) {
@@ -620,17 +625,19 @@ func tostring(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 		return nil, err
 	}
 
-	if fn := th.GetMetaField(val, "__tostring"); fn != nil {
-		rets, err := th.Call(fn, nil)
-		if err != nil {
-			return nil, err
-		}
+	if mt := th.GetMetatable(val); mt != nil {
+		if tm := mt.Get(object.TM_TOSTRING); tm != nil {
+			rets, err := th.Call(tm, nil)
+			if err != nil {
+				return nil, err
+			}
 
-		if len(rets) == 0 {
-			return nil, object.NewRuntimeError("'tostring' must return a string to 'print'")
-		}
+			if len(rets) == 0 {
+				return nil, object.NewRuntimeError("'tostring' must return a string to 'print'")
+			}
 
-		val = rets[0]
+			val = rets[0]
+		}
 	}
 
 	return []object.Value{object.String(object.Repr(val))}, nil
