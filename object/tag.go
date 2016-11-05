@@ -25,4 +25,12 @@ var (
 	TM_LE       Value = String("__le")
 	TM_CONCAT   Value = String("__concat")
 	TM_CALL     Value = String("__call")
+
+	// library-defined metamethods
+
+	TM_PAIRS     Value = String("__pairs")
+	TM_IPAIRS    Value = String("__ipairs")
+	TM_TOSTRING  Value = String("__tostring")
+	TM_METATABLE Value = String("__metatable")
+	TM_NAME      Value = String("__name")
 )
