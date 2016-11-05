@@ -345,6 +345,10 @@ func match(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 		return nil, object.NewRuntimeError(e.Error())
 	}
 
+	if m == nil {
+		return nil, nil
+	}
+
 	if len(m.Captures) == 0 {
 		return []object.Value{object.String(m.Item)}, nil
 	}
