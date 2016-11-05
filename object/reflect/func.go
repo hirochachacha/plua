@@ -17,7 +17,7 @@ func buildFuncMT() {
 
 	mt.Set(object.TM_INDEX, object.GoFunction(index))
 
-	mt.Set(object.String("__call"), object.GoFunction(call))
+	mt.Set(object.TM_CALL, object.GoFunction(call))
 
 	mt.Set(object.TM_EQ, cmp(func(x, y reflect.Value) bool { return x.Pointer() == y.Pointer() }))
 

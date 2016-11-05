@@ -19,7 +19,7 @@ func buildStringMT() {
 	mt.Set(object.TM_LT, cmp(func(x, y reflect.Value) bool { return x.String() < y.String() }))
 	mt.Set(object.TM_LE, cmp(func(x, y reflect.Value) bool { return x.String() <= y.String() }))
 
-	mt.Set(object.String("__concat"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
+	mt.Set(object.TM_CONCAT, binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.String() + y.String()), nil
 	}, mt))
 
