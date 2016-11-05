@@ -12,13 +12,13 @@ import (
 func buildStructMT() {
 	mt := tables.NewTableSize(0, 5)
 
-	mt.Set(object.String("__metatable"), object.True)
-	mt.Set(object.String("__tostring"), object.GoFunction(tostring))
+	mt.Set(object.TM_METATABLE, object.True)
+	mt.Set(object.TM_TOSTRING, object.GoFunction(tostring))
 
-	mt.Set(object.String("__index"), object.GoFunction(sindex))
-	mt.Set(object.String("__newindex"), object.GoFunction(snewindex))
+	mt.Set(object.TM_INDEX, object.GoFunction(sindex))
+	mt.Set(object.TM_NEWINDEX, object.GoFunction(snewindex))
 
-	mt.Set(object.String("__eq"), cmp(func(x, y reflect.Value) bool { return x.Interface() == y.Interface() }))
+	mt.Set(object.TM_EQ, cmp(func(x, y reflect.Value) bool { return x.Interface() == y.Interface() }))
 
 	structMT = mt
 }

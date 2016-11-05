@@ -12,12 +12,12 @@ import (
 func buildIfaceMT() {
 	mt := tables.NewTableSize(0, 4)
 
-	mt.Set(object.String("__metatable"), object.True)
-	mt.Set(object.String("__tostring"), object.GoFunction(tostring))
+	mt.Set(object.TM_METATABLE, object.True)
+	mt.Set(object.TM_TOSTRING, object.GoFunction(tostring))
 
-	mt.Set(object.String("__index"), object.GoFunction(iindex))
+	mt.Set(object.TM_INDEX, object.GoFunction(iindex))
 
-	mt.Set(object.String("__eq"), cmp(func(x, y reflect.Value) bool { return x.Interface() == y.Interface() }))
+	mt.Set(object.TM_EQ, cmp(func(x, y reflect.Value) bool { return x.Interface() == y.Interface() }))
 
 	ifaceMT = mt
 }

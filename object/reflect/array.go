@@ -12,15 +12,15 @@ import (
 func buildArrayMT() {
 	mt := tables.NewTableSize(0, 7)
 
-	mt.Set(object.String("__metatable"), object.True)
-	mt.Set(object.String("__tostring"), object.GoFunction(tostring))
+	mt.Set(object.TM_METATABLE, object.True)
+	mt.Set(object.TM_TOSTRING, object.GoFunction(tostring))
 
-	mt.Set(object.String("__index"), object.GoFunction(aindex))
-	mt.Set(object.String("__newindex"), object.GoFunction(anewindex))
-	mt.Set(object.String("__len"), object.GoFunction(length))
-	mt.Set(object.String("__pairs"), object.GoFunction(apairs))
+	mt.Set(object.TM_INDEX, object.GoFunction(aindex))
+	mt.Set(object.TM_NEWINDEX, object.GoFunction(anewindex))
+	mt.Set(object.TM_LEN, object.GoFunction(length))
+	mt.Set(object.TM_PAIRS, object.GoFunction(apairs))
 
-	mt.Set(object.String("__eq"), cmp(func(x, y reflect.Value) bool { return aeq(x, y) }))
+	mt.Set(object.TM_EQ, cmp(func(x, y reflect.Value) bool { return aeq(x, y) }))
 
 	arrayMT = mt
 }
@@ -28,15 +28,15 @@ func buildArrayMT() {
 func buildSliceMT() {
 	mt := tables.NewTableSize(0, 7)
 
-	mt.Set(object.String("__metatable"), object.True)
-	mt.Set(object.String("__tostring"), object.GoFunction(tostring))
+	mt.Set(object.TM_METATABLE, object.True)
+	mt.Set(object.TM_TOSTRING, object.GoFunction(tostring))
 
-	mt.Set(object.String("__index"), object.GoFunction(aindex))
-	mt.Set(object.String("__newindex"), object.GoFunction(anewindex))
-	mt.Set(object.String("__len"), object.GoFunction(length))
-	mt.Set(object.String("__pairs"), object.GoFunction(apairs))
+	mt.Set(object.TM_INDEX, object.GoFunction(aindex))
+	mt.Set(object.TM_NEWINDEX, object.GoFunction(anewindex))
+	mt.Set(object.TM_LEN, object.GoFunction(length))
+	mt.Set(object.TM_PAIRS, object.GoFunction(apairs))
 
-	mt.Set(object.String("__eq"), cmp(func(x, y reflect.Value) bool { return x.Pointer() == y.Pointer() }))
+	mt.Set(object.TM_EQ, cmp(func(x, y reflect.Value) bool { return x.Pointer() == y.Pointer() }))
 
 	sliceMT = mt
 }

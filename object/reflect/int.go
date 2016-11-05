@@ -11,55 +11,55 @@ import (
 func buildIntMT() {
 	mt := tables.NewTableSize(0, 20)
 
-	mt.Set(object.String("__metatable"), object.True)
-	mt.Set(object.String("__tostring"), object.GoFunction(tostring))
+	mt.Set(object.TM_METATABLE, object.True)
+	mt.Set(object.TM_TOSTRING, object.GoFunction(tostring))
 
-	mt.Set(object.String("__index"), object.GoFunction(index))
+	mt.Set(object.TM_INDEX, object.GoFunction(index))
 
-	mt.Set(object.String("__eq"), cmp(func(x, y reflect.Value) bool { return x.Int() == y.Int() }))
-	mt.Set(object.String("__lt"), cmp(func(x, y reflect.Value) bool { return x.Int() < y.Int() }))
-	mt.Set(object.String("__le"), cmp(func(x, y reflect.Value) bool { return x.Int() <= y.Int() }))
+	mt.Set(object.TM_EQ, cmp(func(x, y reflect.Value) bool { return x.Int() == y.Int() }))
+	mt.Set(object.TM_LT, cmp(func(x, y reflect.Value) bool { return x.Int() < y.Int() }))
+	mt.Set(object.TM_LE, cmp(func(x, y reflect.Value) bool { return x.Int() <= y.Int() }))
 
-	mt.Set(object.String("__unm"), unary(func(x reflect.Value) reflect.Value { return reflect.ValueOf(-x.Int()) }, mt))
-	mt.Set(object.String("__bnot"), unary(func(x reflect.Value) reflect.Value { return reflect.ValueOf(^x.Int()) }, mt))
+	mt.Set(object.TM_UNM, unary(func(x reflect.Value) reflect.Value { return reflect.ValueOf(-x.Int()) }, mt))
+	mt.Set(object.TM_BNOT, unary(func(x reflect.Value) reflect.Value { return reflect.ValueOf(^x.Int()) }, mt))
 
-	mt.Set(object.String("__add"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
+	mt.Set(object.TM_ADD, binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Int() + y.Int()), nil
 	}, mt))
-	mt.Set(object.String("__sub"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
+	mt.Set(object.TM_SUB, binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Int() - y.Int()), nil
 	}, mt))
-	mt.Set(object.String("__mul"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
+	mt.Set(object.TM_MUL, binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Int() * y.Int()), nil
 	}, mt))
-	mt.Set(object.String("__mod"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
+	mt.Set(object.TM_MOD, binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		z, err := imod(x.Int(), y.Int())
 		return reflect.ValueOf(z), err
 	}, mt))
-	mt.Set(object.String("__pow"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
+	mt.Set(object.TM_POW, binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(ipow(x.Int(), y.Int())), nil
 	}, mt))
-	mt.Set(object.String("__div"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
+	mt.Set(object.TM_DIV, binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		z, err := idiv(x.Int(), y.Int())
 		return reflect.ValueOf(z), err
 	}, mt))
-	mt.Set(object.String("__idiv"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
+	mt.Set(object.TM_IDIV, binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		z, err := idiv(x.Int(), y.Int())
 		return reflect.ValueOf(z), err
 	}, mt))
-	mt.Set(object.String("__band"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
+	mt.Set(object.TM_BAND, binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Int() & y.Int()), nil
 	}, mt))
-	mt.Set(object.String("__bor"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
+	mt.Set(object.TM_BOR, binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Int() | y.Int()), nil
 	}, mt))
-	mt.Set(object.String("__bxor"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
+	mt.Set(object.TM_BXOR, binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(x.Int() ^ y.Int()), nil
 	}, mt))
-	mt.Set(object.String("__shl"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
+	mt.Set(object.TM_SHL, binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(ishl(x.Int(), y.Int())), nil
 	}, mt))
-	mt.Set(object.String("__shr"), binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
+	mt.Set(object.TM_SHR, binary(func(x, y reflect.Value) (reflect.Value, *object.RuntimeError) {
 		return reflect.ValueOf(ishr(x.Int(), y.Int())), nil
 	}, mt))
 

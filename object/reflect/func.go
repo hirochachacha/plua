@@ -12,14 +12,14 @@ import (
 func buildFuncMT() {
 	mt := tables.NewTableSize(0, 5)
 
-	mt.Set(object.String("__metatable"), object.True)
-	mt.Set(object.String("__tostring"), object.GoFunction(tostring))
+	mt.Set(object.TM_METATABLE, object.True)
+	mt.Set(object.TM_TOSTRING, object.GoFunction(tostring))
 
-	mt.Set(object.String("__index"), object.GoFunction(index))
+	mt.Set(object.TM_INDEX, object.GoFunction(index))
 
 	mt.Set(object.String("__call"), object.GoFunction(call))
 
-	mt.Set(object.String("__eq"), cmp(func(x, y reflect.Value) bool { return x.Pointer() == y.Pointer() }))
+	mt.Set(object.TM_EQ, cmp(func(x, y reflect.Value) bool { return x.Pointer() == y.Pointer() }))
 
 	funcMT = mt
 }

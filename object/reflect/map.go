@@ -12,15 +12,15 @@ import (
 func buildMapMT() {
 	mt := tables.NewTableSize(0, 7)
 
-	mt.Set(object.String("__metatable"), object.True)
-	mt.Set(object.String("__tostring"), object.GoFunction(tostring))
+	mt.Set(object.TM_METATABLE, object.True)
+	mt.Set(object.TM_TOSTRING, object.GoFunction(tostring))
 
-	mt.Set(object.String("__index"), object.GoFunction(mindex))
-	mt.Set(object.String("__newindex"), object.GoFunction(mnewindex))
-	mt.Set(object.String("__len"), object.GoFunction(length))
-	mt.Set(object.String("__pairs"), object.GoFunction(mpairs))
+	mt.Set(object.TM_INDEX, object.GoFunction(mindex))
+	mt.Set(object.TM_NEWINDEX, object.GoFunction(mnewindex))
+	mt.Set(object.TM_LEN, object.GoFunction(length))
+	mt.Set(object.TM_PAIRS, object.GoFunction(mpairs))
 
-	mt.Set(object.String("__eq"), cmp(func(x, y reflect.Value) bool { return x.Pointer() == y.Pointer() }))
+	mt.Set(object.TM_EQ, cmp(func(x, y reflect.Value) bool { return x.Pointer() == y.Pointer() }))
 
 	mapMT = mt
 }

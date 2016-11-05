@@ -18,14 +18,14 @@ func buildChanMT() {
 	cindex.Set(object.String("Recv"), object.GoFunction(crecv))
 	cindex.Set(object.String("Close"), object.GoFunction(cclose))
 
-	mt.Set(object.String("__metatable"), object.True)
-	mt.Set(object.String("__tostring"), object.GoFunction(tostring))
+	mt.Set(object.TM_METATABLE, object.True)
+	mt.Set(object.TM_TOSTRING, object.GoFunction(tostring))
 
-	mt.Set(object.String("__index"), cindex)
-	mt.Set(object.String("__len"), object.GoFunction(length))
-	mt.Set(object.String("__pairs"), object.GoFunction(cpairs))
+	mt.Set(object.TM_INDEX, cindex)
+	mt.Set(object.TM_LEN, object.GoFunction(length))
+	mt.Set(object.TM_PAIRS, object.GoFunction(cpairs))
 
-	mt.Set(object.String("__eq"), cmp(func(x, y reflect.Value) bool { return x.Pointer() == y.Pointer() }))
+	mt.Set(object.TM_EQ, cmp(func(x, y reflect.Value) bool { return x.Pointer() == y.Pointer() }))
 
 	chanMT = mt
 }

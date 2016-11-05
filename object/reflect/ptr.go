@@ -12,13 +12,13 @@ import (
 func buildPtrMT() {
 	mt := tables.NewTableSize(0, 5)
 
-	mt.Set(object.String("__metatable"), object.True)
-	mt.Set(object.String("__tostring"), object.GoFunction(tostring))
+	mt.Set(object.TM_METATABLE, object.True)
+	mt.Set(object.TM_TOSTRING, object.GoFunction(tostring))
 
-	mt.Set(object.String("__index"), object.GoFunction(pindex))
-	mt.Set(object.String("__newindex"), object.GoFunction(pnewindex))
+	mt.Set(object.TM_INDEX, object.GoFunction(pindex))
+	mt.Set(object.TM_NEWINDEX, object.GoFunction(pnewindex))
 
-	mt.Set(object.String("__eq"), cmp(func(x, y reflect.Value) bool { return x.Pointer() == y.Pointer() }))
+	mt.Set(object.TM_EQ, cmp(func(x, y reflect.Value) bool { return x.Pointer() == y.Pointer() }))
 
 	ptrMT = mt
 }
