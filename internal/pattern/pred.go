@@ -23,14 +23,14 @@ func (preds predicates) is(op, r rune) (bool, bool) {
 	return false, false
 }
 
-var upreds, bpreds predicates
+var upreds predicates
 
 var (
 	_upreds = [...]func(rune) bool{
 		unicode.IsLetter,
 		unicode.IsControl,
 		unicode.IsDigit,
-		unicode.IsGraphic,
+		func(r rune) bool { return r != ' ' && unicode.IsGraphic(r) },
 		unicode.IsLower,
 		unicode.IsPunct,
 		unicode.IsSpace,
@@ -38,24 +38,10 @@ var (
 		isAlphaNum,
 		func(r rune) bool { return unicode.Is(unicode.Hex_Digit, r) },
 	}
-
-	_bpreds = [...]func(rune) bool{
-		isLetter,
-		isControl,
-		isDigit,
-		isGraphic,
-		isLower,
-		isPunct,
-		isSpace,
-		isUpper,
-		isAlphaNum,
-		isXdigit,
-	}
 )
 
 func init() {
 	upreds = predicates(_upreds[:])
-	bpreds = predicates(_bpreds[:])
 }
 
 func isLetter(r rune) bool {
