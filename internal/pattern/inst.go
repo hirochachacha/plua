@@ -137,7 +137,7 @@ type rangeTable struct {
 	r32 [][2]rune
 }
 
-func (rt *rangeTable) is(r rune, preds predicates) bool {
+func (rt *rangeTable) is(r rune) bool {
 	for _, t := range rt.r32 {
 		if t[0] < utf8.MaxRune {
 			if r < t[0] {

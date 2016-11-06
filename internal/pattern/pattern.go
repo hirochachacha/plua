@@ -101,8 +101,6 @@ func Compile(pat string) (*Pattern, error) {
 		typ:     c.typ,
 		literal: c.literal,
 
-		preds: upreds,
-
 		sets: c.sets,
 
 		ncaps: c.nparens + 1,

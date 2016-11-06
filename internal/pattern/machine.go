@@ -129,7 +129,6 @@ type machine struct {
 	typ     matchType
 	literal string
 	code    []inst
-	preds   predicates
 	sets    []*rangeTable
 	ncaps   int
 
@@ -387,8 +386,6 @@ func (m *machine) find(input string) *MatchRange {
 }
 
 func (m *machine) matchFrom(input string, off int) (matched *MatchRange) {
-	// m.current = newQueue(len(m.current.sparse))
-	// m.next = newQueue(len(m.current.sparse))
 	m.current.clear()
 
 	caps := make([]Range, 1, m.ncaps)
@@ -436,18 +433,18 @@ func (m *machine) matchFrom(input string, off int) (matched *MatchRange) {
 			case opBalanceAny:
 				add = t.balance > 0 && ins.x != int(r) && ins.y != int(r)
 			case opRange:
-				add = m.sets[ins.x].is(r, m.preds)
+				add = m.sets[ins.x].is(r)
 			case opNotRange:
-				add = !m.sets[ins.x].is(r, m.preds)
+				add = !m.sets[ins.x].is(r)
 			case opFrontier:
-				add = !m.sets[ins.x].is(prev, m.preds) && m.sets[ins.x].is(r, m.preds)
+				add = !m.sets[ins.x].is(prev) && m.sets[ins.x].is(r)
 			case opCapture:
 				begin, end := t.caps[ins.x].Begin, t.caps[ins.x].End
 				if input[begin:end] == input[off+len(m.literal):off+len(m.literal)+end-begin] {
 					m.next.sleep(t.pc, t.caps, t.stack, t.balance, end-begin-1)
 				}
 			default:
-				add, _ = m.preds.is(ins.op, r)
+				add, _ = preds.is(ins.op, r)
 			}
 
 			if add {
