@@ -1,3 +1,9 @@
+assert(string.gsub("xxx", "x", "y", 2) == "yyx")
+
+assert(string.gsub("xyz", "%w", "%1%0") == "xxyyzz")
+assert(string.gsub("xyz", "", "a") == "axayaza")
+assert(string.gsub("xyz", "()", "%1") == "1x2y3z4")
+
 assert(string.gsub("hello world", "(%w+)", "%1 %1") == "hello hello world world")
 assert(string.gsub("hello world", "%w+", "%0 %0", 1) == "hello hello world")
 assert(string.gsub("hello world from Lua", "(%w+)%s*(%w+)", "%2 %1") == "world hello Lua from")

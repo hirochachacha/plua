@@ -35,3 +35,7 @@ assert(x == 1 and y == 0)
 x, y = string.find(" \r\n ab abc", "%g%g%g")
 
 assert(x == 8 and y == 10)
+
+x, y, z = string.find("xy", "x()y")
+
+assert(x == 1 and y == 2 and z == 2)

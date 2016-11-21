@@ -1,589 +1,335 @@
 package pattern
 
-import "errors"
-
-var (
-	errInvalidRange     = errors.New("invalid character range")
-	errInvalidEscape    = errors.New("invalid escape")
-	errInvalidBalance   = errors.New("invalid balance")
-	errInvalidFrontier  = errors.New("invalid frontier")
-	errInvalidCapture   = errors.New("invalid capture")
-	errMissingBracket   = errors.New("missing closing ]")
-	errUnexpectedParen  = errors.New("unexpected )")
-	errMalformedPattern = errors.New("malformed pattern (ends with '%')")
-)
-
-type matchType uint8
-
-const (
-	matchBeginning matchType = 1 << iota
-	matchEnd
-	matchFullLiteral
-	matchPrefixLiteral
-)
-
-type compiler struct {
-	pat     string
-	pos     int
-	r       rune
-	typ     matchType
-	poff    int
-	literal string
-	sets    []*rangeTable
-	nparens int
+type scanState struct {
+	pat   string
+	off   int
+	rsize int
+	r     rune
 }
 
-func newCompiler(pat string) *compiler {
-	return &compiler{
-		pat: pat,
-	}
+func (s *scanState) next() {
+	s.r, s.rsize = decodeRune(s.pat, s.off)
+	s.off += s.rsize
 }
 
-func (c *compiler) next() {
-	r, size := decodeRune(c.pat, c.pos)
-	c.r = r
-	c.pos += size
-}
+func (s *scanState) scanSet() (*set, error) {
+	set := new(set)
 
-func (c *compiler) peek() rune {
-	r, _ := decodeRune(c.pat, c.pos)
-
-	return r
-}
-
-// return escaped, isSingle
-func (c *compiler) escape(r rune) (rune, bool) {
-	switch r {
-	case 'a':
-		return opLetter, true
-	case 'A':
-		return opNotLetter, true
-	case 'c':
-		return opControl, true
-	case 'C':
-		return opNotControl, true
-	case 'd':
-		return opDigit, true
-	case 'D':
-		return opNotDigit, true
-	case 'g':
-		return opGraphic, true
-	case 'G':
-		return opNotGraphic, true
-	case 'l':
-		return opLower, true
-	case 'L':
-		return opNotLower, true
-	case 'p':
-		return opPunct, true
-	case 'P':
-		return opNotPunct, true
-	case 's':
-		return opSpace, true
-	case 'S':
-		return opNotSpace, true
-	case 'u':
-		return opUpper, true
-	case 'U':
-		return opNotUpper, true
-	case 'w':
-		return opAlphaNum, true
-	case 'W':
-		return opNotAlphaNum, true
-	case 'x':
-		return opHexDigit, true
-	case 'X':
-		return opNotHexDigit, true
-	case 'b':
-		return r, false
-	case 'f':
-		return r, false
-	}
-
-	if '1' <= r && r <= '9' {
-		return r, false
-	}
-
-	return r, true
-}
-
-// op: rune
-func (c *compiler) instChar(r rune) inst {
-	return inst{
-		op: r,
-	}
-}
-
-func (c *compiler) instAny() inst {
-	return inst{
-		op: opAny,
-	}
-}
-
-// op: rune or opAny
-// x: next instruction
-func (c *compiler) instSingle(r rune, isEscaped bool) inst {
-	if !isEscaped && r == '.' {
-		return inst{
-			op: opAny,
-		}
-	}
-	return inst{
-		op: r,
-	}
-}
-
-func (c *compiler) instCapture(x int) inst {
-	return inst{
-		op: opCapture,
-		x:  x,
-	}
-}
-
-func (c *compiler) instBalanceAny(x, y rune) inst {
-	return inst{
-		op: opBalanceAny,
-		x:  int(x),
-		y:  int(y),
-	}
-}
-
-// x : next instruction
-func (c *compiler) instBalanceUp(x int) inst {
-	return inst{
-		op: opBalanceUp,
-		x:  x,
-	}
-}
-
-// x : next instruction
-// y : next instruction if balance == 0
-func (c *compiler) instBalanceDown(x, y int) inst {
-	return inst{
-		op: opBalanceDown,
-		x:  x,
-		y:  y,
-	}
-}
-
-// x : index of sets
-func (c *compiler) instRange(x int) (ins inst, err error) {
-	c.next()
-
-	set := &rangeTable{make([][2]rune, 0)}
-
-	op := opRange
-
-	if c.r == '^' {
-		op = opNotRange
-
-		c.next()
-	}
-
-	// fetch until ']'
-	var isSingle bool
-L2:
-	for {
-		switch c.r {
-		case eot:
-			err = errMissingBracket
-			return
-		case ']':
-			break L2
-		case '%':
-			c.next()
-
-			if c.r == eot {
-				err = errInvalidEscape
-				return
-			}
-
-			c.r, isSingle = c.escape(c.r)
-			if !isSingle {
-				err = errInvalidEscape
-				return
-			}
-		default:
-			if c.peek() == '-' {
-				r := c.r
-
-				c.next()
-				c.next()
-
-				switch c.r {
-				case ']':
-					err = errInvalidRange
-					return
-				case eot:
-					err = errMissingBracket
-					return
-				default:
-					set.r32 = append(set.r32, [2]rune{r, c.r})
-				}
-			} else {
-				set.r32 = append(set.r32, [2]rune{c.r, c.r})
-
-				c.next()
-			}
-		}
-	}
-
-	ins = inst{
-		op: op,
-		x:  x,
-	}
-
-	c.sets = append(c.sets, set)
-
-	return
-}
-
-// x: next instruction, higher precedence than y
-// y: next instruction
-func (c *compiler) instSplit(x, y int) inst {
-	return inst{
-		op: opSplit,
-		x:  x,
-		y:  y,
-	}
-}
-
-// x: next instruction
-func (c *compiler) instJmp(x int) inst {
-	return inst{
-		op: opJmp,
-		x:  x,
-	}
-}
-
-// x: capture depth
-func (c *compiler) instEnterSave(x int) inst {
-	return inst{
-		op: opEnterSave,
-		x:  x,
-	}
-}
-
-// x: capture depth
-func (c *compiler) instExitSave(x int) inst {
-	return inst{
-		op: opExitSave,
-		x:  x,
-	}
-}
-
-func (c *compiler) instMatch() inst {
-	return inst{
-		op: opMatch,
-	}
-}
-
-func (c *compiler) makeRepetition(ins inst, ninsts int) []inst {
-	switch c.peek() {
-	case '+':
-		l1 := ninsts
-		l3 := ninsts + 2
-
-		ins1 := ins
-		ins2 := c.instSplit(l1, l3)
-
-		c.next()
-
-		return []inst{ins1, ins2}
-	case '-':
-		l1 := ninsts
-		l2 := ninsts + 1
-		l4 := ninsts + 3
-
-		ins1 := c.instSplit(l4, l2)
-		ins2 := ins
-		ins3 := c.instJmp(l1)
-
-		c.next()
-
-		return []inst{ins1, ins2, ins3}
-	case '*':
-		l1 := ninsts
-		l2 := ninsts + 1
-		l4 := ninsts + 3
-
-		ins1 := c.instSplit(l2, l4)
-		ins2 := ins
-		ins3 := c.instJmp(l1)
-
-		c.next()
-
-		return []inst{ins1, ins2, ins3}
-	case '?':
-		l1 := ninsts + 1
-		l2 := ninsts + 2
-
-		ins1 := c.instSplit(l1, l2)
-		ins2 := ins
-
-		c.next()
-
-		return []inst{ins1, ins2}
-	}
-
-	return []inst{ins}
-}
-
-func (c *compiler) makeBalance(x, y rune, ninsts int) []inst {
-	l3 := ninsts + 2
-	l4 := ninsts + 3
-	l6 := ninsts + 5
-	l7 := ninsts + 6
-	l9 := ninsts + 8
-	l11 := ninsts + 10
-
-	ins1 := c.instChar(x)
-	ins2 := c.instBalanceUp(l3)
-	ins3 := c.instSplit(l4, l6)
-	ins4 := c.instBalanceAny(x, y)
-	ins5 := c.instJmp(l3)
-	ins6 := c.instSplit(l9, l7)
-	ins7 := c.instChar(x)
-	ins8 := c.instBalanceUp(l3)
-	ins9 := c.instChar(y)
-	ins10 := c.instBalanceDown(l3, l11)
-
-	c.next()
-
-	return []inst{ins1, ins2, ins3, ins4, ins5, ins6, ins7, ins8, ins9, ins10}
-}
-
-func (c *compiler) compile() (insts []inst, err error) {
-	insts = make([]inst, 0, len(c.pat)+1)
-
-	isPrefix := true
-
-	isEscaped := false
-
-	c.next()
-
-	if c.r == '^' {
-		c.typ |= matchBeginning
-
-		c.next()
-
-		c.poff = 1
-	}
-
-	var isSingle bool
-	var depth int // paren depth
 L:
 	for {
-		switch c.r {
-		case eot:
-			break L
-		case '$':
-			if c.peek() == eot {
-				c.typ |= matchEnd
+		switch s.r {
+		case eos:
+			return nil, errMissingBracket
+		case '%':
+			s.next()
 
+			inst, ok := instClassOrEscChar(s.r)
+			if !ok {
+				return nil, errInvalidEscape
+			}
+
+			set.elems = append(set.elems, rune(inst.op))
+
+			s.next()
+
+			continue L
+		case ']':
+			if len(set.elems) != 0 || len(set.ranges) != 0 {
 				break L
 			}
+		}
 
-			// err = ErrUnexpectedCharAfterEnd
-			// return
+		low := s.r
 
-		// case '+', '-', '*', '?':
-		// err = ErrMissingRepeatArgument
-		case '(':
-			isPrefix = false
+		s.next()
 
-			ins := c.instEnterSave(depth)
-			insts = append(insts, ins)
+		if s.r == '-' {
+			s.next()
 
-			c.next()
+			hi := s.r
 
-			depth++
+			switch hi {
+			case ']':
+				set.elems = append(set.elems, low, '-')
 
-			continue
-		case ')':
-			isPrefix = false
-
-			depth--
-			if depth < 0 {
-				err = errUnexpectedParen
-				return
+				break L
+			case eos:
+				return nil, errMissingBracket
+			default:
+				set.ranges = append(set.ranges, r32{low: low, hi: hi})
 			}
-			c.nparens++
+		} else {
+			set.elems = append(set.elems, low)
+		}
+	}
 
-			ins := c.instExitSave(depth)
-			insts = append(insts, ins)
+	return set, nil
+}
 
-			c.next()
+func Compile(pat string) (*Pattern, error) {
+	if pat == "" {
+		return &Pattern{nsaved: 1}, nil
+	}
 
-			continue
-		// case ']':
-		// err = ErrUnexpectedBracket
-		// return
+	p := &Pattern{
+		code: make([]instruction, 0, len(pat)*2),
+	}
+
+	if pat[0] == '^' {
+		p.typ |= matchPrefix
+		pat = pat[1:]
+	}
+
+	s := &scanState{
+		pat: pat,
+	}
+
+	s.next()
+
+	parenDepth := 0
+	lparenNum := 1
+	nsaved := 1
+
+	parens := make(map[int]int) // depth: unclosed paren num
+
+L:
+	for {
+		single := false
+
+		switch s.r {
+		case eos:
+			break L
+		case '$':
+			s.next()
+
+			if s.r == eos {
+				p.typ |= matchSuffix
+			} else {
+				p.code = append(p.code, instChar('$'))
+
+				single = true
+			}
+		case '(':
+			p.code = append(p.code, instBeginSave(lparenNum))
+
+			s.next()
+
+			parens[parenDepth] = lparenNum
+
+			parenDepth++
+			lparenNum++
+
+			if s.r == ')' { // handle empty paren
+				parenDepth--
+				if parenDepth < 0 {
+					return nil, errUnexpectedParen
+				}
+
+				p.code = append(p.code, instEndSave(parens[parenDepth], 1))
+
+				s.next()
+
+				nsaved++
+			}
+		case ')':
+			parenDepth--
+			if parenDepth < 0 {
+				return nil, errUnexpectedParen
+			}
+
+			p.code = append(p.code, instEndSave(parens[parenDepth], 0))
+
+			s.next()
+
+			nsaved++
 		case '[':
-			isPrefix = false
+			op := opSet
 
-			ins, err := c.instRange(len(c.sets))
+			s.next()
+
+			if s.r == '^' {
+				op = opNotSet
+
+				s.next()
+			}
+
+			set, err := s.scanSet()
 			if err != nil {
 				return nil, err
 			}
 
-			insts = append(insts, c.makeRepetition(ins, len(insts))...)
+			p.code = append(p.code, instSet(op, len(p.sets)))
 
-			c.next()
+			p.sets = append(p.sets, set)
 
-			continue
+			s.next()
+
+			single = true
+		case '.':
+			p.code = append(p.code, instAny())
+
+			s.next()
+
+			single = true
 		case '%':
-			isPrefix = false
+			s.next()
 
-			c.next()
+			if inst, ok := instClassOrEscChar(s.r); ok {
+				p.code = append(p.code, inst)
 
-			if c.r == eot {
-				err = errInvalidEscape
-				return
-			}
+				s.next()
 
-			c.r, isSingle = c.escape(c.r)
-
-			if !isSingle {
-				switch c.r {
-				case 'b':
-					c.next()
-
-					if c.r == eot {
-						err = errInvalidBalance
-						return
-					}
-
-					x := c.r
-
-					c.next()
-
-					if c.r == eot {
-						err = errInvalidBalance
-						return
-					}
-
-					y := c.r
-
-					insts = append(insts, c.makeBalance(x, y, len(insts))...)
+				single = true
+			} else {
+				switch s.r {
+				case eos:
+					return nil, errInvalidEscape
 				case 'f':
-					c.next()
+					s.next()
 
-					if c.r != '[' {
-						err = errInvalidFrontier
-						return
+					if s.r != '[' {
+						return nil, errInvalidFrontier
 					}
 
-					ins, err := c.instRange(len(c.sets))
+					s.next()
+
+					set, err := s.scanSet()
 					if err != nil {
 						return nil, err
 					}
 
-					ins.op = opFrontier
+					p.code = append(p.code, instFrontier(len(p.sets)))
 
-					insts = append(insts, ins)
-				default:
-					x := int(c.r - '0')
-					if x > c.nparens {
-						err = errInvalidCapture
-						return
+					p.sets = append(p.sets, set)
+
+					s.next()
+				case 'b':
+					s.next()
+
+					if s.r == eos {
+						return nil, errInvalidBalance
 					}
 
-					ins := c.instCapture(x)
-					insts = append(insts, ins)
+					x := int(s.r)
 
-					c.next()
+					s.next()
+
+					if s.r == eos {
+						return nil, errInvalidBalance
+					}
+
+					y := int(s.r)
+
+					p.code = append(p.code, instBalance(x, y))
+
+					s.next()
+				default:
+					if !isDigit(s.r) {
+						return nil, errInvalidEscape
+					}
+
+					n := int(s.r - '0')
+					if n >= nsaved {
+						return nil, errInvalidCapture
+					}
+
+					p.code = append(p.code, instCapture(n))
+
+					s.next()
 				}
-
-				c.next()
-
-				continue
 			}
+		default:
+			p.code = append(p.code, instChar(s.r))
 
-			isEscaped = true
+			s.next()
+
+			single = true
 		}
 
-		ins := c.instSingle(c.r, isEscaped)
-		if ins.op == opAny {
-			isPrefix = false
+		if single { // try to parse repetition
+			switch s.r {
+			case '*':
+				// e*	L1: split L2, L4
+				// 		L2: codes for e
+				// 		L3:	jmp L1
+				// 		L4:
+
+				inst := p.code[len(p.code)-1]
+				code := p.code[:len(p.code)-1]
+
+				L1 := len(code)
+				L2 := len(code) + 1
+				L4 := len(code) + 3
+
+				i1 := instSplit(L2, L4)
+				i2 := inst
+				i3 := instJmp(L1)
+
+				p.code = append(code, i1, i2, i3)
+
+				s.next()
+			case '+':
+				// e+	L1: codes for e
+				// 		L2: split L1, L3
+				// 		L3:
+
+				inst := p.code[len(p.code)-1]
+				code := p.code[:len(p.code)-1]
+
+				L1 := len(code)
+				L3 := len(code) + 2
+
+				i1 := inst
+				i2 := instSplit(L1, L3)
+
+				p.code = append(code, i1, i2)
+
+				s.next()
+			case '-':
+				inst := p.code[len(p.code)-1]
+				code := p.code[:len(p.code)-1]
+
+				L1 := len(code)
+				L2 := len(code) + 1
+				L4 := len(code) + 3
+
+				i1 := instSplit(L4, L2)
+				i2 := inst
+				i3 := instJmp(L1)
+
+				p.code = append(code, i1, i2, i3)
+
+				s.next()
+			case '?':
+				// e?	L1: split L2, L3
+				// 		L2: codes for e
+				// 		L3:
+
+				inst := p.code[len(p.code)-1]
+				code := p.code[:len(p.code)-1]
+
+				L2 := len(code) + 1
+				L3 := len(code) + 2
+
+				i1 := instSplit(L2, L3)
+				i2 := inst
+
+				p.code = append(code, i1, i2)
+
+				s.next()
+			}
 		}
-
-		isEscaped = false
-
-		_insts := c.makeRepetition(ins, len(insts))
-
-		if len(_insts) > 1 {
-			isPrefix = false
-		}
-
-		if isPrefix {
-			c.poff = c.pos
-		} else {
-			insts = append(insts, _insts...)
-		}
-
-		c.next()
 	}
 
-	// if depth != 0 {
-	// err = ErrMissingParen
-	// return
-	// }
-
-	// close open parens
-	for i := depth; i > 0; i-- {
-		c.nparens++
-
-		ins := c.instExitSave(depth)
-		insts = append(insts, ins)
+	if parenDepth != 0 {
+		return nil, errUnexpectedParen
 	}
 
-	if isPrefix {
-		c.typ |= matchFullLiteral
+	p.nsaved = nsaved
 
-		if c.typ&matchBeginning != 0 {
-			c.literal = c.pat[1:c.poff]
-		} else {
-			c.literal = c.pat[:c.poff]
-		}
-
-		return
+	if len(p.code) != 0 || p.typ&matchSuffix != 0 {
+		p.code = append(p.code, instMatch())
 	}
 
-	if c.poff != 0 {
-		c.typ |= matchPrefixLiteral
-
-		if c.typ&matchBeginning != 0 {
-			c.literal = c.pat[1:c.poff]
-		} else {
-			c.literal = c.pat[:c.poff]
-		}
-	}
-
-	insMatch := c.instMatch()
-
-	insts = append(insts, insMatch)
-
-	return
+	return p, nil
 }
-
-/*
-
-pattern : fragments
-
-fragments : fragment | fragments fragment
-
-fragment : repeat | capture
-
-capture : '(' fragments ')'
-
-repeat : single
-       | single '*'
-       | single '+'
-       | single '-'
-
-single : '.' | char | class
-
-class : '%a' | '%c'
-
-*/

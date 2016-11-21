@@ -117,11 +117,11 @@ func find(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		return nil, nil
 	}
 
-	s = s[init-1:]
-
 	isPlain := ap.OptGoBool(3, false)
 
 	if isPlain {
+		s = s[init-1:]
+
 		idx := strings.Index(s, pat)
 		if idx == -1 {
 			return nil, nil
@@ -130,22 +130,24 @@ func find(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		return []object.Value{object.Integer(idx + init), object.Integer(idx + init + len(pat) - 1)}, nil
 	}
 
-	r, e := pattern.Find(pat, s)
+	captures, e := pattern.FindIndex(s, pat, init-1)
 	if e != nil {
 		return nil, object.NewRuntimeError(e.Error())
 	}
 
-	if r == nil {
-		return []object.Value{nil}, nil
+	if captures == nil {
+		return nil, nil
 	}
 
-	rets := make([]object.Value, len(r.Captures)+2)
+	rets := make([]object.Value, len(captures)+1)
 
-	rets[0] = object.Integer(r.Item.Begin + init)
-	rets[1] = object.Integer(r.Item.End + init - 1)
+	loc := captures[0]
 
-	for i, cap := range r.Captures {
-		rets[i+2] = object.String(s[cap.Begin:cap.End])
+	rets[0] = object.Integer(loc.Begin + 1)
+	rets[1] = object.Integer(loc.End)
+
+	for i, cap := range captures[1:] {
+		rets[i+2] = cap.Value(s)
 	}
 
 	return rets, nil
@@ -165,126 +167,39 @@ func gmatch(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	ms, e := pattern.MatchAll(pat, s)
+	p, e := pattern.Compile(pat)
 	if e != nil {
 		return nil, object.NewRuntimeError(e.Error())
 	}
 
-	var i int
+	off := 0
 
 	fn := func(_ object.Thread, _ ...object.Value) ([]object.Value, *object.RuntimeError) {
-		if len(ms) <= i {
+		captures := p.FindIndex(s, off)
+		if captures == nil {
 			return nil, nil
 		}
 
-		m := ms[i]
+		loc := captures[0]
 
-		i++
-
-		if len(m.Captures) == 0 {
-			return []object.Value{object.String(m.Item)}, nil
+		off = loc.End
+		if off == loc.Begin {
+			off++
 		}
 
-		rets := make([]object.Value, len(m.Captures))
-		for i, cap := range m.Captures {
-			rets[i] = object.String(cap)
+		if len(captures) == 1 {
+			return []object.Value{loc.Value(s)}, nil
+		}
+
+		rets := make([]object.Value, len(captures)-1)
+		for i, cap := range captures[1:] {
+			rets[i] = cap.Value(s)
 		}
 
 		return rets, nil
 	}
 
 	return []object.Value{object.GoFunction(fn)}, nil
-}
-
-// gsub(s, pattern, repl, [, n])
-func gsub(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	ap := fnutil.NewArgParser(th, args)
-
-	s, err := ap.ToGoString(0)
-	if err != nil {
-		return nil, err
-	}
-
-	pat, err := ap.ToGoString(1)
-	if err != nil {
-		return nil, err
-	}
-
-	repl, err := ap.ToValue(2)
-	if err != nil {
-		return nil, err
-	}
-
-	n, err := ap.OptGoInt(3, -1)
-	if err != nil {
-		return nil, err
-	}
-
-	switch repl := repl.(type) {
-	case object.GoFunction, object.Closure:
-		var rerr *object.RuntimeError
-
-		replfn := func(ss ...string) string {
-			rargs := make([]object.Value, len(ss))
-			for i := range ss {
-				rargs[i] = object.String(ss[i])
-			}
-
-			var rets []object.Value
-
-			rets, rerr = th.Call(repl, nil, rargs...)
-			if rerr != nil {
-				return ""
-			}
-
-			if len(rets) > 0 {
-				if s, ok := object.ToGoString(rets[0]); ok {
-					return s
-				}
-			}
-			return ""
-		}
-
-		ret, count, e := pattern.ReplaceFunc(pat, s, replfn, n)
-		if e != nil {
-			return nil, object.NewRuntimeError(e.Error())
-		}
-
-		if rerr != nil {
-			return nil, rerr
-		}
-
-		return []object.Value{object.String(ret), object.Integer(count)}, nil
-	case object.Table:
-		replfn := func(ss ...string) string {
-			if len(ss) > 0 {
-				v := repl.Get(object.String(ss[0]))
-				if r, ok := object.ToGoString(v); ok {
-					return r
-				}
-				return ss[0]
-			}
-			return ""
-		}
-
-		ret, count, e := pattern.ReplaceFunc(pat, s, replfn, n)
-		if e != nil {
-			return nil, object.NewRuntimeError(e.Error())
-		}
-
-		return []object.Value{object.String(ret), object.Integer(count)}, nil
-	default:
-		if repl, ok := object.ToGoString(repl); ok {
-			ret, count, e := pattern.Replace(pat, s, repl, n)
-			if e != nil {
-				return nil, object.NewRuntimeError(e.Error())
-			}
-
-			return []object.Value{object.String(ret), object.Integer(count)}, nil
-		}
-
-		return nil, ap.TypeError(2, "string/function/table")
-	}
 }
 
 func _len(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -334,28 +249,25 @@ func match(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 	if init < 0 {
 		init = 1
 	}
-	if init > len(s) {
-		return nil, nil
-	}
 
-	s = s[init-1:]
-
-	m, e := pattern.Match(pat, s)
+	captures, e := pattern.FindIndex(s, pat, init-1)
 	if e != nil {
 		return nil, object.NewRuntimeError(e.Error())
 	}
 
-	if m == nil {
+	if captures == nil {
 		return nil, nil
 	}
 
-	if len(m.Captures) == 0 {
-		return []object.Value{object.String(m.Item)}, nil
+	loc := captures[0]
+
+	if len(captures) == 1 {
+		return []object.Value{loc.Value(s)}, nil
 	}
 
-	rets := make([]object.Value, len(m.Captures))
-	for i, cap := range m.Captures {
-		rets[i] = object.String(cap)
+	rets := make([]object.Value, len(captures)-1)
+	for i, cap := range captures[1:] {
+		rets[i] = cap.Value(s)
 	}
 
 	return rets, nil
