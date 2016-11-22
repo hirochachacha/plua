@@ -37,7 +37,6 @@ import (
 	"fmt"
 	"io"
 	"unicode"
-	"unicode/utf8"
 
 	"github.com/hirochachacha/plua/compiler/token"
 	"github.com/hirochachacha/plua/position"
@@ -81,8 +80,6 @@ type Scanner struct {
 	filled bool
 
 	clip bytes.Buffer
-
-	runeBytes [utf8.UTFMax]byte
 
 	ch int
 
