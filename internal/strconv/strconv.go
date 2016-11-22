@@ -5,6 +5,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 var (
@@ -217,7 +218,10 @@ func parseHexFloat(s string) (float64, error) {
 
 		var x int
 		for k, r := range s[j+1:] {
-			x = digitVal(r)
+			if r >= utf8.RuneSelf {
+				return 0, ErrSyntax
+			}
+			x = digitVal(byte(r))
 			if x == 16 {
 				if r == 'p' || r == 'P' {
 					e, err := strconv.ParseInt(s[j+k+2:], 10, 64)
@@ -289,17 +293,17 @@ func parseHexFloat(s string) (float64, error) {
 	return f, nil
 }
 
-func digitVal(r rune) int {
+func digitVal(c byte) int {
 	switch {
-	case uint(r)-'0' < 10:
-		return int(r - '0')
-	case uint(r)-'a' < 6:
-		return int(r - 'a' + 10)
-	case uint(r)-'A' < 6:
-		return int(r - 'A' + 10)
+	case uint(c)-'0' < 10:
+		return int(c - '0')
+	case uint(c)-'a' < 6:
+		return int(c - 'a' + 10)
+	case uint(c)-'A' < 6:
+		return int(c - 'A' + 10)
 	}
 
-	return 16 // larger than any legal digit val
+	return 16
 }
 
 func unwrap(err error) error {

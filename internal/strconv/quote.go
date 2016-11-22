@@ -37,234 +37,240 @@ import (
 	"unicode/utf8"
 )
 
-// Quote returns a double-quoted Go string literal representing s.  The
-// returned string uses Lua escape sequences (\t, \n, \xFF, \u{0100}) for
-// control characters and non-printable characters as defined by
-// IsPrint.
 func Quote(s string) string {
 	return quoteWith(s, '"')
-}
-
-func SQuote(s string) string {
-	return quoteWith(s, '\'')
 }
 
 const lowerhex = "0123456789abcdef"
 
 func quoteWith(s string, quote byte) string {
-	var runeTmp [utf8.UTFMax]byte
-	buf := make([]byte, 0, 3*len(s)/2) // Try to avoid more allocations.
-	buf = append(buf, quote)
-	for width := 0; len(s) > 0; s = s[width:] {
-		r := rune(s[0])
-		width = 1
-		if r >= utf8.RuneSelf {
-			r, width = utf8.DecodeRuneInString(s)
-		}
-		if width == 1 && r == utf8.RuneError {
-			buf = append(buf, '\\')
-			buf = AppendInt(buf, int64(s[0]), 10)
-			continue
-		}
-		if r == rune(quote) || r == '\\' { // always backslashed
-			buf = append(buf, '\\')
-			buf = append(buf, byte(r))
-			continue
-		}
-		if unicode.IsPrint(r) {
-			n := utf8.EncodeRune(runeTmp[:], r)
-			buf = append(buf, runeTmp[:n]...)
-			continue
-		}
-		switch r {
+	b := make([]byte, 0, len(s)*3/2)
+
+	b = append(b, quote)
+
+	runeTmp := make([]byte, utf8.UTFMax)
+
+	i := 0
+	for i < len(s) {
+		c := s[i]
+
+		switch c {
+		case quote, '\\':
+			b = append(b, '\\')
+			b = append(b, c)
+			i++
 		case '\a':
-			// buf = append(buf, "\\\a"...)
-			buf = append(buf, `\a`...)
+			b = append(b, `\a`...)
+			i++
 		case '\b':
-			// buf = append(buf, "\\\b"...)
-			buf = append(buf, `\b`...)
+			b = append(b, `\b`...)
+			i++
 		case '\f':
-			// buf = append(buf, "\\\f"...)
-			buf = append(buf, `\f`...)
+			b = append(b, `\f`...)
+			i++
 		case '\n':
-			// buf = append(buf, "\\\n"...)
-			buf = append(buf, `\n`...)
+			b = append(b, `\n`...)
+			i++
 		case '\r':
-			// buf = append(buf, "\\\r"...)
-			buf = append(buf, `\r`...)
+			b = append(b, `\r`...)
+			i++
 		case '\t':
-			// buf = append(buf, "\\\t"...)
-			buf = append(buf, `\t`...)
+			b = append(b, `\t`...)
+			i++
 		case '\v':
-			// buf = append(buf, "\\\v"...)
-			buf = append(buf, `\v`...)
+			b = append(b, `\v`...)
+			i++
 		default:
-			if r <= 0xff {
-				buf = append(buf, '\\')
-				buf = AppendInt(buf, int64(r), 10)
-			} else {
-				buf = append(buf, `\u{`...)
-				for s := 28; s >= 0; s -= 4 {
-					buf = append(buf, lowerhex[r>>uint(s)&0xF])
+			if c >= utf8.RuneSelf {
+				r, rsize := utf8.DecodeRuneInString(s[i:])
+				if r != utf8.RuneError {
+					if unicode.IsPrint(r) {
+						n := utf8.EncodeRune(runeTmp[:], r)
+						b = append(b, runeTmp[:n]...)
+					} else {
+						b = append(b, `\u{`...)
+						for j := 28; j >= 0; j -= 4 {
+							b = append(b, lowerhex[r>>uint(j)&0xF])
+						}
+						b = append(b, '}')
+					}
+
+					i += rsize
+
+					continue
 				}
-				buf = append(buf, '}')
 			}
+
+			if isPrint(c) {
+				b = append(b, c)
+			} else {
+				b = append(b, '\\')
+				b = AppendInt(b, int64(c), 10)
+			}
+			i++
 		}
 	}
-	buf = append(buf, quote)
-	return string(buf)
 
+	b = append(b, quote)
+
+	return string(b)
 }
 
-func unhex(b byte) (v rune, ok bool) {
-	c := rune(b)
-	switch {
-	case '0' <= c && c <= '9':
-		return c - '0', true
-	case 'a' <= c && c <= 'f':
-		return c - 'a' + 10, true
-	case 'A' <= c && c <= 'F':
-		return c - 'A' + 10, true
-	}
-	return
+func isPrint(c byte) bool {
+	return uint(c)-0x20 < 0x5f
 }
 
-// UnquoteChar decodes the first character or byte in the escaped string
-// or character literal represented by the string s.
-// It returns four values:
-//
-//	1) value, the decoded Unicode code point or byte value;
-//	2) multibyte, a boolean indicating whether the decoded character requires a multibyte UTF-8 representation;
-//	3) tail, the remainder of the string after the character; and
-//	4) an error that will be nil if the character is syntactically valid.
-//
-// The second argument, quote, specifies the type of literal being parsed
-// and therefore which escaped quote character is permitted.
-// If set to a single quote, it permits the sequence \' and disallows unescaped '.
-// If set to a double quote, it permits \" and disallows unescaped ".
-// If set to zero, it does not permit either escape and allows both quote characters to appear unescaped.
-func unquoteChar(s string, quote byte) (value rune, multibyte bool, tail string, err error) {
-	// easy cases
-	switch c := s[0]; {
-	case c == quote && (quote == '\'' || quote == '"'):
-		err = ErrSyntax
-		return
-	case c >= utf8.RuneSelf:
-		r, size := utf8.DecodeRuneInString(s)
-		return r, true, s[size:], nil
-	case c != '\\':
-		return rune(s[0]), false, s[1:], nil
+func Unquote(s string) (string, error) {
+	if len(s) < 2 {
+		return "", ErrSyntax
 	}
 
-	// hard case: c is backslash
-	if len(s) <= 1 {
-		err = ErrSyntax
-		return
-	}
-	c := s[1]
-	s = s[2:]
+	quote := s[0]
 
-	switch c {
-	case 'a':
-		value = '\a'
-	case 'b':
-		value = '\b'
-	case 'f':
-		value = '\f'
-	case 'n':
-		value = '\n'
-	case 'r':
-		value = '\r'
-	case 't':
-		value = '\t'
-	case 'v':
-		value = '\v'
-	case 'x':
-		var v rune
-		if len(s) < 2 {
-			err = ErrSyntax
-			return
-		}
-		for j := 0; j < 2; j++ {
-			x, ok := unhex(s[j])
-			if !ok {
-				err = ErrSyntax
-				return
-			}
-			v = v<<4 | x
-		}
-		s = s[2:]
-		value = v
-	case 'u':
-		var v rune
-		if len(s) < 3 {
-			err = ErrSyntax
-			return
-		}
-		if s[0] != '{' {
-			err = ErrSyntax
-			return
-		}
-		s = s[1:]
-		var j int
-		for j = 0; j < min(8, len(s)); j++ {
-			x, ok := unhex(s[j])
-			if !ok {
-				break
-			}
-			v = v<<4 | x
-		}
-		if s[j] != '}' {
-			err = ErrSyntax
-			return
-		}
-		s = s[j+1:]
-		if v > utf8.MaxRune {
-			err = ErrSyntax
-			return
-		}
-		value = v
-		multibyte = true
-	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		v := rune(c) - '0'
-		var j int
-		for j = 0; j < min(2, len(s)); j++ { // one digit already; two more
-			x := rune(s[j]) - '0'
-			if x < 0 || x > 9 {
-				break
-			}
-			v = v*10 + x
-		}
-		s = s[j:]
-		if v > 255 {
-			err = ErrSyntax
-			return
-		}
-		value = v
-	case '\\':
-		value = '\\'
-	case '\'', '"':
-		value = rune(c)
-	case '\n':
-		value = '\n'
-	case '\r':
-		value = '\r'
-		if len(s) > 0 && s[0] == '\n' {
-			value = '\n'
-			s = s[1:]
-		}
-	case 'z':
-		s = strings.TrimLeft(s, " \t\r\n")
-		value = -1
-	default:
-		err = ErrSyntax
-		return
+	if quote == '[' {
+		return unquoteLong(s)
 	}
-	tail = s
-	return
+
+	if quote != '"' && quote != '\'' {
+		return "", ErrSyntax
+	}
+
+	if quote != s[len(s)-1] {
+		return "", ErrSyntax
+	}
+
+	s = s[1 : len(s)-1]
+
+	if !strings.ContainsAny(s, `\`+string(quote)) {
+		return s, nil
+	}
+
+	b := make([]byte, 0, len(s))
+
+	runeTmp := make([]byte, utf8.UTFMax)
+
+	i := 0
+	for i < len(s) {
+		c := s[i]
+
+		switch c {
+		case quote:
+			return "", ErrSyntax
+		case '\\':
+			i++
+			if i == len(s) {
+				return "", ErrSyntax
+			}
+			switch c = s[i]; c {
+			case 'a':
+				b = append(b, '\a')
+				i++
+			case 'b':
+				b = append(b, '\b')
+				i++
+			case 'f':
+				b = append(b, '\f')
+				i++
+			case 'n':
+				b = append(b, '\n')
+				i++
+			case 'r':
+				b = append(b, '\r')
+				i++
+			case 't':
+				b = append(b, '\t')
+				i++
+			case 'v':
+				b = append(b, '\v')
+				i++
+			case 'x':
+				i++
+				if len(s)-i < 2 {
+					return "", ErrSyntax
+				}
+				var c1 int
+				for lim := i + 2; i < lim; i++ {
+					d := digitVal(s[i])
+					if d == 16 {
+						return "", ErrSyntax
+					}
+					c1 = c1<<4 | d
+				}
+				b = append(b, byte(c1))
+			case 'u':
+				i++
+				if len(s)-i < 3 {
+					return "", ErrSyntax
+				}
+				if s[i] != '{' {
+					return "", ErrSyntax
+				}
+				i++
+				var r rune
+				for lim := i + 8; i < min(lim, len(s)); i++ {
+					d := digitVal(s[i])
+					if d == 16 {
+						break
+					}
+					r = r<<4 | rune(d)
+				}
+				if s[i] != '}' {
+					return "", ErrSyntax
+				}
+				i++
+				if r < 0 || r > utf8.MaxRune {
+					return "", ErrSyntax
+				}
+				n := utf8.EncodeRune(runeTmp, r)
+				b = append(b, runeTmp[:n]...)
+			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+				var c1 int
+				for lim := i + 3; i < min(lim, len(s)); i++ {
+					d := s[i] - '0'
+					if d < 0 || d > 9 {
+						break
+					}
+					c1 = c1*10 + int(d)
+				}
+				if c1 < 0 || c1 > 255 {
+					return "", ErrSyntax
+				}
+				b = append(b, byte(c1))
+			case '\\':
+				b = append(b, c)
+				i++
+			case '\'', '"':
+				b = append(b, c)
+				i++
+			case '\n':
+				b = append(b, c)
+				i++
+			case '\r':
+				i++
+				if i < len(s) && s[i] == '\n' {
+					b = append(b, '\n')
+					i++
+				} else {
+					b = append(b, '\r')
+				}
+			case 'z':
+				i++
+				for i < len(s) && isSpace(s[i]) {
+					i++
+				}
+			default:
+				return "", ErrSyntax
+			}
+		default:
+			b = append(b, c)
+			i++
+		}
+	}
+
+	return string(b), nil
 }
 
-func unquoteLong(s string) (t string, err error) {
+func unquoteLong(s string) (string, error) {
 	n := len(s)
 
 	switch prefix := s[:2]; prefix {
@@ -318,67 +324,9 @@ func unquoteLong(s string) (t string, err error) {
 	return "", ErrSyntax
 }
 
-// Unquote interprets s as a single-quoted, double-quoted,
-// or backquoted Go string literal, returning the string value
-// that s quotes.  (If s is single-quoted, it would be a Go
-// character literal; Unquote returns the corresponding
-// one-character string.)
-func Unquote(s string) (t string, err error) {
-	n := len(s)
-	if n < 2 {
-		return "", ErrSyntax
-	}
-
-	quote := s[0]
-
-	if quote == '[' {
-		return unquoteLong(s)
-	}
-
-	if quote != '"' && quote != '\'' {
-		return "", ErrSyntax
-	}
-
-	if quote != s[n-1] {
-		return "", ErrSyntax
-	}
-
-	s = s[1 : n-1]
-
-	// Is it trivial?  Avoid allocation.
-	if !containsByte(s, '\\') && !containsByte(s, quote) {
-		return s, nil
-	}
-
-	var runeTmp [utf8.UTFMax]byte
-	buf := make([]byte, 0, 3*len(s)/2) // Try to avoid more allocations.
-	for len(s) > 0 {
-		c, multibyte, ss, err := unquoteChar(s, quote)
-		if err != nil {
-			return "", err
-		}
-		s = ss
-		if c < 0 {
-			continue
-		}
-		if c < utf8.RuneSelf || !multibyte {
-			buf = append(buf, byte(c))
-		} else {
-			n := utf8.EncodeRune(runeTmp[:], c)
-			buf = append(buf, runeTmp[:n]...)
-		}
-	}
-	return string(buf), nil
-}
-
-// containsByte reports whether the string containsByte the byte c.
-func containsByte(s string, c byte) bool {
-	return strings.IndexByte(s, c) != -1
-}
-
 func min(x, y int) int {
-	if x > y {
-		return y
+	if x < y {
+		return x
 	}
-	return x
+	return y
 }
