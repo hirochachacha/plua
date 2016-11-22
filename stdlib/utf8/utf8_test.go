@@ -7,6 +7,7 @@ import (
 	"github.com/hirochachacha/plua/compiler"
 	"github.com/hirochachacha/plua/runtime"
 	"github.com/hirochachacha/plua/stdlib/base"
+	"github.com/hirochachacha/plua/stdlib/string"
 	"github.com/hirochachacha/plua/stdlib/utf8"
 )
 
@@ -28,6 +29,7 @@ func TestUTF8(t *testing.T) {
 
 		p.Require("_G", base.Open)
 		p.Require("utf8", utf8.Open)
+		p.Require("string", string.Open)
 
 		_, err = p.Exec(proto)
 		if err != nil {

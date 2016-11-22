@@ -1,7 +1,6 @@
 package utf8
 
 import (
-	"bytes"
 	"unicode/utf8"
 
 	"github.com/hirochachacha/plua/object"
@@ -15,7 +14,7 @@ func char(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 
 	ap := fnutil.NewArgParser(th, args)
 
-	var buf bytes.Buffer
+	rs := make([]rune, len(args))
 
 	for i := range args {
 		i64, err := ap.ToGoInt64(i)
@@ -27,10 +26,10 @@ func char(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			return nil, ap.ArgError(i, "value out of range")
 		}
 
-		buf.WriteRune(rune(i64))
+		rs[i] = rune(i64)
 	}
 
-	return []object.Value{object.String(buf.String())}, nil
+	return []object.Value{object.String(string(rs))}, nil
 }
 
 func nextcode(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -255,7 +254,7 @@ func offset(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	m := th.NewTableSize(0, 6)
 
-	m.Set(object.String("charpatt"), object.String("."))
+	m.Set(object.String("charpattern"), object.String("[\x00-\x7F\xC2-\xF4][\x80-\xBF]*"))
 
 	m.Set(object.String("char"), object.GoFunction(char))
 	m.Set(object.String("codes"), object.GoFunction(codes))
