@@ -7,7 +7,7 @@ type machine struct {
 }
 
 func (m *machine) match(p *Pattern, input string, base int) bool {
-	if len(p.prefix) > base+len(input) {
+	if len(p.prefix) > len(input)-base {
 		return false
 	}
 
@@ -107,18 +107,6 @@ func (m *machine) recursiveMatch(p *Pattern, input string, pc, sp int) bool {
 
 			pc++
 			sp += rsize
-		case opNotSet:
-			r, rsize := decodeRune(input, sp)
-			if r == eos {
-				return false
-			}
-
-			if p.sets[inst.x].match(r) {
-				return false
-			}
-
-			pc++
-			sp += rsize
 		case opBalance:
 			x := rune(inst.x)
 			y := rune(inst.y)
@@ -143,13 +131,13 @@ func (m *machine) recursiveMatch(p *Pattern, input string, pc, sp int) bool {
 				sp += rsize
 
 				switch r {
-				case x:
-					balance++
 				case y:
 					balance--
 					if balance == 0 {
 						break L
 					}
+				case x:
+					balance++
 				case eos:
 					return false
 				}
@@ -158,8 +146,8 @@ func (m *machine) recursiveMatch(p *Pattern, input string, pc, sp int) bool {
 			pc++
 		case opFrontier:
 			r, _ := lastDecodeRune(input, sp)
-			if r == eos {
-				return false
+			if r == sos {
+				r = 0x00
 			}
 			if p.sets[inst.x].match(r) {
 				return false
@@ -167,7 +155,7 @@ func (m *machine) recursiveMatch(p *Pattern, input string, pc, sp int) bool {
 
 			r, _ = decodeRune(input, sp)
 			if r == eos {
-				return false
+				r = 0x00
 			}
 			if !p.sets[inst.x].match(r) {
 				return false

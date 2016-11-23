@@ -3,8 +3,10 @@ package string
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"strings"
 
+	"github.com/hirochachacha/plua/internal/arith"
 	"github.com/hirochachacha/plua/internal/pattern"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/object/fnutil"
@@ -43,7 +45,7 @@ func gsub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 
 		return []object.Value{object.String(ret), object.Integer(count)}, nil
 	case object.Table:
-		ret, count, e := gsubTable(s, pat, repl, n)
+		ret, count, e := gsubTable(th, s, pat, repl, n)
 		if e != nil {
 			return nil, object.NewRuntimeError(e.Error())
 		}
@@ -51,7 +53,7 @@ func gsub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		return []object.Value{object.String(ret), object.Integer(count)}, nil
 	default:
 		if repl, ok := object.ToGoString(repl); ok {
-			ret, count, e := gsubStr(s, pat, repl, n)
+			ret, count, e := gsubStr(th, s, pat, repl, n)
 			if e != nil {
 				return nil, object.NewRuntimeError(e.Error())
 			}
@@ -64,173 +66,91 @@ func gsub(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 }
 
 func gsubFunc(th object.Thread, input, pat string, fn object.Value, n int) (string, int, error) {
-	p, e := pattern.Compile(pat)
-	if e != nil {
-		return "", -1, e
-	}
+	return pattern.ReplaceAllFunc(input, pat, func(caps []pattern.Capture) (string, error) {
+		loc := caps[0]
 
-	off := 0
-
-	captures := p.FindIndex(input, off)
-	if captures == nil {
-		return input, 0, nil
-	}
-
-	var i int
-	var buf bytes.Buffer
-
-	for i = n; i != 0; i-- {
-		loc := captures[0]
-
-		buf.WriteString(input[off:loc.Begin])
-
-		argIndex := captures
-		if len(captures) > 1 {
-			argIndex = argIndex[1:]
+		if len(caps) > 1 {
+			caps = caps[1:]
 		}
-
-		rargs := make([]object.Value, len(argIndex))
-		for i, cap := range argIndex {
+		rargs := make([]object.Value, len(caps))
+		for i, cap := range caps {
 			rargs[i] = cap.Value(input)
 		}
 
 		rets, rerr := th.Call(fn, nil, rargs...)
 		if rerr != nil {
-			return "", -1, rerr
+			return "", rerr
 		}
 
 		repl := loc.Value(input)
 
 		if len(rets) > 0 {
-			if s, ok := object.ToString(rets[0]); ok {
-				repl = s
+			if val := rets[0]; val != nil && val != object.False {
+				var ok bool
+				repl, ok = object.ToString(val)
+				if !ok {
+					return "", fmt.Errorf("invalid replacement value (a %s)", object.ToType(val))
+				}
 			}
 		}
 
-		buf.WriteString(repl.String())
-
-		off = loc.End
-		if off == len(input) {
-			i--
-
-			break
-		}
-		if off == loc.Begin {
-			buf.WriteByte(input[off])
-
-			off++
-		}
-
-		captures = p.FindIndex(input, off)
-		if captures == nil {
-			i--
-
-			break
-		}
-	}
-
-	buf.WriteString(input[off:])
-
-	return buf.String(), n - i, nil
+		return repl.String(), nil
+	}, n)
 }
 
-func gsubTable(input, pat string, t object.Table, n int) (string, int, error) {
-	p, e := pattern.Compile(pat)
-	if e != nil {
-		return "", -1, e
-	}
-
-	off := 0
-
-	captures := p.FindIndex(input, off)
-	if captures == nil {
-		return input, 0, nil
-	}
-
-	var i int
-	var buf bytes.Buffer
-
-	for i = n; i != 0; i-- {
-		loc := captures[0]
-
-		buf.WriteString(input[off:loc.Begin])
+func gsubTable(th object.Thread, input, pat string, t object.Table, n int) (string, int, error) {
+	return pattern.ReplaceAllFunc(input, pat, func(caps []pattern.Capture) (string, error) {
+		loc := caps[0]
 
 		repl := loc.Value(input)
 
 		key := repl
-		if len(captures) > 1 {
-			key = captures[1].Value(input)
+		if len(caps) > 1 {
+			key = caps[1].Value(input)
 		}
 
-		if s, ok := object.ToString(t.Get(key)); ok {
-			repl = s
+		val, err := arith.CallGettable(th, t, key)
+		if err != nil {
+			return "", err
 		}
 
-		buf.WriteString(repl.String())
-
-		off = loc.End
-		if off == len(input) {
-			i--
-
-			break
-		}
-		if off == loc.Begin {
-			buf.WriteByte(input[off])
-
-			off++
+		if val != nil && val != object.False {
+			var ok bool
+			repl, ok = object.ToString(val)
+			if !ok {
+				return "", fmt.Errorf("invalid replacement value (a %s)", object.ToType(val))
+			}
 		}
 
-		captures = p.FindIndex(input, off)
-		if captures == nil {
-			i--
-
-			break
-		}
-	}
-
-	buf.WriteString(input[off:])
-
-	return buf.String(), n - i, nil
+		return repl.String(), nil
+	}, n)
 }
 
-func gsubStr(input, pat, repl string, n int) (string, int, error) {
-	p, e := pattern.Compile(pat)
-	if e != nil {
-		return "", -1, e
-	}
-
-	off := 0
-
-	captures := p.FindIndex(input, off)
-	if captures == nil {
-		return input, 0, nil
-	}
-
-	var i int
-	var buf bytes.Buffer
-
+func gsubStr(th object.Thread, input, pat, repl string, n int) (string, int, error) {
 	parts, e := gsubParseRepl(repl)
 	if e != nil {
 		return "", -1, e
 	}
 
-	for i = n; i != 0; i-- {
-		loc := captures[0]
+	var buf bytes.Buffer
 
-		buf.WriteString(input[off:loc.Begin])
+	return pattern.ReplaceAllFunc(input, pat, func(caps []pattern.Capture) (string, error) {
+		loc := caps[0]
 
-		if len(captures) == 1 {
-			captures = append(captures, loc)
+		if len(caps) == 1 {
+			caps = append(caps, loc)
 		}
+
+		buf.Reset()
 
 		for _, part := range parts {
 			if part[0] == '%' {
 				j := int(part[1] - '0')
-				if j >= len(captures) {
-					return "", -1, errors.New("invalid use of '%' in replacement string")
+				if j >= len(caps) {
+					return "", fmt.Errorf("invalid capture index %%%d", j)
 				}
 
-				cap := captures[j]
+				cap := caps[j]
 
 				buf.WriteString(cap.Value(input).String())
 			} else {
@@ -238,29 +158,8 @@ func gsubStr(input, pat, repl string, n int) (string, int, error) {
 			}
 		}
 
-		off = loc.End
-		if off == len(input) {
-			i--
-
-			break
-		}
-		if off == loc.Begin {
-			buf.WriteByte(input[off])
-
-			off++
-		}
-
-		captures = p.FindIndex(input, off)
-		if captures == nil {
-			i--
-
-			break
-		}
-	}
-
-	buf.WriteString(input[off:])
-
-	return buf.String(), n - i, nil
+		return buf.String(), nil
+	}, n)
 }
 
 func gsubParseRepl(repl string) (parts []string, err error) {

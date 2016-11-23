@@ -1,6 +1,7 @@
 package pattern
 
 import (
+	"bytes"
 	"errors"
 
 	"github.com/hirochachacha/plua/object"
@@ -40,7 +41,6 @@ var (
 	errInvalidEscape    = errors.New("invalid escape")
 	errInvalidBalance   = errors.New("invalid balance")
 	errInvalidFrontier  = errors.New("invalid frontier")
-	errInvalidCapture   = errors.New("invalid capture")
 	errMissingBracket   = errors.New("missing closing ]")
 	errUnexpectedParen  = errors.New("unexpected )")
 	errMalformedPattern = errors.New("malformed pattern (ends with '%')")
@@ -53,7 +53,10 @@ const (
 	matchSuffix
 )
 
-const eos = -1
+const (
+	eos = -1
+	sos = -2
+)
 
 type Capture struct {
 	Begin   int
@@ -90,6 +93,84 @@ func (p *Pattern) FindIndex(input string, off int) []Capture {
 	return nil
 }
 
+func (p *Pattern) FindAllIndex(input string, n int) [][]Capture {
+	if n == 0 {
+		return nil
+	}
+
+	var rets [][]Capture
+
+	if n > 0 {
+		rets = make([][]Capture, 0, n)
+	}
+
+	m := &machine{
+		saved: make([]Capture, p.nsaved),
+	}
+
+	prev := -1
+
+	off := 0
+	for {
+		if !m.match(p, input, off) {
+			break
+		}
+
+		loc := m.saved[0]
+
+		off = loc.End
+		if off == loc.Begin {
+			off++
+			if loc.Begin == prev {
+				continue
+			}
+		}
+
+		rets = append(rets, dup(m.saved))
+
+		if len(rets) == n {
+			break
+		}
+
+		prev = loc.End
+	}
+
+	return rets
+}
+
+func (p *Pattern) ReplaceAllFunc(input string, repl func([]Capture) (string, error), n int) (string, int, error) {
+	allCaptures := p.FindAllIndex(input, n)
+	if allCaptures == nil {
+		return input, 0, nil
+	}
+
+	var buf bytes.Buffer
+
+	last := 0
+	for _, caps := range allCaptures {
+		loc := caps[0]
+
+		buf.WriteString(input[last:loc.Begin])
+
+		alt, err := repl(caps)
+		if err != nil {
+			return "", -1, err
+		}
+
+		buf.WriteString(alt)
+
+		last = loc.End
+	}
+
+	buf.WriteString(input[last:])
+
+	return buf.String(), len(allCaptures), nil
+}
+
+func dup(caps []Capture) []Capture {
+	return append([]Capture{}, caps...)
+}
+
 func FindIndex(input, pat string, off int) ([]Capture, error) {
 	if len(input) < off {
 		return nil, nil
@@ -99,4 +180,20 @@ func FindIndex(input, pat string, off int) ([]Capture, error) {
 		return nil, err
 	}
 	return p.FindIndex(input, off), nil
+}
+
+func FindAllIndex(input, pat string, n int) ([][]Capture, error) {
+	p, err := Compile(pat)
+	if err != nil {
+		return nil, err
+	}
+	return p.FindAllIndex(input, n), nil
+}
+
+func ReplaceAllFunc(input, pat string, repl func([]Capture) (string, error), n int) (string, int, error) {
+	p, err := Compile(pat)
+	if err != nil {
+		return "", -1, err
+	}
+	return p.ReplaceAllFunc(input, repl, n)
 }

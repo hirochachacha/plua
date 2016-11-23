@@ -167,32 +167,30 @@ func gmatch(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	p, e := pattern.Compile(pat)
+	allCaptures, e := pattern.FindAllIndex(s, pat, -1)
 	if e != nil {
 		return nil, object.NewRuntimeError(e.Error())
 	}
 
-	off := 0
+	i := 0
 
-	fn := func(_ object.Thread, _ ...object.Value) ([]object.Value, *object.RuntimeError) {
-		captures := p.FindIndex(s, off)
-		if captures == nil {
+	fn := func(object.Thread, ...object.Value) ([]object.Value, *object.RuntimeError) {
+		if i == len(allCaptures) {
 			return nil, nil
 		}
 
-		loc := captures[0]
+		caps := allCaptures[i]
 
-		off = loc.End
-		if off == loc.Begin {
-			off++
-		}
+		i++
 
-		if len(captures) == 1 {
+		loc := caps[0]
+
+		if len(caps) == 1 {
 			return []object.Value{loc.Value(s)}, nil
 		}
 
-		rets := make([]object.Value, len(captures)-1)
-		for i, cap := range captures[1:] {
+		rets := make([]object.Value, len(caps)-1)
+		for i, cap := range caps[1:] {
 			rets[i] = cap.Value(s)
 		}
 

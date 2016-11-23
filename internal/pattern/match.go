@@ -66,18 +66,19 @@ type r32 struct {
 type set struct {
 	elems  []rune
 	ranges []r32
+	not    bool
 }
 
 func (s *set) match(r rune) bool {
 	for _, e := range s.elems {
 		if simpleMatch(opCode(e), r) {
-			return true
+			return !s.not
 		}
 	}
 	for _, rng := range s.ranges {
 		if rng.low <= r && r <= rng.hi {
-			return true
+			return !s.not
 		}
 	}
-	return false
+	return s.not
 }

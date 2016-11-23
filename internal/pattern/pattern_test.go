@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var testFindCases = []struct {
+var testFindIndexCases = []struct {
 	input    string
 	pat      string
 	off      int
@@ -40,6 +40,7 @@ var testFindCases = []struct {
 	{"aabb", "%f[a]", 0, []Capture{{0, 0, false}}},
 	{"aabb", "%f[b]", 0, []Capture{{2, 2, false}}},
 	{"aa(bb)cc", "%b()", 0, []Capture{{2, 6, false}}},
+	{"aa'bb'cc", "%b''", 0, []Capture{{2, 6, false}}},
 	{"ab ! test", "[^%sa-z]", 0, []Capture{{3, 4, false}}},
 	{`[]`, `^%[%]$`, 0, []Capture{{0, 2, false}}},
 	{`["]`, `^%["%]$`, 0, []Capture{{0, 3, false}}},
@@ -52,15 +53,84 @@ var testFindCases = []struct {
 	{"ab", "b", 1, []Capture{{1, 2, false}}},
 	{" a ", "%w", 1, []Capture{{1, 2, false}}},
 	{"x=y", "x%py", 0, []Capture{{0, 3, false}}},
+	{"aa5bb", "[%d]", 0, []Capture{{2, 3, false}}},
+	{"aa5bb", "[^%D]", 0, []Capture{{2, 3, false}}},
+	{"aa", "%f[a]", 0, []Capture{{0, 0, false}}},
+	{"aa", "%f[^a]", 0, []Capture{{2, 2, false}}},
+	{"aa", "%f[^\x00]", 0, []Capture{{0, 0, false}}},
+	{"aa", "%f[\x00]", 0, []Capture{{2, 2, false}}},
 }
 
-func TestFind(t *testing.T) {
-	for i, test := range testFindCases {
+func TestFindIndex(t *testing.T) {
+	for i, test := range testFindIndexCases {
 		got, err := FindIndex(test.input, test.pat, test.off)
 		if err != nil {
 			t.Fatal(err)
 		}
 		want := test.captures
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%d: got %v, want %v", i+1, got, want)
+		}
+	}
+}
+
+var testFindAllIndexCases = []struct {
+	input       string
+	pat         string
+	allCaptures [][]Capture
+}{
+	{"abc", "", [][]Capture{
+		{{0, 0, false}},
+		{{1, 1, false}},
+		{{2, 2, false}},
+		{{3, 3, false}},
+	}},
+	{"a bc", " *", [][]Capture{
+		{{0, 0, false}},
+		{{1, 2, false}},
+		{{3, 3, false}},
+		{{4, 4, false}},
+	}},
+	{"abc abc ababcabc", "abc", [][]Capture{
+		{{0, 3, false}},
+		{{4, 7, false}},
+		{{10, 13, false}},
+		{{13, 16, false}},
+	}},
+}
+
+func TestFindAllIndex(t *testing.T) {
+	for i, test := range testFindAllIndexCases {
+		got, err := FindAllIndex(test.input, test.pat, -1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := test.allCaptures
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%d: got %v, want %v", i+1, got, want)
+		}
+	}
+}
+
+var testReplaceAllCases = []struct {
+	input  string
+	pat    string
+	repl   string
+	output string
+}{
+	{"abc", "", "-", "-a-b-c-"},
+	{"a bc", " *", "-", "-a-b-c-"},
+}
+
+func TestReplaceAllFunc(t *testing.T) {
+	for i, test := range testReplaceAllCases {
+		got, _, err := ReplaceAllFunc(test.input, test.pat, func(caps []Capture) (string, error) {
+			return test.repl, nil
+		}, -1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := test.output
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("%d: got %v, want %v", i+1, got, want)
 		}

@@ -1,5 +1,7 @@
 package pattern
 
+import "fmt"
+
 type scanState struct {
 	pat   string
 	off   int
@@ -14,6 +16,12 @@ func (s *scanState) next() {
 
 func (s *scanState) scanSet() (*set, error) {
 	set := new(set)
+
+	if s.r == '^' {
+		set.not = true
+
+		s.next()
+	}
 
 L:
 	for {
@@ -143,22 +151,14 @@ L:
 
 			nsaved++
 		case '[':
-			op := opSet
-
 			s.next()
-
-			if s.r == '^' {
-				op = opNotSet
-
-				s.next()
-			}
 
 			set, err := s.scanSet()
 			if err != nil {
 				return nil, err
 			}
 
-			p.code = append(p.code, instSet(op, len(p.sets)))
+			p.code = append(p.code, instSet(len(p.sets)))
 
 			p.sets = append(p.sets, set)
 
@@ -229,8 +229,8 @@ L:
 					}
 
 					n := int(s.r - '0')
-					if n >= nsaved {
-						return nil, errInvalidCapture
+					if n <= 0 || n >= nsaved {
+						return nil, fmt.Errorf("invalid capture index %%%d", n)
 					}
 
 					p.code = append(p.code, instCapture(n))

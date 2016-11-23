@@ -28,8 +28,6 @@ const (
 	opHexDigit
 	opZero
 
-	opSet
-
 	opNotLetter
 	opNotControl
 	opNotDigit
@@ -42,10 +40,9 @@ const (
 	opNotHexDigit
 	opNotZero
 
-	opNotSet
-
-	opBalance
+	opSet
 	opFrontier
+	opBalance
 )
 
 type instruction struct {
@@ -94,9 +91,6 @@ func (inst instruction) String() string {
 	case opZero:
 		return fmt.Sprintf("op: zero")
 
-	case opSet:
-		return fmt.Sprintf("op: set")
-
 	case opNotLetter:
 		return fmt.Sprintf("op: not letter")
 	case opNotControl:
@@ -120,13 +114,12 @@ func (inst instruction) String() string {
 	case opNotZero:
 		return fmt.Sprintf("op: not zero")
 
-	case opNotSet:
-		return fmt.Sprintf("op: not set")
-
-	case opBalance:
-		return fmt.Sprintf("op: balance, x: %c, y: %c", rune(inst.x), rune(inst.y))
+	case opSet:
+		return fmt.Sprintf("op: set")
 	case opFrontier:
 		return fmt.Sprintf("op: frontier")
+	case opBalance:
+		return fmt.Sprintf("op: balance, x: %c, y: %c", rune(inst.x), rune(inst.y))
 
 	default:
 		if 0 <= inst.op && inst.op <= utf8.MaxRune {
@@ -249,9 +242,9 @@ func instCapture(x int) instruction {
 	}
 }
 
-func instSet(op opCode, x int) instruction {
+func instSet(x int) instruction {
 	return instruction{
-		op: op,
+		op: opSet,
 		x:  x,
 	}
 }
