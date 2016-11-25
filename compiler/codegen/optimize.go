@@ -138,7 +138,11 @@ func (g *generator) foldUnary(expr *ast.UnaryExpr) (val object.Value, ok bool) {
 	case token.LEN:
 		x := expr.X
 
-		for paren, ok := x.(*ast.ParenExpr); ok; {
+		for {
+			paren, ok := x.(*ast.ParenExpr)
+			if !ok {
+				break
+			}
 			x = paren.X
 		}
 
