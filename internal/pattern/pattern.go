@@ -38,12 +38,13 @@ var lastDecodeRune = _lastDecodeByte
 // var lastDecodeRune = _lastDecodeRune
 
 var (
-	errInvalidEscape    = errors.New("invalid escape")
-	errInvalidBalance   = errors.New("invalid balance")
-	errInvalidFrontier  = errors.New("invalid frontier")
-	errMissingBracket   = errors.New("missing closing ]")
-	errUnexpectedParen  = errors.New("unexpected )")
-	errMalformedPattern = errors.New("malformed pattern (ends with '%')")
+	errInvalidEscape         = errors.New("invalid escape")
+	errIncompleteFrontier    = errors.New("missing '[' after '%f' in pattern")
+	errUnfinishedCapture     = errors.New("unfinished capture")
+	errInvalidPatternCapture = errors.New("invalid pattern capture")
+	errMalformedSet          = errors.New("malformed pattern (missing ']')")
+	errMalformedBalance      = errors.New("malformed pattern (missing arguments to '%b')")
+	errMalformedEscape       = errors.New("malformed pattern (ends with '%')")
 )
 
 type matchType int

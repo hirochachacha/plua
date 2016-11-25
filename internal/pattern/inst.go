@@ -140,6 +140,8 @@ func instAny() instruction {
 
 func instClassOrEscChar(r rune) (instruction, bool) {
 	switch r {
+	case eos:
+		return instruction{}, false
 	case 'a':
 		return instruction{op: opLetter}, true
 	case 'A':

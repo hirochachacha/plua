@@ -27,12 +27,15 @@ L:
 	for {
 		switch s.r {
 		case eos:
-			return nil, errMissingBracket
+			return nil, errMalformedSet
 		case '%':
 			s.next()
 
 			inst, ok := instClassOrEscChar(s.r)
 			if !ok {
+				if s.r == eos {
+					return nil, errMalformedSet
+				}
 				return nil, errInvalidEscape
 			}
 
@@ -62,7 +65,7 @@ L:
 
 				break L
 			case eos:
-				return nil, errMissingBracket
+				return nil, errMalformedSet
 			default:
 				set.ranges = append(set.ranges, r32{low: low, hi: hi})
 			}
@@ -130,7 +133,7 @@ L:
 			if s.r == ')' { // handle empty paren
 				parenDepth--
 				if parenDepth < 0 {
-					return nil, errUnexpectedParen
+					return nil, errInvalidPatternCapture
 				}
 
 				p.code = append(p.code, instEndSave(parens[parenDepth], 1))
@@ -142,7 +145,7 @@ L:
 		case ')':
 			parenDepth--
 			if parenDepth < 0 {
-				return nil, errUnexpectedParen
+				return nil, errInvalidPatternCapture
 			}
 
 			p.code = append(p.code, instEndSave(parens[parenDepth], 0))
@@ -183,12 +186,12 @@ L:
 			} else {
 				switch s.r {
 				case eos:
-					return nil, errInvalidEscape
+					return nil, errMalformedEscape
 				case 'f':
 					s.next()
 
 					if s.r != '[' {
-						return nil, errInvalidFrontier
+						return nil, errIncompleteFrontier
 					}
 
 					s.next()
@@ -207,7 +210,7 @@ L:
 					s.next()
 
 					if s.r == eos {
-						return nil, errInvalidBalance
+						return nil, errMalformedBalance
 					}
 
 					x := int(s.r)
@@ -215,7 +218,7 @@ L:
 					s.next()
 
 					if s.r == eos {
-						return nil, errInvalidBalance
+						return nil, errMalformedBalance
 					}
 
 					y := int(s.r)
@@ -322,7 +325,7 @@ L:
 	}
 
 	if parenDepth != 0 {
-		return nil, errUnexpectedParen
+		return nil, errUnfinishedCapture
 	}
 
 	p.nsaved = nsaved
