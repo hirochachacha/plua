@@ -44,8 +44,9 @@ func nextcode(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 	if err != nil {
 		return nil, err
 	}
-	if off < 0 {
-		off = len(s) + 1 + off
+
+	if off >= len(s) {
+		return nil, nil
 	}
 
 	if off <= 0 {
@@ -57,25 +58,23 @@ func nextcode(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 		return []object.Value{object.Integer(1), object.Integer(r)}, nil
 	}
 
-	if off >= len(s) {
-		return nil, nil
-	}
-
-	r, i := utf8.DecodeRuneInString(s[off-1:])
+	r, rsize := utf8.DecodeRuneInString(s[off-1:])
 	if r == utf8.RuneError {
 		return nil, object.NewRuntimeError("invalid UTF-8 code")
 	}
 
-	if off+i >= len(s) {
+	off += rsize
+
+	if off > len(s) {
 		return nil, nil
 	}
 
-	r, _ = utf8.DecodeRuneInString(s[off-1+i:])
+	r, _ = utf8.DecodeRuneInString(s[off-1:])
 	if r == utf8.RuneError {
 		return nil, object.NewRuntimeError("invalid UTF-8 code")
 	}
 
-	return []object.Value{object.Integer(off + i), object.Integer(r)}, nil
+	return []object.Value{object.Integer(off), object.Integer(r)}, nil
 }
 
 func codes(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -199,56 +198,69 @@ func offset(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	scount := utf8.RuneCountInString(s)
-
 	n, err := ap.ToGoInt(1)
 	if err != nil {
 		return nil, err
 	}
+	i := 1
 	if n < 0 {
-		n = scount + 1 + n
-	}
-	if n < 0 || n > scount {
-		return []object.Value{nil}, nil
+		i = len(s) + 1
 	}
 
-	i, err := ap.OptGoInt(2, 1)
+	i, err = ap.OptGoInt(2, i)
 	if err != nil {
 		return nil, err
 	}
 	if i < 0 {
 		i = len(s) + 1 + i
 	}
-	if i <= 0 || i > len(s) {
+	if i <= 0 || i > len(s)+1 {
 		return nil, ap.ArgError(2, "position out of range")
 	}
 
-	if n == 0 {
-		j := 1
-		for {
-			r, rsize := utf8.DecodeRuneInString(s[j-1:])
+	var r rune
+	var rsize int
+
+	switch {
+	case n < 0:
+		if i != len(s)+1 && !utf8.RuneStart(s[i-1]) {
+			return nil, object.NewRuntimeError("initial position is a continuation byte")
+		}
+		for n < 0 && i > 0 {
+			r, rsize = utf8.DecodeLastRuneInString(s[:i-1])
 			if r == utf8.RuneError {
-				return nil, object.NewRuntimeError("invalid UTF-8 code")
+				break
 			}
-
-			if j <= i && i < j+rsize {
-				return []object.Value{object.Integer(j)}, nil
+			i -= rsize
+			n++
+		}
+	case n > 0:
+		if i != len(s)+1 && !utf8.RuneStart(s[i-1]) {
+			return nil, object.NewRuntimeError("initial position is a continuation byte")
+		}
+		n--
+		for n > 0 && i < len(s)+1 {
+			r, rsize = utf8.DecodeRuneInString(s[i-1:])
+			if r == utf8.RuneError {
+				break
 			}
-
-			j += rsize
+			i += rsize
+			n--
+		}
+	default:
+		if len(s) == i-1 {
+			return []object.Value{object.Integer(i)}, nil
+		}
+		for i > 0 && !utf8.RuneStart(s[i-1]) {
+			i--
 		}
 	}
 
-	for j := 0; j < n-1; j++ {
-		r, rsize := utf8.DecodeRuneInString(s[i-1:])
-		if r == utf8.RuneError {
-			return nil, object.NewRuntimeError("invalid UTF-8 code")
-		}
-
-		i += rsize
+	if n == 0 {
+		return []object.Value{object.Integer(i)}, nil
 	}
 
-	return []object.Value{object.Integer(i)}, nil
+	return nil, nil
 }
 
 func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
