@@ -241,7 +241,7 @@ func calluntm(th object.Thread, x object.Value, tag object.Value) (object.Value,
 	if tm == nil {
 		return nil, errors.UnaryError(tag, x)
 	}
-	return calltm(th, tm)
+	return calltm(th, tm, x)
 }
 
 func callbintm(th object.Thread, x, y object.Value, tag object.Value) (object.Value, *object.RuntimeError) {
