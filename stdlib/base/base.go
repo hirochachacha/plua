@@ -88,12 +88,7 @@ func dofile(th object.Thread, args ...object.Value) (rets []object.Value, err *o
 		return []object.Value{nil, object.String(e.Error())}, nil
 	}
 
-	rets, err = th.Call(th.NewClosure(p), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return rets, nil
+	return th.Call(th.NewClosure(p), nil)
 }
 
 // error(message [, level]) -> panic
@@ -209,12 +204,7 @@ func ipairs(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	}
 
 	if tm := mt.Get(object.TM_IPAIRS); tm != nil {
-		rets, err := th.Call(tm, nil, args...)
-		if err != nil {
-			return nil, err
-		}
-
-		return rets, nil
+		return th.Call(tm, nil, args...)
 	}
 
 	for i := 0; i < version.MAX_TAG_LOOP; i++ {
@@ -270,12 +260,7 @@ func pairs(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 
 	if mt := th.GetMetatable(t); mt != nil {
 		if tm := mt.Get(object.TM_PAIRS); tm != nil {
-			rets, err := th.Call(tm, nil, args...)
-			if err != nil {
-				return nil, err
-			}
-
-			return rets, nil
+			return th.Call(tm, nil, args...)
 		}
 	}
 
