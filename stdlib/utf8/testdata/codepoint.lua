@@ -8,3 +8,5 @@ ok, err = pcall(utf8.codepoint, "あい", 2)
 assert(not ok)
 assert(err == "invalid UTF-8 code")
 assert(not pcall(utf8.codepoint, "あい", 0))
+
+assert(utf8.codepoint("", 1, -1) == nil)

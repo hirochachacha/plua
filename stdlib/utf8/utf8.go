@@ -103,7 +103,7 @@ func codepoint(th object.Thread, args ...object.Value) ([]object.Value, *object.
 	if i < 0 {
 		i = len(s) + 1 + i
 	}
-	if i <= 0 || i > len(s) {
+	if i <= 0 {
 		return nil, ap.ArgError(1, "out of range")
 	}
 
@@ -114,7 +114,7 @@ func codepoint(th object.Thread, args ...object.Value) ([]object.Value, *object.
 	if j < 0 {
 		j = len(s) + 1 + j
 	}
-	if j <= 0 || j > len(s) {
+	if j > len(s) {
 		return nil, ap.ArgError(2, "out of range")
 	}
 
