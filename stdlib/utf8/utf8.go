@@ -158,7 +158,7 @@ func _len(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	if i < 0 {
 		i = len(s) + 1 + i
 	}
-	if i <= 0 || i > len(s) {
+	if i <= 0 || i > len(s)+1 {
 		return nil, ap.ArgError(1, "out of range")
 	}
 
@@ -169,12 +169,8 @@ func _len(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	if j < 0 {
 		j = len(s) + 1 + j
 	}
-	if j <= 0 || j > len(s) {
+	if j >= len(s)+1 {
 		return nil, ap.ArgError(2, "out of range")
-	}
-
-	if i > j {
-		return nil, nil
 	}
 
 	var n int

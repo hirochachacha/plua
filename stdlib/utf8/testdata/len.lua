@@ -5,3 +5,5 @@ assert(utf8.len("あい", 1, 4) == 2)
 
 ok, pos = utf8.len("あい", 2)
 assert(not ok and pos == 2)
+
+assert(utf8.len("") == 0)
