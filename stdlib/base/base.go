@@ -627,16 +627,7 @@ func tostring(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 
 	if mt := th.GetMetatable(val); mt != nil {
 		if tm := mt.Get(object.TM_TOSTRING); tm != nil {
-			rets, err := th.Call(tm, nil)
-			if err != nil {
-				return nil, err
-			}
-
-			if len(rets) == 0 {
-				return nil, object.NewRuntimeError("'tostring' must return a string to 'print'")
-			}
-
-			val = rets[0]
+			return th.Call(tm, nil, val)
 		}
 	}
 
