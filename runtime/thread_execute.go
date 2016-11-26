@@ -882,7 +882,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			nrets := inst.B() - 1
 
 			varargs := ci.varargs
-			if nrets != -1 {
+			if nrets != -1 && nrets < len(varargs) {
 				varargs = varargs[:nrets]
 			}
 
@@ -892,7 +892,13 @@ func (th *thread) execute0() (rets []object.Value) {
 
 			copy(ctx.stack[ci.base+a:], varargs)
 
-			ctx.ci.top = ci.base + a + len(varargs)
+			top := ci.base + a + len(varargs)
+
+			for r := ci.base + nrets; r >= top; r-- {
+				ctx.stack[r] = nil
+			}
+
+			ctx.ci.top = top
 		case opcode.EXTRAARG:
 			th.error(errors.ErrInvalidByteCode)
 
