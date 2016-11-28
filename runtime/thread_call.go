@@ -84,17 +84,17 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 
 	copy(ctx.stack[ctx.ci.base-1:], rets)
 
-	retop := ctx.ci.base - 1 + len(rets)
+	top := ctx.ci.base - 1 + len(rets)
 
 	// clear unused stack
-	for r := ctx.ci.base - 1 + nrets; r >= retop; r-- {
+	for r := ctx.ci.base - 1 + nrets; r >= top; r-- {
 		ctx.stack[r] = nil
 	}
 
 	ctx.popFrame()
 
 	// adjust top
-	ctx.ci.top = retop
+	ctx.ci.top = top
 
 	return nil
 }
@@ -300,7 +300,7 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 	top := ctx.ci.base - 1 + len(rets)
 
 	// clear unused stack
-	for r := ctx.ci.base + ctx.ci.nrets; r >= top; r-- {
+	for r := ctx.ci.base - 1 + ctx.ci.nrets; r >= top; r-- {
 		ctx.stack[r] = nil
 	}
 

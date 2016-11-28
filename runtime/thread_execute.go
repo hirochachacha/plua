@@ -76,7 +76,7 @@ func (th *thread) resumeExecute(rets []object.Value) {
 
 	top := ctx.ci.base - 1 + len(rets)
 
-	for r := ctx.ci.base + ctx.ci.nrets; r >= top; r-- {
+	for r := ctx.ci.base - 1 + ctx.ci.nrets; r >= top; r-- {
 		ctx.stack[r] = nil
 	}
 
@@ -894,7 +894,7 @@ func (th *thread) execute0() (rets []object.Value) {
 
 			top := ci.base + a + len(varargs)
 
-			for r := ci.base + nrets; r >= top; r-- {
+			for r := ci.base + a + nrets; r >= top; r-- {
 				ctx.stack[r] = nil
 			}
 
