@@ -924,17 +924,17 @@ func (th *thread) concat(a, b, c int) (err *object.RuntimeError) {
 	ctx := th.context
 	ci := ctx.ci
 
-	rb := ctx.stack[ci.base+b]
-	for r := b + 1; r <= c; r++ {
-		rc := ctx.stack[ci.base+r]
+	rc := ctx.stack[ci.base+c]
+	for r := c - 1; r >= b; r-- {
+		rb := ctx.stack[ci.base+r]
 
-		rb, err = arith.CallConcat(th, rb, rc)
+		rc, err = arith.CallConcat(th, rb, rc)
 		if err != nil {
 			return err
 		}
 	}
 
-	ctx.setR(a, rb)
+	ctx.setR(a, rc)
 
 	return nil
 }
