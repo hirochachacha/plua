@@ -118,17 +118,17 @@ func (th *thread) callLua(c object.Closure, f, nargs, nrets int) (err *object.Ru
 		return errors.ErrStackOverflow
 	}
 
+	ci.varargs = nil
+
 	if nargs > cl.NParams {
 		if cl.IsVararg {
 			ci.varargs = dup(ctx.stack[ci.base+cl.NParams : ci.base+nargs])
-		} else {
-			ci.varargs = nil
 		}
-		for r := ci.base - 1 + nargs; r > ci.base-1+cl.NParams; r-- {
+		for r := ci.base + nargs - 1; r >= ci.base+cl.NParams; r-- {
 			ctx.stack[r] = nil
 		}
 	} else {
-		for r := ci.base - 1 + cl.NParams; r > ci.base-1+nargs; r-- {
+		for r := ci.base + cl.NParams - 1; r >= ci.base+nargs; r-- {
 			ctx.stack[r] = nil
 		}
 	}
@@ -193,26 +193,26 @@ func (th *thread) tailcallLua(c object.Closure, f, nargs int) (err *object.Runti
 		return errors.ErrStackOverflow
 	}
 
-	ctx.stack[ci.base-1] = ctx.stack[f] // copy function to ci.base-1
+	copy(ctx.stack[ci.base-1:], ctx.stack[f:f+1+nargs])
 
-	args := ctx.stack[f+1 : f+1+nargs]
+	for r := f + nargs; r >= ci.base+nargs; r-- {
+		ctx.stack[r] = nil
+	}
+
+	ci.varargs = nil
 
 	if nargs > cl.NParams {
 		if cl.IsVararg {
-			ci.varargs = dup(args[cl.NParams:])
-		} else {
-			ci.varargs = nil
+			ci.varargs = dup(ctx.stack[ci.base+cl.NParams : ci.base+nargs])
 		}
-		for r := ci.base - 1 + nargs; r > ci.base-1+cl.NParams; r-- {
+		for r := ci.base + nargs - 1; r >= ci.base+cl.NParams; r-- {
 			ctx.stack[r] = nil
 		}
-		args = args[:cl.NParams]
 	} else {
-		for r := ci.base - 1 + cl.NParams; r > ci.base-1+nargs; r-- {
+		for r := ci.base + cl.NParams - 1; r >= ci.base+nargs; r-- {
 			ctx.stack[r] = nil
 		}
 	}
-	copy(ctx.stack[ci.base:], args)
 
 	if err := th.onTailCall(); err != nil {
 		return err
