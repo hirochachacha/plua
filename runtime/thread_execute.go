@@ -34,7 +34,7 @@ func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bo
 		ci.closure = cl
 		ci.top = ci.base + cl.MaxStackSize
 
-		if !ctx.growStack(0) {
+		if !ctx.growStack(ci.top) {
 			panic(errors.ErrStackOverflow)
 		}
 
@@ -72,9 +72,9 @@ func (th *thread) resumeExecute(rets []object.Value) {
 
 	ctx.err = nil
 
-	copy(ctx.stack[ci.base-1:], rets)
-
 	top := ctx.ci.base - 1 + len(rets)
+
+	copy(ctx.stack[ci.base-1:], rets)
 
 	for r := ctx.ci.base - 1 + ctx.ci.nrets; r >= top; r-- {
 		ctx.stack[r] = nil
@@ -886,13 +886,13 @@ func (th *thread) execute0() (rets []object.Value) {
 				varargs = varargs[:nrets]
 			}
 
-			if !ctx.growStack(len(varargs)) {
+			top := ci.base + a + len(varargs)
+
+			if !ctx.growStack(top) {
 				th.error(errors.ErrStackOverflow)
 			}
 
 			copy(ctx.stack[ci.base+a:], varargs)
-
-			top := ci.base + a + len(varargs)
 
 			for r := ci.base + a + nrets; r >= top; r-- {
 				ctx.stack[r] = nil

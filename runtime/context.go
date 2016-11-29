@@ -87,20 +87,12 @@ func (ctx *context) popFrame() {
 	ctx.ci = &ctx.ciStack[len(ctx.ciStack)-1]
 }
 
-func (ctx *context) growStack(size int) bool {
-	if size < 0 {
-		return true
-	}
-
-	top := ctx.ci.top
-
-	if top > int(limits.MaxInt)-size {
+func (ctx *context) growStack(top int) bool {
+	if top > int(limits.MaxInt) {
 		return false
 	}
 
-	needed := top + size
-
-	if needed < len(ctx.stack) {
+	if top < len(ctx.stack) {
 		return true
 	}
 
@@ -110,8 +102,8 @@ func (ctx *context) growStack(size int) bool {
 		newsize = int(limits.MaxInt)
 	} else {
 		newsize *= 2
-		if newsize < needed {
-			newsize = needed
+		if newsize < top {
+			newsize = top
 		}
 	}
 
