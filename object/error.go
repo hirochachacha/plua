@@ -20,7 +20,7 @@ func NewRuntimeError(msg string) *RuntimeError {
 func (err *RuntimeError) Positioned() Value {
 	if msg, ok := err.Value.(String); ok {
 		if len(err.Traceback) > 0 {
-			traceback := err.Traceback[len(err.Traceback)-1]
+			traceback := err.Traceback[0]
 			if traceback.IsValid() {
 				msg = String(traceback.String()) + ": " + msg
 			}
