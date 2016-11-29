@@ -85,12 +85,7 @@ func wrap(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	th1.LoadFunc(cl)
 
 	fn := func(_ object.Thread, args1 ...object.Value) ([]object.Value, *object.RuntimeError) {
-		rets, err := th1.Resume(args1...)
-		if err != nil {
-			return nil, err
-		}
-
-		return rets, nil
+		return th1.Resume(args1...)
 	}
 
 	return []object.Value{object.GoFunction(fn)}, nil
