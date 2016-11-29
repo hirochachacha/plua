@@ -6,6 +6,7 @@ import (
 
 	"github.com/hirochachacha/plua/compiler"
 	"github.com/hirochachacha/plua/internal/compiler_pool"
+	"github.com/hirochachacha/plua/internal/errors"
 	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/object/fnutil"
@@ -643,9 +644,13 @@ func xpcall(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	rets, err := th.Call(f, msgh, args[2:]...)
+	rets, err := th.Call(f, nil, args[2:]...)
 	if err != nil {
-		return []object.Value{object.False, err.Positioned()}, nil
+		rets, err = th.Call(msgh, nil, err.Positioned())
+		if err != nil {
+			return []object.Value{object.False, errors.ErrInErrorHandling.Positioned()}, nil
+		}
+		return append([]object.Value{object.False}, rets...), nil
 	}
 
 	return append([]object.Value{object.True}, rets...), nil
