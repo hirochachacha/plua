@@ -138,10 +138,8 @@ func (g *generator) genName(expr *ast.Name, typ genType) (rk int) {
 		return g.markRK(g.constant(object.String(expr.Name)))
 	}
 
-	l := g.resolve(expr.Name)
-
-	// get global
-	if l == nil {
+	l, ok := g.resolve(expr.Name)
+	if !ok {
 		return g.genGetGlobal(expr)
 	}
 
@@ -225,7 +223,7 @@ func (g *generator) genBasicLit(expr *ast.BasicLit, typ genType) (rk int) {
 
 		return
 	case token.INT:
-		i, inf := parseInteger(tok.Lit)
+		i, inf := g.parseInteger(tok, false)
 		if inf != 0 {
 			if inf > 0 {
 				val = object.Infinity
@@ -236,9 +234,9 @@ func (g *generator) genBasicLit(expr *ast.BasicLit, typ genType) (rk int) {
 			val = i
 		}
 	case token.FLOAT:
-		val = parseNumber(tok.Lit)
+		val = g.parseNumber(tok, false)
 	case token.STRING:
-		val = object.String(unquoteString(tok.Lit))
+		val = object.String(g.unquoteString(tok))
 	default:
 		panic("unreachable")
 	}
@@ -511,7 +509,7 @@ func (g *generator) genUnaryExpr(expr *ast.UnaryExpr, typ genType) (r int) {
 			case token.INT:
 				var val object.Value
 
-				i, inf := parseInteger("-" + tok.Lit)
+				i, inf := g.parseInteger(tok, true)
 				if inf != 0 {
 					if inf > 0 {
 						val = object.Infinity
@@ -524,7 +522,7 @@ func (g *generator) genUnaryExpr(expr *ast.UnaryExpr, typ genType) (r int) {
 
 				return g.genConst(val, typ)
 			case token.FLOAT:
-				val := parseNumber("-" + tok.Lit)
+				val := g.parseNumber(tok, true)
 
 				return g.genConst(val, typ)
 			}

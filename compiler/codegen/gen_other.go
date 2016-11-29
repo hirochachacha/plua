@@ -28,10 +28,8 @@ func (g *generator) genFile(f *ast.File) {
 
 	g.closeScope()
 
-	if assert {
-		if g.scope != nil {
-			panic("unexpected")
-		}
+	if g.scope != nil {
+		panic("unexpected")
 	}
 }
 
@@ -290,7 +288,10 @@ func (g *generator) genConst(val object.Value, typ genType) (rk int) {
 }
 
 func (g *generator) genSetGlobal(name *ast.Name, r int) {
-	env := g.resolve(version.LUA_ENV)
+	env, ok := g.resolve(version.LUA_ENV)
+	if !ok {
+		panic("unexpected")
+	}
 
 	rk := g.markRK(g.constant(object.String(name.Name)))
 
@@ -305,7 +306,10 @@ func (g *generator) genSetGlobal(name *ast.Name, r int) {
 }
 
 func (g *generator) genGetGlobal(name *ast.Name) (r int) {
-	env := g.resolve(version.LUA_ENV)
+	env, ok := g.resolve(version.LUA_ENV)
+	if !ok {
+		panic("unexpected")
+	}
 
 	rk := g.markRK(g.constant(object.String(name.Name)))
 

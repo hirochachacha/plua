@@ -50,7 +50,7 @@ func (g *generator) foldBasic(expr *ast.BasicLit) (val object.Value, ok bool) {
 	case token.TRUE:
 		val = object.True
 	case token.INT:
-		i, inf := parseInteger(tok.Lit)
+		i, inf := g.parseInteger(tok, false)
 		if inf != 0 {
 			if inf > 0 {
 				val = object.Infinity
@@ -61,9 +61,9 @@ func (g *generator) foldBasic(expr *ast.BasicLit) (val object.Value, ok bool) {
 			val = i
 		}
 	case token.FLOAT:
-		val = parseNumber(tok.Lit)
+		val = g.parseNumber(tok, false)
 	case token.STRING:
-		val = object.String(unquoteString(tok.Lit))
+		val = object.String(g.unquoteString(tok))
 	default:
 		panic("unreachable")
 	}
@@ -92,7 +92,7 @@ func (g *generator) foldUnary(expr *ast.UnaryExpr) (val object.Value, ok bool) {
 			case token.INT:
 				var val object.Value
 
-				i, inf := parseInteger("-" + tok.Lit)
+				i, inf := g.parseInteger(tok, true)
 				if inf != 0 {
 					if inf > 0 {
 						val = object.Infinity
@@ -107,7 +107,7 @@ func (g *generator) foldUnary(expr *ast.UnaryExpr) (val object.Value, ok bool) {
 
 				return val, true
 			case token.FLOAT:
-				val := parseNumber("-" + tok.Lit)
+				val := g.parseNumber(tok, true)
 
 				g.cfolds[expr] = val
 
@@ -150,7 +150,7 @@ func (g *generator) foldUnary(expr *ast.UnaryExpr) (val object.Value, ok bool) {
 		case *ast.BasicLit:
 			tok := x.Token
 			if tok.Type == token.STRING {
-				val = object.Integer(len(unquoteString(tok.Lit)))
+				val = object.Integer(len(g.unquoteString(tok)))
 			}
 		case *ast.TableLit:
 			var a []ast.Expr
@@ -1028,8 +1028,4 @@ func (g *generator) peepLine(i opcode.Instruction, line int) {
 
 		return
 	}
-
-	panic("unreachable")
-
-	return
 }

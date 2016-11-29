@@ -77,7 +77,7 @@ func (c *Compiler) Compile(r io.Reader, srcname string, typ FormatType) (*object
 			return nil, err
 		}
 
-		return codegen.Generate(ast), nil
+		return codegen.Generate(ast)
 	case err == nil && c.b[0] == version.LUA_SIGNATURE[0]:
 		if typ != Either && typ != Binary {
 			return nil, fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "binary", typ)

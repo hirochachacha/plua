@@ -5,13 +5,12 @@ import (
 	"math"
 
 	"github.com/hirochachacha/plua/compiler/ast"
+	"github.com/hirochachacha/plua/compiler/token"
 	"github.com/hirochachacha/plua/internal/strconv"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/opcode"
+	"github.com/hirochachacha/plua/position"
 )
-
-// assertion flag for debugging
-const assert = false
 
 const (
 	skipPeepholeOptimization = false
@@ -19,41 +18,41 @@ const (
 	skipConstantFolding      = false
 )
 
-func Generate(f *ast.File) (proto *object.Proto) {
+func Generate(f *ast.File) (proto *object.Proto, err error) {
 	g := newGenerator(nil)
 
 	g.Source = f.Filename
 	g.cfolds = make(map[ast.Expr]object.Value) // cache for constant folding
 
+	defer func() {
+		if r := recover(); r != nil {
+			_ = r.(bailout)
+
+			err = g.err
+		}
+	}()
+
 	g.genFile(f)
 
-	proto = g.Proto
+	proto, err = g.Proto, g.err
+	if err != nil {
+		return nil, g.err
+	}
 
-	g.Proto = nil
-
-	return
+	return proto, nil
 }
 
-// snapshot of proto generator
+// label is a snapshot of proto generator
 type label struct {
-	pc int
-	sp int
+	pc  int
+	sp  int
+	pos position.Position
 }
 
-func newGenerator(outer *generator) *generator {
-	g := &generator{
-		Proto:      new(object.Proto),
-		outer:      outer,
-		jumps:      make(map[*scope]map[string]int, 0),
-		rconstants: make(map[object.Value]int, 0),
-	}
-
-	if outer != nil {
-		g.Source = outer.Source
-		g.cfolds = outer.cfolds
-	}
-
-	return g
+// pendingJump is a location of 'goto' and used for backward jump
+type pendingJump struct {
+	pc  int
+	pos position.Position
 }
 
 type generator struct {
@@ -65,7 +64,7 @@ type generator struct {
 
 	sp int
 
-	jumps map[*scope]map[string]int // pending jumps
+	pendingJumps map[*scope]map[string]pendingJump // pending jumps per scopes
 
 	rconstants map[object.Value]int // reverse map of Proto.constants
 
@@ -73,6 +72,37 @@ type generator struct {
 
 	locktmp  bool // don't remove tmp variable by peep hole optimization
 	lockpeep bool // don't do peep hole optimization, because here is jump destination
+
+	err error
+}
+
+type bailout struct{}
+
+func newGenerator(outer *generator) *generator {
+	g := &generator{
+		Proto:        new(object.Proto),
+		outer:        outer,
+		pendingJumps: make(map[*scope]map[string]pendingJump, 0),
+		rconstants:   make(map[object.Value]int, 0),
+	}
+
+	if outer != nil {
+		g.Source = outer.Source
+		g.cfolds = outer.cfolds
+	}
+
+	return g
+}
+
+func (g *generator) error(pos position.Position, err error) {
+	pos.SourceName = g.Source
+
+	g.err = &Error{
+		Pos: pos,
+		Err: err,
+	}
+
+	panic(bailout{})
 }
 
 func (g *generator) pc() int {
@@ -105,7 +135,7 @@ func (g *generator) setSP(sp int) {
 func (g *generator) newLocalLabel() (lid int) {
 	lid = g.lid
 
-	g.llabels[lid] = &label{pc: g.pc(), sp: g.sp}
+	g.llabels[lid] = label{pc: g.pc(), sp: g.sp}
 
 	g.lid++
 
@@ -117,7 +147,7 @@ func (g *generator) newLocalLabel() (lid int) {
 func (g *generator) genPendingLocalJump() (lid int) {
 	lid = g.lid
 
-	g.llabels[lid] = &label{pc: g.pushTemp(), sp: g.sp}
+	g.llabels[lid] = label{pc: g.pushTemp(), sp: g.sp}
 
 	g.lid++
 
@@ -128,10 +158,8 @@ func (g *generator) setLocalJumpDst(lid int) {
 	label := g.llabels[lid]
 
 	reljmp := g.pc() - label.pc - 1
-	if assert {
-		if reljmp < 0 {
-			panic("unexpected")
-		}
+	if reljmp < 0 {
+		panic("unexpected")
 	}
 
 	g.Code[label.pc] = opcode.AsBx(opcode.JMP, 0, reljmp)
@@ -143,10 +171,8 @@ func (g *generator) genLocalJump(lid int) {
 	label := g.llabels[lid]
 
 	reljmp := label.pc - g.pc() - 1
-	if assert {
-		if reljmp > 0 {
-			panic("unexpected")
-		}
+	if reljmp > 0 {
+		panic("unexpected")
 	}
 
 	g.pushInst(opcode.AsBx(opcode.JMP, label.sp+1, reljmp))
@@ -154,23 +180,22 @@ func (g *generator) genLocalJump(lid int) {
 
 // global jumps
 
-func (g *generator) newLabel(name string) {
-	g.labels[name] = &label{
-		pc: g.pc(),
-		sp: g.sp,
+func (g *generator) newLabel(name string, pos position.Position) {
+	g.labels[name] = label{
+		pc:  g.pc(),
+		sp:  g.sp,
+		pos: pos,
 	}
 }
 
-func (g *generator) genJump(name string) {
-	if label := g.resolveLabel(name); label != nil {
+func (g *generator) genJump(name string, pos position.Position) {
+	if label, ok := g.resolveLabel(name); ok {
 		// forward jump
 		// if label are already defined
 
 		reljmp := label.pc - g.pc() - 1
-		if assert {
-			if reljmp > 0 {
-				panic("unexpected")
-			}
+		if reljmp > 0 {
+			panic("unexpected")
 		}
 
 		a := label.sp + 1
@@ -178,72 +203,71 @@ func (g *generator) genJump(name string) {
 		g.pushInst(opcode.AsBx(opcode.JMP, a, reljmp))
 	} else {
 		// backward jump
-		g.genPendingJump(name)
+		g.genPendingJump(name, pos)
 	}
 }
 
-func (g *generator) genPendingJump(label string) {
-	jumps, ok := g.jumps[g.scope]
-	if !ok {
-		jumps = make(map[string]int, 0)
-		g.jumps[g.scope] = jumps
-	}
+func (g *generator) genPendingJump(name string, pos position.Position) {
+	pc := g.pushTemp()
 
-	jumps[label] = g.pushTemp()
+	if jmps, ok := g.pendingJumps[g.scope]; ok {
+		jmps[name] = pendingJump{
+			pc:  pc,
+			pos: pos,
+		}
+	} else {
+		g.pendingJumps[g.scope] = map[string]pendingJump{
+			name: pendingJump{
+				pc:  pc,
+				pos: pos,
+			},
+		}
+	}
 }
 
 // close pending jumps
 func (g *generator) closeJumps() {
-	for scope, jumps := range g.jumps {
-		if len(jumps) == 0 {
+	for scope, pendingJumps := range g.pendingJumps {
+		if len(pendingJumps) == 0 {
 			continue
 		}
 
-		for name, jmp := range jumps {
-			label := scope.resolveLabel(name)
-			if label == nil {
-				panic("unresolve jump " + name)
+		for name, pendingJump := range pendingJumps {
+			label, ok := scope.resolveLabel(name)
+			if !ok {
+				g.error(pendingJump.pos, fmt.Errorf("unknown label '%s' for jump", name))
 			}
-			reljmp := label.pc - jmp - 1
-			if assert {
-				if reljmp < 0 {
-					panic("unexpected")
-				}
+			reljmp := label.pc - pendingJump.pc - 1
+			if reljmp < 0 {
+				panic("unexpected")
 			}
 
-			g.Code[jmp] = opcode.AsBx(opcode.JMP, g.sp+1, reljmp)
+			g.Code[pendingJump.pc] = opcode.AsBx(opcode.JMP, g.sp+1, reljmp)
 		}
 
-		delete(g.jumps, scope)
+		delete(g.pendingJumps, scope)
 	}
 
 	g.lockpeep = true
 }
 
-func (g *generator) resolve(name string) *link {
+func (g *generator) resolve(name string) (link, bool) {
 	if g == nil {
-		return nil
+		return link{}, false
 	}
 
-	l := g.resolveLocal(name)
-	if l != nil {
-		return l
+	if l, ok := g.resolveLocal(name); ok {
+		return l, true
 	}
 
-	l = g.outer.resolve(name)
-	if l != nil {
-		return g.declareUpvalue(name, l)
+	if l, ok := g.outer.resolve(name); ok {
+		return g.declareUpvalue(name, l), true
 	}
 
-	return nil
+	return link{}, false
 }
 
 func (g *generator) declareLocal(name string, v int) {
-	l := &link{
-		kind: linkLocal,
-		v:    v,
-	}
-
 	locVar := object.LocVar{
 		Name:    name,
 		StartPC: g.pc(),
@@ -251,13 +275,10 @@ func (g *generator) declareLocal(name string, v int) {
 
 	g.LocVars = append(g.LocVars, locVar)
 
-	g.scope.declare(name, l)
-
-	if assert {
-		if g.nlocals != v {
-			panic("unexpected")
-		}
-	}
+	g.scope.declare(name, link{
+		kind: linkLocal,
+		v:    v,
+	})
 
 	g.nlocals++
 }
@@ -271,15 +292,13 @@ func (g *generator) declareEnviron() {
 
 	g.Upvalues = append(g.Upvalues, u)
 
-	link := &link{
+	g.scope.declare("_ENV", link{
 		kind: linkUpval,
 		v:    0,
-	}
-
-	g.scope.declare("_ENV", link)
+	})
 }
 
-func (g *generator) declareUpvalue(name string, l *link) *link {
+func (g *generator) declareUpvalue(name string, l link) link {
 	instack := l.kind == linkLocal
 
 	// mark upvalue should be close or not
@@ -308,7 +327,7 @@ func (g *generator) declareUpvalue(name string, l *link) *link {
 
 	g.Upvalues = append(g.Upvalues, u)
 
-	link := &link{
+	link := link{
 		kind: linkUpval,
 		v:    len(g.Upvalues) - 1,
 	}
@@ -386,17 +405,17 @@ func (g *generator) markRK(k int) (rk int) {
 
 func (g *generator) newScope() {
 	g.scope = &scope{
-		symbols: make(map[string]*link, 0),
-		labels:  make(map[string]*label, 0),
-		llabels: make(map[int]*label, 0),
+		symbols: make(map[string]link, 0),
+		labels:  make(map[string]label, 0),
+		llabels: make(map[int]label, 0),
 	}
 }
 
 func (g *generator) openScope() {
 	g.scope = &scope{
-		symbols: make(map[string]*link, 0),
-		labels:  make(map[string]*label, 0),
-		llabels: make(map[int]*label, 0),
+		symbols: make(map[string]link, 0),
+		labels:  make(map[string]label, 0),
+		llabels: make(map[int]label, 0),
 		outer:   g.scope,
 		savedSP: g.sp,
 		nlocals: g.scope.nlocals,
@@ -471,19 +490,22 @@ func (g *generator) pushReturn() {
 	g.LineInfo = append(g.LineInfo, g.LastLineDefined)
 }
 
-func unquoteString(s string) string {
-	us, err := strconv.Unquote(s)
+func (g *generator) unquoteString(tok token.Token) string {
+	us, err := strconv.Unquote(tok.Lit)
 	if err != nil {
-		panic(fmt.Sprintf("failed to unquote %s, err: %v", s, err))
+		g.error(tok.Pos, fmt.Errorf("failed to unquote %s, err: %v", tok.Lit, err))
 	}
 	return us
 }
 
-func parseInteger(g string) (ret object.Integer, inf int) {
-	i, err := strconv.ParseInt(g)
+func (g *generator) parseInteger(tok token.Token, negate bool) (ret object.Integer, inf int) {
+	if negate {
+		tok.Lit = "-" + tok.Lit
+	}
+	i, err := strconv.ParseInt(tok.Lit)
 	if err != nil {
 		if err != strconv.ErrRange {
-			panic(fmt.Sprintf("strconv.ParseInt(%s) = %v", g, err))
+			g.error(tok.Pos, fmt.Errorf("failed to parse int %s, err: %v", tok.Lit, err))
 		}
 
 		// infinity
@@ -497,11 +519,14 @@ func parseInteger(g string) (ret object.Integer, inf int) {
 	return object.Integer(i), 0
 }
 
-func parseNumber(g string) object.Number {
-	f, err := strconv.ParseFloat(g)
+func (g *generator) parseNumber(tok token.Token, negate bool) object.Number {
+	if negate {
+		tok.Lit = "-" + tok.Lit
+	}
+	f, err := strconv.ParseFloat(tok.Lit)
 	if err != nil {
 		if err != strconv.ErrRange {
-			panic(fmt.Sprintf("strconv.ParseFloat(%s) = %v", g, err))
+			g.error(tok.Pos, fmt.Errorf("failed to parse float %s, err: %v", tok.Lit, err))
 		}
 	}
 

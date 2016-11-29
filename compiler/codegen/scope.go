@@ -1,11 +1,11 @@
 package codegen
 
 type scope struct {
-	symbols map[string]*link // linkLocal or linkUpval
-	labels  map[string]*label
+	symbols map[string]link // linkLocal or linkUpval
+	labels  map[string]label
 
-	lid     int            // local label id
-	llabels map[int]*label // local labels
+	lid     int           // local label id
+	llabels map[int]label // local labels
 
 	outer   *scope
 	savedSP int
@@ -26,36 +26,36 @@ func (s *scope) root() *scope {
 	}
 }
 
-func (s *scope) resolveLabel(name string) *label {
+func (s *scope) resolveLabel(name string) (label, bool) {
 	scope := s
 	for {
-		label, ok := scope.labels[name]
+		l, ok := scope.labels[name]
 		if ok {
-			return label
+			return l, true
 		}
 
 		scope = scope.outer
 		if scope == nil {
-			return nil
+			return label{}, false
 		}
 	}
 }
 
-func (s *scope) declare(name string, l *link) {
+func (s *scope) declare(name string, l link) {
 	s.symbols[name] = l
 }
 
-func (s *scope) resolveLocal(name string) *link {
+func (s *scope) resolveLocal(name string) (link, bool) {
 	scope := s
 	for {
 		l, ok := scope.symbols[name]
 		if ok {
-			return l
+			return l, true
 		}
 
 		scope = scope.outer
 		if scope == nil {
-			return nil
+			return link{}, false
 		}
 	}
 }

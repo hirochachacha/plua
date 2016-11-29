@@ -20,7 +20,10 @@ func TestMain(t *testing.T) {
 		panic(err)
 	}
 
-	proto := Generate(ast)
+	proto, err := Generate(ast)
+	if err != nil {
+		panic(err)
+	}
 
 	printer.Print(proto)
 }

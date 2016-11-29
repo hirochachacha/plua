@@ -1,11 +1,14 @@
 package codegen
 
 import (
+	"fmt"
+
 	"github.com/hirochachacha/plua/compiler/ast"
 	"github.com/hirochachacha/plua/compiler/token"
 	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/opcode"
+	"github.com/hirochachacha/plua/position"
 )
 
 type immBool int
@@ -125,15 +128,11 @@ func (g *generator) genFuncStmt(stmt *ast.FuncStmt) {
 	endLine := stmt.End().Line
 
 	if prefix == nil {
-		l := g.resolve(name.Name)
+		l, ok := g.resolve(name.Name)
 
 		p := g.proto(body, false, endLine)
 
-		if l == nil {
-			g.pushInstLine(opcode.ABx(opcode.CLOSURE, g.sp, p), endLine)
-
-			g.genSetGlobal(name, g.sp)
-		} else {
+		if ok {
 			switch l.kind {
 			case linkLocal:
 				g.pushInstLine(opcode.ABx(opcode.CLOSURE, l.v, p), endLine)
@@ -144,6 +143,10 @@ func (g *generator) genFuncStmt(stmt *ast.FuncStmt) {
 			default:
 				panic("unreachable")
 			}
+		} else {
+			g.pushInstLine(opcode.ABx(opcode.CLOSURE, g.sp, p), endLine)
+
+			g.genSetGlobal(name, g.sp)
 		}
 	} else {
 		r := g.genPrefix(prefix)
@@ -173,11 +176,15 @@ func (g *generator) genFuncStmt(stmt *ast.FuncStmt) {
 }
 
 func (g *generator) genLabelStmt(stmt *ast.LabelStmt) {
-	if _, ok := g.labels[stmt.Name.Name]; ok {
-		panic("label already defined")
+	nameNode := stmt.Name
+	name := nameNode.Name
+	pos := nameNode.Pos()
+
+	if label, ok := g.labels[name]; ok {
+		g.error(pos, fmt.Errorf("label '%s' already defined on %s", name, label.pos))
 	}
 
-	g.newLabel(stmt.Name.Name)
+	g.newLabel(name, pos)
 
 	g.lockpeep = true
 }
@@ -237,11 +244,7 @@ func (g *generator) genAssignStmt(stmt *ast.AssignStmt) {
 func (g *generator) genAssignSimple(lhs ast.Expr, r int) {
 	switch lhs := lhs.(type) {
 	case *ast.Name:
-		l := g.resolve(lhs.Name)
-
-		if l == nil {
-			g.genSetGlobal(lhs, r)
-		} else {
+		if l, ok := g.resolve(lhs.Name); ok {
 			switch l.kind {
 			case linkLocal:
 				g.pushInst(opcode.AB(opcode.MOVE, l.v, r))
@@ -250,6 +253,8 @@ func (g *generator) genAssignSimple(lhs ast.Expr, r int) {
 			default:
 				panic("unreachable")
 			}
+		} else {
+			g.genSetGlobal(lhs, r)
 		}
 	case *ast.SelectorExpr:
 		x := g.genExpr(lhs.X, genR|genK)
@@ -277,15 +282,7 @@ func (g *generator) genAssign(LHS []ast.Expr, base int) {
 
 		switch lhs := lhs.(type) {
 		case *ast.Name:
-			l := g.resolve(lhs.Name)
-
-			if l == nil {
-				rk := g.markRK(g.constant(object.String(lhs.Name)))
-
-				env := g.genName(&ast.Name{Name: version.LUA_ENV}, genR|genMove)
-
-				assigns[i] = opcode.ABC(opcode.SETTABLE, env, rk, r)
-			} else {
+			if l, ok := g.resolve(lhs.Name); ok {
 				switch l.kind {
 				case linkLocal:
 					assigns[i] = opcode.AB(opcode.MOVE, l.v, r)
@@ -294,6 +291,12 @@ func (g *generator) genAssign(LHS []ast.Expr, base int) {
 				default:
 					panic("unreachable")
 				}
+			} else {
+				rk := g.markRK(g.constant(object.String(lhs.Name)))
+
+				env := g.genName(&ast.Name{Name: version.LUA_ENV}, genR|genMove)
+
+				assigns[i] = opcode.ABC(opcode.SETTABLE, env, rk, r)
 			}
 		case *ast.SelectorExpr:
 			x := g.genExpr(lhs.X, genR|genK|genMove)
@@ -320,11 +323,12 @@ func (g *generator) genAssign(LHS []ast.Expr, base int) {
 }
 
 func (g *generator) genGotoStmt(stmt *ast.GotoStmt) {
-	g.genJump(stmt.Label.Name)
+	label := stmt.Label
+	g.genJump(label.Name, label.Pos())
 }
 
 func (g *generator) genBreakStmt(stmt *ast.BreakStmt) {
-	g.genJump("@break")
+	g.genJump("@break", position.NoPos)
 }
 
 func (g *generator) genIfStmt(stmt *ast.IfStmt) {
@@ -393,7 +397,7 @@ func (g *generator) genWhileStmt(stmt *ast.WhileStmt) {
 
 		g.genLocalJump(initLabel)
 
-		g.newLabel("@break")
+		g.newLabel("@break", position.NoPos)
 	case immFalse:
 		// do nothing
 	default:
@@ -407,7 +411,7 @@ func (g *generator) genWhileStmt(stmt *ast.WhileStmt) {
 
 		g.setLocalJumpDst(endJump)
 
-		g.newLabel("@break")
+		g.newLabel("@break", position.NoPos)
 	}
 
 	g.closeScope()
@@ -426,9 +430,9 @@ func (g *generator) genRepeatStmt(stmt *ast.RepeatStmt) {
 	case immTrue:
 		g.genLocalJump(initLabel)
 
-		g.newLabel("@break")
+		g.newLabel("@break", position.NoPos)
 	case immFalse:
-		g.newLabel("@break")
+		g.newLabel("@break", position.NoPos)
 	default:
 		endJump := g.genPendingLocalJump()
 
@@ -436,7 +440,7 @@ func (g *generator) genRepeatStmt(stmt *ast.RepeatStmt) {
 
 		g.setLocalJumpDst(endJump)
 
-		g.newLabel("@break")
+		g.newLabel("@break", position.NoPos)
 	}
 
 	g.closeScope()
@@ -522,7 +526,7 @@ func (g *generator) genForStmt(stmt *ast.ForStmt) {
 
 	g.pushInstLine(opcode.AsBx(opcode.FORLOOP, sp, forprep-g.pc()), forLine)
 
-	g.newLabel("@break")
+	g.newLabel("@break", position.NoPos)
 
 	g.sp = sp
 
@@ -596,7 +600,7 @@ func (g *generator) genForEachStmt(stmt *ast.ForEachStmt) {
 
 	g.pushInstLine(opcode.AsBx(opcode.TFORLOOP, sp+2, init-g.pc()-1), forLine)
 
-	g.newLabel("@break")
+	g.newLabel("@break", position.NoPos)
 
 	g.closeScope()
 }
