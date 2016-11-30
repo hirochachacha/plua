@@ -463,14 +463,22 @@ func (s *ReturnStmt) Pos() position.Position      { return s.Return }
 func (s *ForStmt) Pos() position.Position         { return s.For }
 func (s *ForEachStmt) Pos() position.Position     { return s.For }
 
-func (s *BadStmt) End() position.Position         { return s.To }
-func (s *EmptyStmt) End() position.Position       { return s.Semicolon.OffsetColumn(1) }
-func (s *LocalAssignStmt) End() position.Position { return s.RHS[len(s.RHS)-1].End() }
-func (s *LocalFuncStmt) End() position.Position   { return s.Body.End() }
-func (s *FuncStmt) End() position.Position        { return s.Body.End() }
-func (s *LabelStmt) End() position.Position       { return s.EndLabel.OffsetColumn(2) }
-func (s *ExprStmt) End() position.Position        { return s.X.End() }
-func (s *AssignStmt) End() position.Position      { return s.RHS[len(s.RHS)-1].End() }
+func (s *BadStmt) End() position.Position   { return s.To }
+func (s *EmptyStmt) End() position.Position { return s.Semicolon.OffsetColumn(1) }
+func (s *LocalAssignStmt) End() position.Position {
+	if s.Equal.IsValid() {
+		if len(s.RHS) > 0 {
+			return s.RHS[len(s.RHS)-1].End()
+		}
+		return s.Equal.OffsetColumn(1)
+	}
+	return s.LHS[len(s.LHS)-1].End()
+}
+func (s *LocalFuncStmt) End() position.Position { return s.Body.End() }
+func (s *FuncStmt) End() position.Position      { return s.Body.End() }
+func (s *LabelStmt) End() position.Position     { return s.EndLabel.OffsetColumn(2) }
+func (s *ExprStmt) End() position.Position      { return s.X.End() }
+func (s *AssignStmt) End() position.Position    { return s.RHS[len(s.RHS)-1].End() }
 func (s *GotoStmt) End() position.Position {
 	return s.Label.End()
 }
@@ -488,7 +496,7 @@ func (s *ReturnStmt) End() position.Position {
 	if s.Semicolon.IsValid() {
 		return s.Semicolon.OffsetColumn(1)
 	}
-	if s.Results != nil {
+	if len(s.Results) > 0 {
 		return s.Results[len(s.Results)-1].End()
 	}
 	return s.Return.OffsetColumn(6)
