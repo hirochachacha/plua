@@ -49,7 +49,7 @@ type label struct {
 	pos position.Position
 }
 
-// pendingJump is a location of 'goto' and used for backward jump
+// pendingJump is a location of 'goto' and used for forward jump
 type pendingJump struct {
 	pc  int
 	pos position.Position
@@ -190,7 +190,7 @@ func (g *generator) newLabel(name string, pos position.Position) {
 
 func (g *generator) genJump(name string, pos position.Position) {
 	if label, ok := g.resolveLabel(name); ok {
-		// forward jump
+		// backward jump
 		// if label are already defined
 
 		reljmp := label.pc - g.pc() - 1
@@ -202,7 +202,7 @@ func (g *generator) genJump(name string, pos position.Position) {
 
 		g.pushInst(opcode.AsBx(opcode.JMP, a, reljmp))
 	} else {
-		// backward jump
+		// forward jump
 		g.genPendingJump(name, pos)
 	}
 }
