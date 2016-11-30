@@ -184,7 +184,7 @@ func (g *generator) genLabelStmt(stmt *ast.LabelStmt) {
 		g.error(pos, fmt.Errorf("label '%s' already defined on %s", name, label.pos))
 	}
 
-	g.newLabel(name, pos)
+	g.declareLabelPos(name, pos)
 
 	g.lockpeep = true
 }
@@ -344,7 +344,7 @@ func (g *generator) genIfStmt(stmt *ast.IfStmt) {
 			g.genBlock(stmt.Else)
 		}
 	default:
-		elseJump := g.genPendingLocalJump()
+		elseJump := g.genJumpPoint()
 
 		if stmt.Body != nil {
 			g.openScope()
@@ -355,9 +355,9 @@ func (g *generator) genIfStmt(stmt *ast.IfStmt) {
 		}
 
 		if stmt.Else != nil {
-			doneJump := g.genPendingLocalJump()
+			doneJump := g.genJumpPoint()
 
-			g.setLocalJumpDst(elseJump)
+			g.genJumpFrom(elseJump)
 
 			g.openScope()
 
@@ -365,9 +365,9 @@ func (g *generator) genIfStmt(stmt *ast.IfStmt) {
 
 			g.closeScope()
 
-			g.setLocalJumpDst(doneJump)
+			g.genJumpFrom(doneJump)
 		} else {
-			g.setLocalJumpDst(elseJump)
+			g.genJumpFrom(elseJump)
 		}
 	}
 
@@ -387,7 +387,7 @@ func (g *generator) genDoStmt(stmt *ast.DoStmt) {
 func (g *generator) genWhileStmt(stmt *ast.WhileStmt) {
 	g.openScope()
 
-	initLabel := g.newLocalLabel()
+	initLabel := g.newLabel()
 
 	switch g.genTest(stmt.Cond, false) {
 	case immTrue:
@@ -395,32 +395,34 @@ func (g *generator) genWhileStmt(stmt *ast.WhileStmt) {
 			g.genBlock(stmt.Body)
 		}
 
-		g.genLocalJump(initLabel)
+		g.closeScope()
 
-		g.newLabel("@break", position.NoPos)
+		g.genJumpTo(initLabel)
+
+		g.declareLabel("@break")
 	case immFalse:
-		// do nothing
+		g.closeScope()
 	default:
-		endJump := g.genPendingLocalJump()
+		endJump := g.genJumpPoint()
 
 		if stmt.Body != nil {
 			g.genBlock(stmt.Body)
 		}
 
-		g.genLocalJump(initLabel)
+		g.closeScope()
 
-		g.setLocalJumpDst(endJump)
+		g.genJumpTo(initLabel)
 
-		g.newLabel("@break", position.NoPos)
+		g.genJumpFrom(endJump)
+
+		g.declareLabel("@break")
 	}
-
-	g.closeScope()
 }
 
 func (g *generator) genRepeatStmt(stmt *ast.RepeatStmt) {
 	g.openScope()
 
-	initLabel := g.newLocalLabel()
+	initLabel := g.newLabel()
 
 	if stmt.Body != nil {
 		g.genBlock(stmt.Body)
@@ -428,19 +430,19 @@ func (g *generator) genRepeatStmt(stmt *ast.RepeatStmt) {
 
 	switch g.genTest(stmt.Cond, true) {
 	case immTrue:
-		g.genLocalJump(initLabel)
+		g.genJumpTo(initLabel)
 
-		g.newLabel("@break", position.NoPos)
+		g.declareLabel("@break")
 	case immFalse:
-		g.newLabel("@break", position.NoPos)
+		g.declareLabel("@break")
 	default:
-		endJump := g.genPendingLocalJump()
+		endJump := g.genJumpPoint()
 
-		g.genLocalJump(initLabel)
+		g.genJumpTo(initLabel)
 
-		g.setLocalJumpDst(endJump)
+		g.genJumpFrom(endJump)
 
-		g.newLabel("@break", position.NoPos)
+		g.declareLabel("@break")
 	}
 
 	g.closeScope()
@@ -492,8 +494,6 @@ func (g *generator) genForStmt(stmt *ast.ForStmt) {
 
 	sp := g.sp
 
-	g.openScope()
-
 	g.locktmp = true
 
 	g.genExpr(stmt.Start, genMove)
@@ -510,11 +510,13 @@ func (g *generator) genForStmt(stmt *ast.ForStmt) {
 	g.declareLocal("(for limit)", sp+1)
 	g.declareLocal("(for step)", sp+2)
 
+	forprep := g.pushTempLine(forLine)
+
+	g.openScope()
+
 	g.declareLocal(stmt.Name.Name, g.sp)
 
 	g.addSP(1)
-
-	forprep := g.pushTempLine(forLine)
 
 	if stmt.Body != nil {
 		g.genBlock(stmt.Body)
@@ -526,7 +528,7 @@ func (g *generator) genForStmt(stmt *ast.ForStmt) {
 
 	g.pushInstLine(opcode.AsBx(opcode.FORLOOP, sp, forprep-g.pc()), forLine)
 
-	g.newLabel("@break", position.NoPos)
+	g.declareLabel("@break")
 
 	g.sp = sp
 
@@ -539,8 +541,6 @@ func (g *generator) genForEachStmt(stmt *ast.ForEachStmt) {
 	forLine := stmt.For.Line
 
 	sp := g.sp
-
-	g.openScope()
 
 	g.locktmp = true
 
@@ -578,13 +578,15 @@ func (g *generator) genForEachStmt(stmt *ast.ForEachStmt) {
 
 	g.setSP(sp + 3)
 
+	loopJump := g.genJumpPoint()
+
+	g.openScope()
+
 	for i, name := range stmt.Names {
 		g.declareLocal(name.Name, g.sp+i)
 	}
 
 	g.addSP(len(stmt.Names))
-
-	loopJump := g.genPendingLocalJump()
 
 	init := g.pc()
 
@@ -592,7 +594,7 @@ func (g *generator) genForEachStmt(stmt *ast.ForEachStmt) {
 		g.genBlock(stmt.Body)
 	}
 
-	g.setLocalJumpDst(loopJump)
+	g.genJumpFrom(loopJump)
 
 	g.closeScope()
 
@@ -600,7 +602,7 @@ func (g *generator) genForEachStmt(stmt *ast.ForEachStmt) {
 
 	g.pushInstLine(opcode.AsBx(opcode.TFORLOOP, sp+2, init-g.pc()-1), forLine)
 
-	g.newLabel("@break", position.NoPos)
+	g.declareLabel("@break")
 
 	g.closeScope()
 }

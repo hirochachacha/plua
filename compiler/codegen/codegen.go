@@ -42,15 +42,13 @@ func Generate(f *ast.File) (proto *object.Proto, err error) {
 	return proto, nil
 }
 
-// label is a snapshot of proto generator
 type label struct {
 	pc  int
 	sp  int
 	pos position.Position
 }
 
-// pendingJump is a location of 'goto' and used for forward jump
-type pendingJump struct {
+type jumpPoint struct {
 	pc  int
 	pos position.Position
 }
@@ -64,7 +62,7 @@ type generator struct {
 
 	sp int
 
-	pendingJumps map[*scope]map[string]pendingJump // pending jumps per scopes
+	pendingJumps map[*scope]map[string]jumpPoint // pending jumps per scopes
 
 	rconstants map[object.Value]int // reverse map of Proto.constants
 
@@ -82,7 +80,7 @@ func newGenerator(outer *generator) *generator {
 	g := &generator{
 		Proto:        new(object.Proto),
 		outer:        outer,
-		pendingJumps: make(map[*scope]map[string]pendingJump, 0),
+		pendingJumps: make(map[*scope]map[string]jumpPoint, 0),
 		rconstants:   make(map[object.Value]int, 0),
 	}
 
@@ -110,10 +108,7 @@ func (g *generator) pc() int {
 }
 
 func (g *generator) nextSP() {
-	g.sp++
-	if g.sp > g.MaxStackSize {
-		g.MaxStackSize = g.sp
-	}
+	g.addSP(1)
 }
 
 func (g *generator) addSP(i int) {
@@ -132,44 +127,20 @@ func (g *generator) setSP(sp int) {
 
 // local jumps
 
-func (g *generator) newLocalLabel() (lid int) {
-	lid = g.lid
-
-	g.llabels[lid] = label{pc: g.pc(), sp: g.sp}
-
-	g.lid++
+func (g *generator) newLabel() label {
+	l := label{pc: g.pc(), sp: g.sp}
 
 	g.lockpeep = true
 
-	return
+	return l
 }
 
-func (g *generator) genPendingLocalJump() (lid int) {
-	lid = g.lid
-
-	g.llabels[lid] = label{pc: g.pushTemp(), sp: g.sp}
-
-	g.lid++
-
-	return
+func (g *generator) genJumpPoint() jumpPoint {
+	return jumpPoint{pc: g.pushTemp()}
 }
 
-func (g *generator) setLocalJumpDst(lid int) {
-	label := g.llabels[lid]
-
-	reljmp := g.pc() - label.pc - 1
-	if reljmp < 0 {
-		panic("unexpected")
-	}
-
-	g.Code[label.pc] = opcode.AsBx(opcode.JMP, 0, reljmp)
-
-	g.lockpeep = true
-}
-
-func (g *generator) genLocalJump(lid int) {
-	label := g.llabels[lid]
-
+// backward jump
+func (g *generator) genJumpTo(label label) {
 	reljmp := label.pc - g.pc() - 1
 	if reljmp > 0 {
 		panic("unexpected")
@@ -178,9 +149,25 @@ func (g *generator) genLocalJump(lid int) {
 	g.pushInst(opcode.AsBx(opcode.JMP, label.sp+1, reljmp))
 }
 
+// forward jump
+func (g *generator) genJumpFrom(jmp jumpPoint) {
+	reljmp := g.pc() - jmp.pc - 1
+	if reljmp < 0 {
+		panic("unexpected")
+	}
+
+	g.Code[jmp.pc] = opcode.AsBx(opcode.JMP, 0, reljmp)
+
+	g.lockpeep = true
+}
+
 // global jumps
 
-func (g *generator) newLabel(name string, pos position.Position) {
+func (g *generator) declareLabel(name string) {
+	g.declareLabelPos(name, position.NoPos)
+}
+
+func (g *generator) declareLabelPos(name string, pos position.Position) {
 	g.labels[name] = label{
 		pc:  g.pc(),
 		sp:  g.sp,
@@ -190,37 +177,22 @@ func (g *generator) newLabel(name string, pos position.Position) {
 
 func (g *generator) genJump(name string, pos position.Position) {
 	if label, ok := g.resolveLabel(name); ok {
-		// backward jump
-		// if label are already defined
-
-		reljmp := label.pc - g.pc() - 1
-		if reljmp > 0 {
-			panic("unexpected")
-		}
-
-		a := label.sp + 1
-
-		g.pushInst(opcode.AsBx(opcode.JMP, a, reljmp))
+		g.genJumpTo(label)
 	} else {
-		// forward jump
-		g.genPendingJump(name, pos)
+		g.genSetJumpPoint(name, pos)
 	}
 }
 
-func (g *generator) genPendingJump(name string, pos position.Position) {
-	pc := g.pushTemp()
+func (g *generator) genSetJumpPoint(name string, pos position.Position) {
+	jmp := g.genJumpPoint()
+
+	jmp.pos = pos
 
 	if jmps, ok := g.pendingJumps[g.scope]; ok {
-		jmps[name] = pendingJump{
-			pc:  pc,
-			pos: pos,
-		}
+		jmps[name] = jmp
 	} else {
-		g.pendingJumps[g.scope] = map[string]pendingJump{
-			name: pendingJump{
-				pc:  pc,
-				pos: pos,
-			},
+		g.pendingJumps[g.scope] = map[string]jumpPoint{
+			name: jmp,
 		}
 	}
 }
@@ -232,26 +204,28 @@ func (g *generator) closeJumps() {
 			continue
 		}
 
-		for name, pendingJump := range pendingJumps {
+		for name, jmp := range pendingJumps {
 			label, ok := scope.resolveLabel(name)
 			if !ok {
-				g.error(pendingJump.pos, fmt.Errorf("unknown label '%s' for jump", name))
+				g.error(jmp.pos, fmt.Errorf("unknown label '%s' for jump", name))
 			}
 
-			// TODO
+			for _, locVar := range g.LocVars {
+				if jmp.pc < locVar.StartPC && locVar.StartPC <= label.pc && label.pc < locVar.EndPC {
+					g.error(label.pos, fmt.Errorf("forward jump over local '%s'", locVar.Name))
+				}
+			}
 
-			reljmp := label.pc - pendingJump.pc - 1
+			reljmp := label.pc - jmp.pc - 1
 			if reljmp < 0 {
 				panic("unexpected")
 			}
 
-			g.Code[pendingJump.pc] = opcode.AsBx(opcode.JMP, g.sp+1, reljmp)
+			g.Code[jmp.pc] = opcode.AsBx(opcode.JMP, label.sp+1, reljmp)
 		}
 
 		delete(g.pendingJumps, scope)
 	}
-
-	g.lockpeep = true
 }
 
 func (g *generator) resolve(name string) (link, bool) {
@@ -410,7 +384,9 @@ func (g *generator) newScope() {
 	g.scope = &scope{
 		symbols: make(map[string]link, 0),
 		labels:  make(map[string]label, 0),
-		llabels: make(map[int]label, 0),
+		outer:   nil,
+		savedSP: 0,
+		nlocals: 0,
 	}
 }
 
@@ -418,7 +394,6 @@ func (g *generator) openScope() {
 	g.scope = &scope{
 		symbols: make(map[string]link, 0),
 		labels:  make(map[string]label, 0),
-		llabels: make(map[int]label, 0),
 		outer:   g.scope,
 		savedSP: g.sp,
 		nlocals: g.scope.nlocals,
@@ -426,23 +401,17 @@ func (g *generator) openScope() {
 }
 
 func (g *generator) closeScope() {
-	g.sp = g.scope.savedSP
-
-	if g.scope.doClose {
-		g.pushInst(opcode.AsBx(opcode.JMP, g.sp+1, 0))
-	}
-
 	nlocals := g.scope.nlocals
 
-	g.scope = g.scope.outer
+	outer := g.scope.outer
 
-	if g.scope != nil {
-		nlocals -= g.scope.nlocals
+	if outer != nil {
+		nlocals -= outer.nlocals
 	}
 
-	if nlocals != 0 {
-		pc := g.pc()
+	endPC := g.pc()
 
+	if nlocals != 0 {
 		for i := len(g.LocVars) - 1; i >= 0; i-- {
 			if g.LocVars[i].EndPC != 0 {
 				continue
@@ -450,13 +419,22 @@ func (g *generator) closeScope() {
 
 			nlocals--
 
-			g.LocVars[i].EndPC = pc
+			g.LocVars[i].EndPC = endPC
 
 			if nlocals == 0 {
 				break
 			}
 		}
 	}
+
+	g.sp = g.scope.savedSP
+
+	if g.scope.doClose {
+		g.pushInst(opcode.AsBx(opcode.JMP, g.sp+1, 0))
+	}
+
+	g.scope.endPC = endPC
+	g.scope = outer
 
 	return
 }

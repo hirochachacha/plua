@@ -15,6 +15,7 @@ var compileErrorTestCases = []struct {
 	{"unresolved_goto.lua", "unknown label 'L' for jump"},
 	{"unclosed_function.lua", "expected 'end', found 'EOF'"},
 	{"label_duplication.lua", "label 'L' already defined"},
+	{"forward_jump_over_local_assign.lua", "forward jump over local var 'name'"},
 }
 
 func TestCompileError(t *testing.T) {
@@ -23,7 +24,7 @@ func TestCompileError(t *testing.T) {
 	for i, test := range compileErrorTestCases {
 		_, err := c.CompileFile(filepath.Join("testdata/errors", test.fname), compiler.Either)
 		if err == nil {
-			t.Fatal()
+			t.Fatalf("%d: got: nil, want: %q", i+1, test.error)
 		}
 
 		if !strings.Contains(err.Error(), test.error) {

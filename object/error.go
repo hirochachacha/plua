@@ -36,31 +36,14 @@ func (err *RuntimeError) Error() string {
 		msg = strconv.Quote(string(val))
 	}
 	if len(err.Traceback) > 0 {
-		msg = msg + " from "
-		tb := err.Traceback[0]
-		if tb.IsValid() {
-			msg += tb.String()
-		}
+		msg = msg + " from " + err.Traceback[0].String()
 		if len(err.Traceback) > 1 {
-			var valid bool
-
+			msg += " via "
 			for _, tb := range err.Traceback[1:] {
-				if tb.IsValid() {
-					valid = true
-					break
-				}
+				msg += tb.String() + ", "
 			}
-
-			if valid {
-				msg += " via "
-				for _, tb := range err.Traceback[1:] {
-					if tb.IsValid() {
-						msg += tb.String() + ", "
-					}
-				}
-				if strings.HasSuffix(msg, ", ") {
-					msg = msg[:len(msg)-2]
-				}
+			if strings.HasSuffix(msg, ", ") {
+				msg = msg[:len(msg)-2]
 			}
 		}
 	}

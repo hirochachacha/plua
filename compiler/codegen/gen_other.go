@@ -22,8 +22,6 @@ func (g *generator) genFile(f *ast.File) {
 		g.genStmt(e)
 	}
 
-	g.closeJumps()
-
 	g.pushReturn()
 
 	g.closeScope()
@@ -31,6 +29,8 @@ func (g *generator) genFile(f *ast.File) {
 	if g.scope != nil {
 		panic("unexpected")
 	}
+
+	g.closeJumps()
 }
 
 func (g *generator) genFuncBody(f *ast.FuncBody, self bool, endLine int) {
@@ -60,8 +60,6 @@ func (g *generator) genFuncBody(f *ast.FuncBody, self bool, endLine int) {
 
 	if f.Body != nil {
 		g.genBlock(f.Body)
-
-		g.closeJumps()
 	}
 
 	g.LastLineDefined = endLine
@@ -69,6 +67,8 @@ func (g *generator) genFuncBody(f *ast.FuncBody, self bool, endLine int) {
 	g.pushReturn()
 
 	g.closeScope()
+
+	g.closeJumps()
 }
 
 func (g *generator) genBlock(b *ast.Block) {

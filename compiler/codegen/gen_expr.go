@@ -718,13 +718,13 @@ func (g *generator) genBinaryExpr(expr *ast.BinaryExpr, typ genType) (r int) {
 
 			g.pushInst(opcode.ABC(opcode.TESTSET, sp, x, 0))
 
-			endJump := g.genPendingLocalJump()
+			endJump := g.genJumpPoint()
 
 			y := g.genExpr(expr.Y, genR)
 
 			g.pushInst(opcode.AB(opcode.MOVE, sp, y))
 
-			g.setLocalJumpDst(endJump)
+			g.genJumpFrom(endJump)
 		}
 	case token.OR:
 		if _, ok := g.foldExpr(expr.X); ok {
@@ -740,13 +740,13 @@ func (g *generator) genBinaryExpr(expr *ast.BinaryExpr, typ genType) (r int) {
 
 			g.pushInst(opcode.ABC(opcode.TESTSET, sp, x, 1))
 
-			endJump := g.genPendingLocalJump()
+			endJump := g.genJumpPoint()
 
 			y := g.genExpr(expr.Y, genR)
 
 			g.pushInst(opcode.AB(opcode.MOVE, sp, y))
 
-			g.setLocalJumpDst(endJump)
+			g.genJumpFrom(endJump)
 		}
 	default:
 		panic("unreachable")

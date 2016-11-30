@@ -4,15 +4,14 @@ type scope struct {
 	symbols map[string]link // linkLocal or linkUpval
 	labels  map[string]label
 
-	lid     int           // local label id
-	llabels map[int]label // local labels
-
 	outer   *scope
 	savedSP int
 
 	doClose bool // generate CLOSE(JMP) op when closeScope called
 
 	nlocals int // if r >= nlocals then r is tmp variable
+
+	endPC int
 }
 
 func (s *scope) root() *scope {
