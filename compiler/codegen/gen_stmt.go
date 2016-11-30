@@ -135,11 +135,11 @@ func (g *generator) genFuncStmt(stmt *ast.FuncStmt) {
 		if ok {
 			switch l.kind {
 			case linkLocal:
-				g.pushInstLine(opcode.ABx(opcode.CLOSURE, l.v, p), endLine)
+				g.pushInstLine(opcode.ABx(opcode.CLOSURE, l.index, p), endLine)
 			case linkUpval:
 				g.pushInstLine(opcode.ABx(opcode.CLOSURE, g.sp, p), endLine)
 
-				g.pushInst(opcode.AB(opcode.SETUPVAL, g.sp, l.v))
+				g.pushInst(opcode.AB(opcode.SETUPVAL, g.sp, l.index))
 			default:
 				panic("unreachable")
 			}
@@ -247,9 +247,9 @@ func (g *generator) genAssignSimple(lhs ast.Expr, r int) {
 		if l, ok := g.resolve(lhs.Name); ok {
 			switch l.kind {
 			case linkLocal:
-				g.pushInst(opcode.AB(opcode.MOVE, l.v, r))
+				g.pushInst(opcode.AB(opcode.MOVE, l.index, r))
 			case linkUpval:
-				g.pushInst(opcode.AB(opcode.SETUPVAL, r, l.v))
+				g.pushInst(opcode.AB(opcode.SETUPVAL, r, l.index))
 			default:
 				panic("unreachable")
 			}
@@ -285,9 +285,9 @@ func (g *generator) genAssign(LHS []ast.Expr, base int) {
 			if l, ok := g.resolve(lhs.Name); ok {
 				switch l.kind {
 				case linkLocal:
-					assigns[i] = opcode.AB(opcode.MOVE, l.v, r)
+					assigns[i] = opcode.AB(opcode.MOVE, l.index, r)
 				case linkUpval:
-					assigns[i] = opcode.AB(opcode.SETUPVAL, r, l.v)
+					assigns[i] = opcode.AB(opcode.SETUPVAL, r, l.index)
 				default:
 					panic("unreachable")
 				}

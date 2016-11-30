@@ -237,6 +237,9 @@ func (g *generator) closeJumps() {
 			if !ok {
 				g.error(pendingJump.pos, fmt.Errorf("unknown label '%s' for jump", name))
 			}
+
+			// TODO
+
 			reljmp := label.pc - pendingJump.pc - 1
 			if reljmp < 0 {
 				panic("unexpected")
@@ -260,14 +263,14 @@ func (g *generator) resolve(name string) (link, bool) {
 		return l, true
 	}
 
-	if l, ok := g.outer.resolve(name); ok {
-		return g.declareUpvalue(name, l), true
+	if up, ok := g.outer.resolve(name); ok {
+		return g.declareUpvalue(name, up), true
 	}
 
 	return link{}, false
 }
 
-func (g *generator) declareLocal(name string, v int) {
+func (g *generator) declareLocal(name string, sp int) {
 	locVar := object.LocVar{
 		Name:    name,
 		StartPC: g.pc(),
@@ -276,8 +279,8 @@ func (g *generator) declareLocal(name string, v int) {
 	g.LocVars = append(g.LocVars, locVar)
 
 	g.scope.declare(name, link{
-		kind: linkLocal,
-		v:    v,
+		kind:  linkLocal,
+		index: sp,
 	})
 
 	g.nlocals++
@@ -293,15 +296,15 @@ func (g *generator) declareEnviron() {
 	g.Upvalues = append(g.Upvalues, u)
 
 	g.scope.declare("_ENV", link{
-		kind: linkUpval,
-		v:    0,
+		kind:  linkUpval,
+		index: 0,
 	})
 }
 
-func (g *generator) declareUpvalue(name string, l link) link {
-	instack := l.kind == linkLocal
+func (g *generator) declareUpvalue(name string, up link) link {
+	instack := up.kind == linkLocal
 
-	// mark upvalue should be close or not
+	// mark upvalue whether it should be closed
 	if instack {
 		scope := g.outer.scope
 
@@ -319,17 +322,17 @@ func (g *generator) declareUpvalue(name string, l link) link {
 		}
 	}
 
-	u := object.UpvalueDesc{
+	ud := object.UpvalueDesc{
 		Name:    name,
 		Instack: instack,
-		Index:   l.v,
+		Index:   up.index,
 	}
 
-	g.Upvalues = append(g.Upvalues, u)
+	g.Upvalues = append(g.Upvalues, ud)
 
 	link := link{
-		kind: linkUpval,
-		v:    len(g.Upvalues) - 1,
+		kind:  linkUpval,
+		index: len(g.Upvalues) - 1,
 	}
 
 	g.scope.root().declare(name, link)

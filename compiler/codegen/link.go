@@ -8,6 +8,8 @@ const (
 )
 
 type link struct {
-	kind kind
-	v    int
+	kind  kind
+	index int
+	// kind == linkLocal => v == index of stack (stack pointer)
+	// kind == linkUpval => v == index of upvalues
 }

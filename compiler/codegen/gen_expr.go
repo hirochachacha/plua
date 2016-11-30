@@ -145,19 +145,19 @@ func (g *generator) genName(expr *ast.Name, typ genType) (rk int) {
 
 	switch l.kind {
 	case linkUpval:
-		g.pushInst(opcode.AB(opcode.GETUPVAL, g.sp, l.v))
+		g.pushInst(opcode.AB(opcode.GETUPVAL, g.sp, l.index))
 
 		rk = g.sp
 
 		g.nextSP()
 	case linkLocal:
 		if typ&genMove == 0 {
-			return l.v
+			return l.index
 		}
 
 		rk = g.sp
 
-		g.pushInst(opcode.AB(opcode.MOVE, g.sp, l.v))
+		g.pushInst(opcode.AB(opcode.MOVE, g.sp, l.index))
 
 		g.nextSP()
 	default:

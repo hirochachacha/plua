@@ -297,9 +297,9 @@ func (g *generator) genSetGlobal(name *ast.Name, r int) {
 
 	switch env.kind {
 	case linkLocal:
-		g.pushInst(opcode.ABC(opcode.SETTABLE, env.v, rk, r))
+		g.pushInst(opcode.ABC(opcode.SETTABLE, env.index, rk, r))
 	case linkUpval:
-		g.pushInst(opcode.ABC(opcode.SETTABUP, env.v, rk, r))
+		g.pushInst(opcode.ABC(opcode.SETTABUP, env.index, rk, r))
 	default:
 		panic("unreachable")
 	}
@@ -315,9 +315,9 @@ func (g *generator) genGetGlobal(name *ast.Name) (r int) {
 
 	switch env.kind {
 	case linkLocal:
-		g.pushInst(opcode.ABC(opcode.GETTABLE, g.sp, env.v, rk))
+		g.pushInst(opcode.ABC(opcode.GETTABLE, g.sp, env.index, rk))
 	case linkUpval:
-		g.pushInst(opcode.ABC(opcode.GETTABUP, g.sp, env.v, rk))
+		g.pushInst(opcode.ABC(opcode.GETTABUP, g.sp, env.index, rk))
 	default:
 		panic("unreachable")
 	}
