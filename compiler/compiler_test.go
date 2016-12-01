@@ -15,7 +15,9 @@ var compileErrorTestCases = []struct {
 	{"unresolved_goto.lua", "unknown label 'L' for jump"},
 	{"unclosed_function.lua", "expected 'end', found 'EOF'"},
 	{"label_duplication.lua", "label 'L' already defined"},
-	{"forward_jump_over_local_assign.lua", "forward jump over local var 'name'"},
+	{"forward_jump_over_local_assign.lua", "forward jump over local 'name'"},
+	{"unreachable_code.lua", "expected 'end', found 'NAME'"},
+	{"unreachable_code2.lua", "expected 'EOF', found 'return'"},
 }
 
 func TestCompileError(t *testing.T) {

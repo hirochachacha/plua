@@ -430,7 +430,11 @@ func (p *parser) parseStmtList() []ast.Stmt {
 func (p *parser) parseChunk() []ast.Stmt {
 	p.allowEllipsis = true
 
-	return p.parseStmtList()
+	list := p.parseStmtList()
+
+	p.expect(token.EOF)
+
+	return list
 }
 
 func (p *parser) parseThenBlock() *ast.Block {
