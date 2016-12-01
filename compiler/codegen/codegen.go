@@ -175,14 +175,6 @@ func (g *generator) declareLabelPos(name string, pos position.Position) {
 	}
 }
 
-func (g *generator) genJump(name string, pos position.Position) {
-	if label, ok := g.resolveLabel(name); ok {
-		g.genJumpTo(label)
-	} else {
-		g.genSetJumpPoint(name, pos)
-	}
-}
-
 func (g *generator) genSetJumpPoint(name string, pos position.Position) {
 	jmp := g.genJumpPoint()
 
@@ -217,9 +209,6 @@ func (g *generator) closeJumps() {
 			}
 
 			reljmp := label.pc - jmp.pc - 1
-			if reljmp < 0 {
-				panic("unexpected")
-			}
 
 			g.Code[jmp.pc] = opcode.AsBx(opcode.JMP, label.sp+1, reljmp)
 		}

@@ -8,7 +8,6 @@ import (
 	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/opcode"
-	"github.com/hirochachacha/plua/position"
 )
 
 type immBool int
@@ -323,12 +322,11 @@ func (g *generator) genAssign(LHS []ast.Expr, base int) {
 }
 
 func (g *generator) genGotoStmt(stmt *ast.GotoStmt) {
-	label := stmt.Label
-	g.genJump(label.Name, label.Pos())
+	g.genSetJumpPoint(stmt.Label.Name, stmt.Label.Pos())
 }
 
 func (g *generator) genBreakStmt(stmt *ast.BreakStmt) {
-	g.genJump("@break", position.NoPos)
+	g.genSetJumpPoint("@break", stmt.Break)
 }
 
 func (g *generator) genIfStmt(stmt *ast.IfStmt) {
