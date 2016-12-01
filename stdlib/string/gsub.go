@@ -145,14 +145,18 @@ func gsubStr(th object.Thread, input, pat, repl string, n int) (string, int, err
 
 		for _, part := range parts {
 			if part[0] == '%' {
-				j := int(part[1] - '0')
-				if j >= len(caps) {
-					return "", fmt.Errorf("invalid capture index %%%d", j)
+				if part[1] == '%' {
+					buf.WriteByte('%')
+				} else {
+					j := int(part[1] - '0')
+					if j >= len(caps) {
+						return "", fmt.Errorf("invalid capture index %%%d", j)
+					}
+
+					cap := caps[j]
+
+					buf.WriteString(cap.Value(input).String())
 				}
-
-				cap := caps[j]
-
-				buf.WriteString(cap.Value(input).String())
 			} else {
 				buf.WriteString(part)
 			}
@@ -182,7 +186,7 @@ func gsubParseRepl(repl string) (parts []string, err error) {
 		}
 
 		d := repl[i+1]
-		if !('0' <= d && d <= '9') {
+		if !('0' <= d && d <= '9') && d != '%' {
 			return nil, errors.New("invalid use of '%' in replacement string")
 		}
 

@@ -18,3 +18,6 @@ assert(x == "lua-5.3.tar.gz")
 
 s, n = string.gsub("x x  x x", " ", "y")
 assert(n == 4 and s == "xyxyyxyx")
+
+s, n = string.gsub("xyx", "x", "%%%1")
+assert(n == 2 and s == "%xy%x")
