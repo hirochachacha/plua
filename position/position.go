@@ -50,21 +50,14 @@ func (pos Position) OffsetColumn(off int) Position {
 
 func (pos Position) String() string {
 	s := shorten(pos.SourceName)
-
-	if pos.IsValid() {
-		if s != "" {
-			s += ":"
-		}
-		if pos.Column > 0 {
-			s += fmt.Sprintf("%d:%d", pos.Line, pos.Column)
-		} else {
-			s += fmt.Sprint(pos.Line)
-		}
-	}
 	if s == "" {
-		s = "-"
+		s = "?"
 	}
-	return s
+	line := pos.Line
+	if !pos.IsValid() {
+		line = -1
+	}
+	return fmt.Sprintf("%s:%d", s, line)
 }
 
 func (pos Position) IsValid() bool {

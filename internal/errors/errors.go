@@ -19,7 +19,7 @@ var (
 	ErrNilIndex         = object.NewRuntimeError("table index is nil")
 	ErrNaNIndex         = object.NewRuntimeError("table index is nan")
 	ErrZeroDivision     = object.NewRuntimeError("attempt to divide by zero")
-	ErrModuloByZero     = object.NewRuntimeError("attempt to modulo by zero")
+	ErrModuloByZero     = object.NewRuntimeError("attempt to perform 'n%0'")
 	ErrInErrorHandling  = object.NewRuntimeError("error in error handling")
 )
 
@@ -27,59 +27,80 @@ func ForLoopError(elem string) *object.RuntimeError {
 	return object.NewRuntimeError(fmt.Sprintf("'for' %s value must be a number", elem))
 }
 
-func TypeError(op string, x object.Value) *object.RuntimeError {
-	return object.NewRuntimeError(fmt.Sprintf("attempt to %s a %s value%s", op, object.ToType(x), varinfo(x)))
+func typeName(th object.Thread, arg object.Value) string {
+	if mt := th.GetMetatable(arg); mt != nil {
+		if name := mt.Get(object.TM_NAME); name != nil {
+			if name, ok := name.(object.String); ok {
+				return string(name)
+			}
+			if _, ok := arg.(object.LightUserdata); ok {
+				return "light userdata"
+			}
+			return object.ToType(arg).String()
+		}
+	}
+	if _, ok := arg.(object.LightUserdata); ok {
+		return "light userdata"
+	}
+	return object.ToType(arg).String()
 }
 
-func CallError(fn object.Value) *object.RuntimeError {
-	return TypeError("call", fn)
+func TypeError(th object.Thread, op string, x object.Value) *object.RuntimeError {
+	return object.NewRuntimeError(fmt.Sprintf("attempt to %s a %s value%s", op, typeName(th, x), varinfo(th, x)))
 }
 
-func IndexError(t object.Value) *object.RuntimeError {
-	return TypeError("index", t)
+func CallError(th object.Thread, fn object.Value) *object.RuntimeError {
+	return TypeError(th, "call", fn)
 }
 
-func UnaryError(tag object.Value, x object.Value) *object.RuntimeError {
+func IndexError(th object.Thread, t object.Value) *object.RuntimeError {
+	return TypeError(th, "index", t)
+}
+
+func UnaryError(th object.Thread, tag object.Value, x object.Value) *object.RuntimeError {
 	switch tag {
 	case object.TM_LEN:
-		return LengthError(x)
+		return LengthError(th, x)
 	case object.TM_UNM:
-		return UnaryMinusError(x)
+		return UnaryMinusError(th, x)
 	case object.TM_BNOT:
-		return BinaryNotError(x)
+		return BinaryNotError(th, x)
 	default:
 		panic("unreachable")
 	}
 }
 
-func BinaryError(tag object.Value, x, y object.Value) *object.RuntimeError {
+func BinaryError(th object.Thread, tag object.Value, x, y object.Value) *object.RuntimeError {
 	switch tag {
 	case object.TM_ADD, object.TM_SUB, object.TM_MUL, object.TM_MOD, object.TM_POW, object.TM_DIV:
-		return ArithError(x, y)
+		return ArithError(th, x, y)
 	case object.TM_IDIV, object.TM_BAND, object.TM_BOR, object.TM_BXOR, object.TM_SHL, object.TM_SHR:
-		return BitwiseError(x, y)
+		return BitwiseError(th, x, y)
 	case object.TM_CONCAT:
-		return ConcatError(x, y)
+		return ConcatError(th, x, y)
 	default:
 		panic("unreachable")
 	}
 }
 
-func LengthError(x object.Value) *object.RuntimeError {
-	return TypeError("get length of", x)
+func LengthError(th object.Thread, x object.Value) *object.RuntimeError {
+	return TypeError(th, "get length of", x)
 }
 
-func UnaryMinusError(x object.Value) *object.RuntimeError {
-	return TypeError("negate", x)
+func UnaryMinusError(th object.Thread, x object.Value) *object.RuntimeError {
+	return TypeError(th, "negate", x)
 }
 
-func BinaryNotError(x object.Value) *object.RuntimeError {
-	return TypeError("bitwise negation on", x)
+func BinaryNotError(th object.Thread, x object.Value) *object.RuntimeError {
+	if _, ok := object.ToNumber(x); ok {
+		return object.NewRuntimeError(fmt.Sprintf("number%s has no integer representation", varinfo(th, x)))
+	}
+	return TypeError(th, "bitwise negation on", x)
 }
 
-func CompareError(x, y object.Value) *object.RuntimeError {
-	t1 := object.ToType(x)
-	t2 := object.ToType(y)
+func CompareError(th object.Thread, x, y object.Value) *object.RuntimeError {
+	t1 := typeName(th, x)
+	t2 := typeName(th, y)
 
 	if t1 == t2 {
 		return object.NewRuntimeError(fmt.Sprintf("attempt to compare two %s values", t1))
@@ -88,35 +109,34 @@ func CompareError(x, y object.Value) *object.RuntimeError {
 	return object.NewRuntimeError(fmt.Sprintf("attempt to compare %s with %s", t1, t2))
 }
 
-func ArithError(x, y object.Value) *object.RuntimeError {
+func ArithError(th object.Thread, x, y object.Value) *object.RuntimeError {
 	if _, ok := object.ToNumber(x); ok {
-		return TypeError("perform arithmetic on", y)
+		return TypeError(th, "perform arithmetic on", y)
 	}
-	return TypeError("perform arithmetic on", x)
+	return TypeError(th, "perform arithmetic on", x)
 }
 
-func BitwiseError(x, y object.Value) *object.RuntimeError {
+func BitwiseError(th object.Thread, x, y object.Value) *object.RuntimeError {
 	if _, ok := object.ToInteger(x); ok {
-		if _, ok = y.(object.Number); ok {
-			return object.NewRuntimeError(fmt.Sprintf("number%s has no integer representation", varinfo(y)))
+		if _, ok := object.ToNumber(y); ok {
+			return object.NewRuntimeError(fmt.Sprintf("number%s has no integer representation", varinfo(th, y)))
 		}
-		return TypeError("perform bitwise operation on", y)
+		return TypeError(th, "perform bitwise operation on", y)
 	}
-
-	if _, ok := x.(object.Number); ok {
-		return object.NewRuntimeError(fmt.Sprintf("number%s has no integer representation", varinfo(x)))
+	if _, ok := object.ToNumber(x); ok {
+		return object.NewRuntimeError(fmt.Sprintf("number%s has no integer representation", varinfo(th, x)))
 	}
-	return TypeError("perform bitwise operation on", x)
+	return TypeError(th, "perform bitwise operation on", x)
 }
 
-func ConcatError(x, y object.Value) *object.RuntimeError {
+func ConcatError(th object.Thread, x, y object.Value) *object.RuntimeError {
 	if _, ok := object.ToString(x); ok {
-		return TypeError("concatenate", y)
+		return TypeError(th, "concatenate", y)
 	}
-	return TypeError("concatenate", x)
+	return TypeError(th, "concatenate", x)
 }
 
-func varinfo(x object.Value) string {
+func varinfo(th object.Thread, x object.Value) string {
 	// TODO? INCOMPATIBLE
 	// Current implementation uses value instead of pointer everywhere.
 	// So there is no way to identify two object is exactly same.

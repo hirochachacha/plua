@@ -331,6 +331,9 @@ func (ap *ArgParser) ToGoInt(n int) (int, *object.RuntimeError) {
 
 	i, ok := object.ToGoInt64(arg)
 	if !ok {
+		if _, ok := object.ToNumber(arg); ok {
+			return 0, ap.ArgError(n, "number has no integer representation")
+		}
 		return 0, ap.TypeError(n, "integer")
 	}
 
@@ -349,6 +352,9 @@ func (ap *ArgParser) ToGoInt64(n int) (int64, *object.RuntimeError) {
 
 	i, ok := object.ToGoInt64(arg)
 	if !ok {
+		if _, ok := object.ToNumber(arg); ok {
+			return 0, ap.ArgError(n, "number has no integer representation")
+		}
 		return 0, ap.TypeError(n, "integer")
 	}
 
@@ -490,31 +496,7 @@ func (ap *ArgParser) TypeError(n int, tname string) *object.RuntimeError {
 	if !ok {
 		return ap.ArgError(n, fmt.Sprintf("%s expected, got no value", tname))
 	}
-
-	var typearg string
-
-	if mt := ap.th.GetMetatable(arg); mt != nil {
-		if name := mt.Get(object.TM_NAME); name != nil {
-			if name, ok := name.(object.String); ok {
-				typearg = string(name)
-			} else {
-				if _, ok := arg.(object.LightUserdata); ok {
-					typearg = "light userdata"
-				} else {
-					typearg = object.ToType(arg).String()
-				}
-			}
-			return ap.ArgError(n, fmt.Sprintf("%s expected, got %s", tname, typearg))
-		}
-	}
-
-	if _, ok := arg.(object.LightUserdata); ok {
-		typearg = "light userdata"
-	} else {
-		typearg = object.ToType(arg).String()
-	}
-
-	return ap.ArgError(n, fmt.Sprintf("%s expected, got %s", tname, typearg))
+	return ap.ArgError(n, fmt.Sprintf("%s expected, got %s", tname, typeName(ap.th, arg)))
 }
 
 func (ap *ArgParser) OptionError(n int, opt string) *object.RuntimeError {
@@ -556,4 +538,22 @@ func (ap *ArgParser) getFuncName(fn object.Value) string {
 	}
 
 	return "?"
+}
+
+func typeName(th object.Thread, arg object.Value) string {
+	if mt := th.GetMetatable(arg); mt != nil {
+		if name := mt.Get(object.TM_NAME); name != nil {
+			if name, ok := name.(object.String); ok {
+				return string(name)
+			}
+			if _, ok := arg.(object.LightUserdata); ok {
+				return "light userdata"
+			}
+			return object.ToType(arg).String()
+		}
+	}
+	if _, ok := arg.(object.LightUserdata); ok {
+		return "light userdata"
+	}
+	return object.ToType(arg).String()
 }

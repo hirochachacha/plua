@@ -64,11 +64,13 @@ func (th *thread) getInfo(level int, what string) *object.DebugInfo {
 				}
 			}
 		case 'L':
-			lines := th.NewTableSize(0, len(cl.LineInfo))
-			for _, line := range cl.LineInfo {
-				lines.Set(object.Integer(line), object.True)
+			if cl != nil {
+				lines := th.NewTableSize(0, len(cl.LineInfo))
+				for _, line := range cl.LineInfo {
+					lines.Set(object.Integer(line), object.True)
+				}
+				d.Lines = lines
 			}
-			d.Lines = lines
 		}
 	}
 

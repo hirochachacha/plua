@@ -15,7 +15,7 @@ func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
 
 	switch fn := fn.(type) {
 	case nil:
-		return errors.CallError(fn)
+		return errors.CallError(th, fn)
 	case object.GoFunction:
 		return th.callGo(fn, f, nargs, nrets, false)
 	case object.Closure:
@@ -25,7 +25,7 @@ func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
 	tm := th.gettmbyobj(fn, object.TM_CALL)
 
 	if !isFunction(tm) {
-		return errors.CallError(fn)
+		return errors.CallError(th, fn)
 	}
 
 	ctx.ci.top = f + 2 + nargs
@@ -67,6 +67,8 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 
 	rets, err := fn(th, ctx.stack[ctx.ci.base:ctx.ci.top]...)
 	if err != nil {
+		// TODO trackError
+
 		ctx.popFrame()
 
 		return err
@@ -154,7 +156,7 @@ func (th *thread) tailcall(a, nargs int) (err *object.RuntimeError) {
 
 	switch fn := ctx.stack[f].(type) {
 	case nil:
-		return errors.CallError(fn)
+		return errors.CallError(th, fn)
 	case object.GoFunction:
 		return th.callGo(fn, f, nargs, -1, true)
 	case object.Closure:
@@ -164,7 +166,7 @@ func (th *thread) tailcall(a, nargs int) (err *object.RuntimeError) {
 	tm := th.gettmbyobj(fn, object.TM_CALL)
 
 	if !isFunction(tm) {
-		return errors.CallError(fn)
+		return errors.CallError(th, fn)
 	}
 
 	ctx.ci.top = f + 2 + nargs
@@ -235,7 +237,7 @@ func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 
 	switch fn := fn.(type) {
 	case nil:
-		return errors.CallError(fn)
+		return errors.CallError(th, fn)
 	case object.GoFunction:
 		copy(ctx.stack[f+3:], ctx.stack[f:f+3])
 
@@ -271,7 +273,7 @@ func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 	tm := th.gettmbyobj(fn, object.TM_CALL)
 
 	if !isFunction(tm) {
-		return errors.CallError(fn)
+		return errors.CallError(th, fn)
 	}
 
 	ctx.ci.top = f + 4
@@ -330,7 +332,7 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 func (th *thread) docall(fn, errh object.Value, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	switch fn := fn.(type) {
 	case nil:
-		return th.dohandle(errh, errors.CallError(fn))
+		return th.dohandle(errh, errors.CallError(th, fn))
 	case object.GoFunction:
 		rets, err := th.docallGo(fn, args...)
 		if err != nil {
@@ -373,6 +375,8 @@ func (th *thread) docallGo(fn object.GoFunction, args ...object.Value) (rets []o
 
 	rets, err = fn(th, args...)
 	if err != nil {
+		// TODO trackError
+
 		ctx.stack[1] = old
 
 		ctx.popFrame()

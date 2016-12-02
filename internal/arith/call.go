@@ -189,7 +189,7 @@ func CallConcat(th object.Thread, x, y object.Value) (object.Value, *object.Runt
 	if tm == nil {
 		tm = gettmbyobj(th, y, object.TM_CONCAT)
 		if tm == nil {
-			return nil, errors.BinaryError(object.TM_CONCAT, x, y)
+			return nil, errors.BinaryError(th, object.TM_CONCAT, x, y)
 		}
 	}
 	return calltm(th, tm, x, y)
@@ -239,7 +239,7 @@ func callcmptm(th object.Thread, not bool, tm object.Value, x, y object.Value) (
 func calluntm(th object.Thread, x object.Value, tag object.Value) (object.Value, *object.RuntimeError) {
 	tm := gettmbyobj(th, x, tag)
 	if tm == nil {
-		return nil, errors.UnaryError(tag, x)
+		return nil, errors.UnaryError(th, tag, x)
 	}
 	return calltm(th, tm, x)
 }
@@ -249,7 +249,7 @@ func callbintm(th object.Thread, x, y object.Value, tag object.Value) (object.Va
 	if tm == nil {
 		tm = gettmbyobj(th, y, tag)
 		if tm == nil {
-			return nil, errors.BinaryError(tag, x, y)
+			return nil, errors.BinaryError(th, tag, x, y)
 		}
 	}
 	return calltm(th, tm, x, y)
@@ -266,7 +266,7 @@ func callordertm(th object.Thread, not bool, x, y object.Value, tag object.Value
 				if tm == nil {
 					tm = gettmbyobj(th, y, object.TM_LE)
 					if tm == nil {
-						return false, errors.CompareError(x, y)
+						return false, errors.CompareError(th, x, y)
 					}
 				}
 
@@ -278,7 +278,7 @@ func callordertm(th object.Thread, not bool, x, y object.Value, tag object.Value
 				if tm == nil {
 					tm = gettmbyobj(th, y, object.TM_LT)
 					if tm == nil {
-						return false, errors.CompareError(x, y)
+						return false, errors.CompareError(th, x, y)
 					}
 				}
 

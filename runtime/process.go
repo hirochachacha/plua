@@ -31,5 +31,6 @@ func (p *process) Exec(proto *object.Proto, args ...object.Value) (rets []object
 	if e != nil {
 		return nil, e
 	}
+
 	return rets, nil
 }

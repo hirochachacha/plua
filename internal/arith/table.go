@@ -23,7 +23,7 @@ func CallGettable(th object.Thread, t, key object.Value) (object.Value, *object.
 		}
 
 		if tm == nil {
-			return nil, errors.IndexError(t)
+			return nil, errors.IndexError(th, t)
 		}
 
 		if isFunction(tm) {
@@ -59,7 +59,7 @@ func CallSettable(th object.Thread, t, key, val object.Value) *object.RuntimeErr
 		}
 
 		if tm == nil {
-			return errors.IndexError(t)
+			return errors.IndexError(th, t)
 		}
 
 		if isFunction(tm) {

@@ -86,7 +86,7 @@ func dofile(th object.Thread, args ...object.Value) (rets []object.Value, err *o
 
 	p, e := compiler_pool.CompileFile(fname, 0)
 	if e != nil {
-		return []object.Value{nil, object.String(e.Error())}, nil
+		return nil, object.NewRuntimeError(e.Error())
 	}
 
 	return th.Call(th.NewClosure(p), nil)

@@ -22,10 +22,11 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	fileIndex.Set(object.String("setvbuf"), object.GoFunction(fsetvbuf))
 	fileIndex.Set(object.String("write"), object.GoFunction(fwrite))
 
-	mt := th.NewTableSize(0, 2)
+	mt := th.NewTableSize(0, 3)
 
 	mt.Set(object.String("__index"), fileIndex)
 	mt.Set(object.String("__tostring"), object.GoFunction(ftostring))
+	mt.Set(object.TM_NAME, object.String("FILE*"))
 
 	stdin := &object.Userdata{
 		Value:     file.NewFile(os.Stdin, os.O_RDONLY),
@@ -87,7 +88,7 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		} else {
 			ud, e = ap.ToFullUserdata(0)
 			if e != nil {
-				return nil, ap.TypeError(0, "*FILE or string")
+				return nil, ap.TypeError(0, "FILE* or string")
 			}
 
 			_, ok := ud.Value.(file.File)
@@ -192,7 +193,7 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		} else {
 			ud, e = ap.ToFullUserdata(0)
 			if e != nil {
-				return nil, ap.TypeError(0, "*FILE or string")
+				return nil, ap.TypeError(0, "FILE* or string")
 			}
 
 			_, ok := ud.Value.(file.File)
