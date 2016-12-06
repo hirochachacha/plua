@@ -1,9 +1,10 @@
 package string
 
 import (
+	"bytes"
 	"strings"
 
-	"github.com/hirochachacha/plua/internal/compiler_pool"
+	"github.com/hirochachacha/plua/compiler/dump"
 	"github.com/hirochachacha/plua/internal/pattern"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/object/fnutil"
@@ -72,7 +73,7 @@ func char(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return []object.Value{object.String(bs)}, nil
 }
 
-func dump(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+func _dump(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
 	cl, err := ap.ToClosure(0)
@@ -82,12 +83,19 @@ func dump(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 
 	strip := ap.OptGoBool(1, false)
 
-	code, e := compiler_pool.DumpToString(cl.Prototype(), strip)
+	var mode dump.Mode
+	if strip {
+		mode |= dump.StripDebugInfo
+	}
+
+	buf := new(bytes.Buffer)
+
+	e := dump.DumpTo(buf, cl.Prototype(), mode)
 	if e != nil {
 		return nil, object.NewRuntimeError(e.Error())
 	}
 
-	return []object.Value{object.String(code)}, nil
+	return []object.Value{object.String(buf.String())}, nil
 }
 
 func find(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -380,7 +388,7 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 
 	m.Set(object.String("byte"), object.GoFunction(_byte))
 	m.Set(object.String("char"), object.GoFunction(char))
-	m.Set(object.String("dump"), object.GoFunction(dump))
+	m.Set(object.String("dump"), object.GoFunction(_dump))
 	m.Set(object.String("find"), object.GoFunction(find))
 	m.Set(object.String("format"), object.GoFunction(format))
 	m.Set(object.String("gmatch"), object.GoFunction(gmatch))

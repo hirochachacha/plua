@@ -1,14 +1,12 @@
 package compiler_pool
 
 import (
-	"bytes"
 	"io"
 	"os"
 	"strings"
 	"sync"
 
 	"github.com/hirochachacha/plua/compiler"
-	"github.com/hirochachacha/plua/compiler/dump"
 	"github.com/hirochachacha/plua/object"
 )
 
@@ -54,20 +52,4 @@ func CompileString(s, srcname string, typ compiler.FormatType) (*object.Proto, e
 	pool.Put(c)
 
 	return p, err
-}
-
-func DumpToString(p *object.Proto, strip bool) (string, error) {
-	var mode dump.Mode
-	if strip {
-		mode |= dump.StripDebugInfo
-	}
-
-	buf := new(bytes.Buffer)
-
-	err := dump.DumpTo(buf, p, mode)
-	if err != nil {
-		return "", err
-	}
-
-	return buf.String(), nil
 }
