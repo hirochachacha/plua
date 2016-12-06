@@ -88,7 +88,7 @@ var testErrors = []execCase{
 		error("test_message")
 		`,
 		nil,
-		`runtime: "test_message" from test_error:3`,
+		`runtime: test_error:3: test_message`,
 	},
 	{
 		`
@@ -99,7 +99,7 @@ var testErrors = []execCase{
 		x()
 		`,
 		nil,
-		`runtime: "test_message" from test_error:3 via test_error:6`,
+		`runtime: test_error:3: test_message`,
 	},
 }
 
@@ -178,7 +178,7 @@ var testDoFiles = []execCase{
 	{
 		`assert(dofile("testdata/do/not.lua"))`,
 		nil,
-		"compiler/parser",
+		"expected",
 	},
 	{
 		`dofile("testdata/do/do_err.lua")`,
