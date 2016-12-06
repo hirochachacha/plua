@@ -1,8 +1,7 @@
 package runtime
 
 import (
-	"strings"
-
+	"github.com/hirochachacha/plua/internal/util"
 	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/opcode"
@@ -275,7 +274,7 @@ func setFuncInfo(d *object.DebugInfo, cl *closure) {
 			d.ShortSource = "?"
 		} else {
 			d.Source = cl.Source
-			d.ShortSource = shorten(cl.Source)
+			d.ShortSource = util.Shorten(cl.Source)
 		}
 		d.LineDefined = cl.LineDefined
 		d.LastLineDefined = cl.LastLineDefined
@@ -497,43 +496,4 @@ func setFuncName(d *object.DebugInfo, ci *callInfo) {
 
 	d.Name = tag.String()
 	d.NameWhat = "metamethod"
-}
-
-func shorten(s string) string {
-	if len(s) == 0 {
-		return ""
-	}
-
-	switch s[0] {
-	case '=':
-		s = s[1:]
-		if len(s) > version.LUA_IDSIZE {
-			return s[:version.LUA_IDSIZE]
-		}
-		return s
-	case '@':
-		s = s[1:]
-		if len(s) > version.LUA_IDSIZE {
-			return "..." + s[len(s)-version.LUA_IDSIZE+3:len(s)]
-		}
-		return s
-	default:
-		i := strings.IndexRune(s, '\n')
-		if i == -1 {
-			s = "[string \"" + s
-
-			if len(s) > version.LUA_IDSIZE-2 {
-				return s[:version.LUA_IDSIZE-5] + "...\"]"
-			}
-			return s + "\"]"
-		}
-
-		s = "[string \"" + s[:i]
-
-		if len(s) > version.LUA_IDSIZE-2 {
-			return s[:version.LUA_IDSIZE-5] + "...\"]"
-		}
-
-		return s + "...\"]"
-	}
 }

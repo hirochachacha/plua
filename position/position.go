@@ -2,9 +2,8 @@ package position
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/hirochachacha/plua/internal/version"
+	"github.com/hirochachacha/plua/internal/util"
 )
 
 var NoPos = Position{
@@ -49,7 +48,7 @@ func (pos Position) OffsetColumn(off int) Position {
 }
 
 func (pos Position) String() string {
-	s := shorten(pos.SourceName)
+	s := util.Shorten(pos.SourceName)
 	if s == "" {
 		s = "?"
 	}
@@ -62,43 +61,4 @@ func (pos Position) String() string {
 
 func (pos Position) IsValid() bool {
 	return pos.Line > 0
-}
-
-func shorten(s string) string {
-	if len(s) == 0 {
-		return ""
-	}
-
-	switch s[0] {
-	case '=':
-		s = s[1:]
-		if len(s) > version.LUA_IDSIZE {
-			return s[:version.LUA_IDSIZE]
-		}
-		return s
-	case '@':
-		s = s[1:]
-		if len(s) > version.LUA_IDSIZE {
-			return s[:version.LUA_IDSIZE-3] + "..."
-		}
-		return s
-	default:
-		i := strings.IndexRune(s, '\n')
-		if i == -1 {
-			s = "[string \"" + s
-
-			if len(s) > version.LUA_IDSIZE-2 {
-				return s[:version.LUA_IDSIZE-5] + "...\"]"
-			}
-			return s + "\"]"
-		}
-
-		s = "[string \"" + s[:i]
-
-		if len(s) > version.LUA_IDSIZE-2 {
-			return s[:version.LUA_IDSIZE-5] + "...\"]"
-		}
-
-		return s + "...\"]"
-	}
 }
