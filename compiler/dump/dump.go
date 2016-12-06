@@ -12,9 +12,14 @@ import (
 )
 
 var (
-	errIntegerOverflow = errors.New("compiler/dump: integer overflow")
-	errFloatOverflow   = errors.New("compiler/dump: float overflow")
-	errFloatUnderflow  = errors.New("compiler/dump: float underflow")
+	errIntegerOverflow    = &Error{errors.New("integer overflow")}
+	errFloatOverflow      = &Error{errors.New("float overflow")}
+	errFloatUnderflow     = &Error{errors.New("float underflow")}
+	errInvalidIntSize     = &Error{errors.New("IntSize should be power of 2")}
+	errInvalidSizeTSize   = &Error{errors.New("SizeTSize should be power of 2")}
+	errInvalidIntegerSize = &Error{errors.New("IntegerSize should be power of 2")}
+	errInvalidNumberSize  = &Error{errors.New("NumberSize should be 4 or 8")}
+	errInvalidByteOrder   = &Error{errors.New("ByteOrder should not be nil")}
 )
 
 type Mode uint
@@ -45,23 +50,23 @@ type Config struct {
 
 func (cfg *Config) validate() error {
 	if !isPowerOfTwo(cfg.IntSize) {
-		return errors.New("compiler/dump: IntSize should be power of 2")
+		return errInvalidIntSize
 	}
 
 	if !isPowerOfTwo(cfg.SizeTSize) {
-		return errors.New("compiler/dump: SizeTSize should be power of 2")
+		return errInvalidSizeTSize
 	}
 
 	if !isPowerOfTwo(cfg.IntegerSize) {
-		return errors.New("compiler/dump: IntegerSize should be power of 2")
+		return errInvalidIntegerSize
 	}
 
 	if !(cfg.NumberSize == 4 || cfg.NumberSize == 8) {
-		return errors.New("compiler/dump: NumberSize should be 4 or 8")
+		return errInvalidNumberSize
 	}
 
 	if cfg.ByteOrder == nil {
-		return errors.New("compiler/dump: ByteOrder should not be nil")
+		return errInvalidByteOrder
 	}
 
 	return nil

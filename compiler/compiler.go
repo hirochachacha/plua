@@ -63,7 +63,7 @@ func (c *Compiler) Compile(r io.Reader, srcname string, typ FormatType) (*object
 	switch {
 	case err == io.EOF, err == nil && c.b[0] != version.LUA_SIGNATURE[0]:
 		if typ != Either && typ != Text {
-			return nil, fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "text", typ)
+			return nil, &Error{fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "text", typ)}
 		}
 
 		if c.s == nil {
@@ -80,7 +80,7 @@ func (c *Compiler) Compile(r io.Reader, srcname string, typ FormatType) (*object
 		return codegen.Generate(ast)
 	case err == nil && c.b[0] == version.LUA_SIGNATURE[0]:
 		if typ != Either && typ != Binary {
-			return nil, fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "binary", typ)
+			return nil, &Error{fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "binary", typ)}
 		}
 
 		if c.u == nil {

@@ -12,20 +12,20 @@ import (
 )
 
 var (
-	errIntegerOverflow        = errors.New("compiler/undump: integer overflow")
-	errShortHeader            = errors.New("compiler/undump: header is too short")
-	errSignatureMismatch      = errors.New("compiler/undump: signature mismatch")
-	errVersionMismatch        = errors.New("compiler/undump: version mismatch")
-	errFormatMismatch         = errors.New("compiler/undump: format mismatch")
-	errDataMismatch           = errors.New("compiler/undump: data mismatch")
-	errInvalidIntSize         = errors.New("compiler/undump: int size is invalid")
-	errInvalidIntegerSize     = errors.New("compiler/undump: integer size is invalid")
-	errInvalidNumberSize      = errors.New("compiler/undump: number size is invalid")
-	errInvalidInstructionSize = errors.New("compiler/undump: instruction size is invalid")
-	errEndiannessMismatch     = errors.New("compiler/undump: endianness mismatch")
-	errNumberFormatMismatch   = errors.New("compiler/undump: number format mismatch")
-	errMalformedByteCode      = errors.New("compiler/undump: malformed byte code detected")
-	errTruncatedChunk         = errors.New("compiler/undump: truncated precompiled chunk")
+	errIntegerOverflow        = &Error{errors.New("integer overflow")}
+	errShortHeader            = &Error{errors.New("header is too short")}
+	errSignatureMismatch      = &Error{errors.New("signature mismatch")}
+	errVersionMismatch        = &Error{errors.New("version mismatch")}
+	errFormatMismatch         = &Error{errors.New("format mismatch")}
+	errDataMismatch           = &Error{errors.New("data mismatch")}
+	errInvalidIntSize         = &Error{errors.New("int size is invalid")}
+	errInvalidIntegerSize     = &Error{errors.New("integer size is invalid")}
+	errInvalidNumberSize      = &Error{errors.New("number size is invalid")}
+	errInvalidInstructionSize = &Error{errors.New("instruction size is invalid")}
+	errEndiannessMismatch     = &Error{errors.New("endianness mismatch")}
+	errNumberFormatMismatch   = &Error{errors.New("number format mismatch")}
+	errMalformedByteCode      = &Error{errors.New("malformed byte code detected")}
+	errTruncatedChunk         = &Error{errors.New("truncated precompiled chunk")}
 )
 
 const bufferSize = 20
