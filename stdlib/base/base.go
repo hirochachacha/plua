@@ -84,9 +84,9 @@ func dofile(th object.Thread, args ...object.Value) (rets []object.Value, err *o
 		}
 	}
 
-	p, e := compiler_pool.CompileFile(fname, 0)
-	if e != nil {
-		return nil, object.NewRuntimeError(e.Error())
+	p, err := compiler_pool.CompileFile(fname, 0)
+	if err != nil {
+		return nil, err
 	}
 
 	return th.Call(th.NewClosure(p), nil)
@@ -283,21 +283,20 @@ func loadfile(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 	}
 
 	var p *object.Proto
-	var e error
 
 	switch mode {
 	case "b":
-		p, e = compiler_pool.CompileFile(fname, compiler.Binary)
+		p, err = compiler_pool.CompileFile(fname, compiler.Binary)
 	case "t":
-		p, e = compiler_pool.CompileFile(fname, compiler.Text)
+		p, err = compiler_pool.CompileFile(fname, compiler.Text)
 	case "bt":
-		p, e = compiler_pool.CompileFile(fname, 0)
+		p, err = compiler_pool.CompileFile(fname, 0)
 	default:
 		return nil, ap.OptionError(1, mode)
 	}
 
-	if e != nil {
-		return []object.Value{nil, object.String(e.Error())}, nil
+	if err != nil {
+		return []object.Value{nil, err.Positioned()}, nil
 	}
 
 	cl := th.NewClosure(p)
@@ -333,7 +332,7 @@ func load(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		for {
 			rets, err := th.Call(s, nil)
 			if err != nil {
-				return []object.Value{nil, err.Value}, nil
+				return []object.Value{nil, err.Positioned()}, nil
 			}
 			if len(rets) == 0 || rets[0] == nil {
 				break
@@ -360,20 +359,19 @@ func load(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	}
 
 	var p *object.Proto
-	var e error
 	switch mode {
 	case "b":
-		p, e = compiler_pool.CompileString(chunk, chunkname, compiler.Binary)
+		p, err = compiler_pool.CompileString(chunk, chunkname, compiler.Binary)
 	case "t":
-		p, e = compiler_pool.CompileString(chunk, chunkname, compiler.Text)
+		p, err = compiler_pool.CompileString(chunk, chunkname, compiler.Text)
 	case "bt":
-		p, e = compiler_pool.CompileString(chunk, chunkname, 0)
+		p, err = compiler_pool.CompileString(chunk, chunkname, 0)
 	default:
 		return nil, ap.OptionError(2, mode)
 	}
 
-	if e != nil {
-		return []object.Value{nil, object.String(e.Error())}, nil
+	if err != nil {
+		return []object.Value{nil, err.Positioned()}, nil
 	}
 
 	cl := th.NewClosure(p)

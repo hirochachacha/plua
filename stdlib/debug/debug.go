@@ -15,14 +15,14 @@ func debug(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 	stdin := bufio.NewScanner(os.Stdin)
 
 	for {
-		_, err := os.Stderr.WriteString("lua_debug> ")
-		if err != nil {
-			return nil, object.NewRuntimeError(err.Error())
+		_, e := os.Stderr.WriteString("lua_debug> ")
+		if e != nil {
+			return nil, object.NewRuntimeError(e.Error())
 		}
 
 		if !stdin.Scan() {
-			if err := stdin.Err(); err != nil {
-				return nil, object.NewRuntimeError(err.Error())
+			if e := stdin.Err(); e != nil {
+				return nil, object.NewRuntimeError(e.Error())
 			}
 
 			return nil, nil
@@ -35,20 +35,20 @@ func debug(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 
 		p, err := compiler_pool.CompileString(line, "=(debug command)", 0)
 		if err != nil {
-			return nil, object.NewRuntimeError(err.Error())
+			return nil, err
 		}
 
-		rets, e := th.Call(th.NewClosure(p), nil)
-		if e != nil {
-			return nil, e
+		rets, err := th.Call(th.NewClosure(p), nil)
+		if err != nil {
+			return nil, err
 		}
 
 		if len(rets) != 0 {
 			s := object.Repr(rets[0])
 
-			_, err := fmt.Fprintf(os.Stderr, "\n%s\n", s)
-			if err != nil {
-				return nil, object.NewRuntimeError(err.Error())
+			_, e := fmt.Fprintf(os.Stderr, "\n%s\n", s)
+			if e != nil {
+				return nil, object.NewRuntimeError(e.Error())
 			}
 		}
 	}

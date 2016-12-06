@@ -107,7 +107,7 @@ func makeSearchers(m object.Table) []object.Value {
 
 			p, err := compiler_pool.CompileFile(fpath, 0)
 			if err != nil {
-				return nil, object.NewRuntimeError(fmt.Sprintf("error loading module '%s' from file '%s':\n\t%s", modname, fpath, err.Error()))
+				return nil, err
 			}
 
 			return []object.Value{th.NewClosure(p), object.String(fpath)}, nil

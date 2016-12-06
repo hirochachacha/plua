@@ -27,5 +27,5 @@ func (err *RuntimeError) Positioned() Value {
 }
 
 func (err *RuntimeError) Error() string {
-	return Repr(err.Positioned())
+	return fmt.Sprintf("runtime: %s", Repr(err.Positioned()))
 }
