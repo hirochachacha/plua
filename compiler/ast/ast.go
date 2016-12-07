@@ -250,7 +250,15 @@ func (x *TableLit) End() position.Position     { return x.Rbrace.OffsetColumn(1)
 func (x *ParenExpr) End() position.Position    { return x.Rparen.OffsetColumn(1) }
 func (x *SelectorExpr) End() position.Position { return x.Sel.End() }
 func (x *IndexExpr) End() position.Position    { return x.Rbrack.OffsetColumn(1) }
-func (x *CallExpr) End() position.Position     { return x.Rparen.OffsetColumn(1) }
+func (x *CallExpr) End() position.Position {
+	if x.Rparen.IsValid() {
+		return x.Rparen.OffsetColumn(1)
+	}
+	if len(x.Args) > 0 {
+		return x.Args[len(x.Args)-1].End()
+	}
+	return position.NoPos
+}
 func (x *UnaryExpr) End() position.Position    { return x.X.End() }
 func (x *BinaryExpr) End() position.Position   { return x.Y.End() }
 func (x *KeyValueExpr) End() position.Position { return x.Value.End() }

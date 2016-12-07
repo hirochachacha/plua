@@ -22,26 +22,26 @@ func ExampleHello() {
 	printer.PrintTree(ast)
 
 	// Output:
-	// File { 1:1--
+	// File { ?:1-?:3
 	//   Shebang: "#!/usr/bin/env lua"
 	//   Chunk: {
-	//     ExprStmt { 3:1--
-	//       X: CallExpr { 3:1--
-	//         X: Name { 3:1-3:6
-	//           NamePos: 3:1
+	//     ExprStmt { ?:3-?:3
+	//       X: CallExpr { ?:3-?:3
+	//         X: Name { ?:3-?:3
+	//           NamePos: ?:3
 	//           Name: print
 	//         }
-	//         Colon: -
+	//         Colon: ?:-1
 	//         Name: nil
-	//         Lparen: -
+	//         Lparen: ?:-1
 	//         Args: {
-	//           BasicLit { 3:7-3:21
+	//           BasicLit { ?:3-?:3
 	//             Token.Type: STRING
-	//             Token.Pos: 3:7
+	//             Token.Pos: ?:3
 	//             Token.Lit: "Hello World!"
 	//           }
 	//         }
-	//         Rparen: -
+	//         Rparen: ?:-1
 	//       }
 	//     }
 	//   }
