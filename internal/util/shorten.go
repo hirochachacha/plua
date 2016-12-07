@@ -21,7 +21,7 @@ func Shorten(s string) string {
 	case '@':
 		s = s[1:]
 		if len(s) >= version.LUA_IDSIZE {
-			return s[:version.LUA_IDSIZE-4] + "..."
+			return "..." + s[len(s)-version.LUA_IDSIZE+4:]
 		}
 		return s
 	default:
