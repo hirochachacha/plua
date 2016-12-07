@@ -20,7 +20,6 @@ var testExec = []struct {
 	{`return 3.14`, []object.Value{object.Number(3.14)}},
 	{`return false`, []object.Value{object.Boolean(false)}},
 	{`return`, nil},
-	{`return; return 1`, nil},
 	{`function x() return 1 end; return x()`, []object.Value{object.Integer(1)}},
 	{`function x() return 1 end; x(); return 2`, []object.Value{object.Integer(2)}},
 	{`local a = {1 = 10, 2, 3, 4 = 9}; return a[4]`, []object.Value{object.Integer(9)}},
@@ -127,10 +126,10 @@ var testExec = []struct {
 func TestExec(t *testing.T) {
 	c := compiler.NewCompiler()
 
-	for _, test := range testExec {
-		proto, err := c.Compile(strings.NewReader(test.Code), "=testCode", 0)
+	for i, test := range testExec {
+		proto, err := c.Compile(strings.NewReader(test.Code), "=test_code", 0)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("%d: %v", i+1, err)
 		}
 
 		p := runtime.NewProcess()
@@ -169,10 +168,10 @@ var testExecError = []struct {
 func TestExecError(t *testing.T) {
 	c := compiler.NewCompiler()
 
-	for _, test := range testExecError {
-		proto, err := c.Compile(strings.NewReader(test.Code), "=testCode", 0)
+	for i, test := range testExecError {
+		proto, err := c.Compile(strings.NewReader(test.Code), "=test_code", 0)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("%d: %v", i+1, err)
 		}
 
 		p := runtime.NewProcess()
