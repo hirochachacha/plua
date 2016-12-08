@@ -4,7 +4,6 @@ import (
 	"io"
 	"strings"
 	"text/tabwriter"
-	"unicode"
 
 	"github.com/hirochachacha/plua/compiler/ast"
 	"github.com/hirochachacha/plua/compiler/token"
@@ -12,131 +11,111 @@ import (
 )
 
 const (
-	infinity = 1 << 30
-	equal    = "="
-	indent   = "  "
-	period   = "."
-	comma    = ","
-	lbrace   = "{"
-	rbrace   = "}"
-	lparen   = "("
-	rparen   = ")"
-	lbrack   = "["
-	rbrack   = "]"
-	colon    = ":"
-
-	tab       = '\t'
-	blank     = ' '
-	newline   = '\n'
-	semicolon = ';'
-	formfeed  = '\f'
-	escape    = tabwriter.Escape
+	indent = "  "
 )
 
 type mode uint
 
 const (
-	noExprIndent mode = 1 << iota
-	noBlank
-	insertSemi
-	isLit
+	noBlank mode = 1 << iota
+	escape
+	noExpr
+	noParen
+	inParen
 )
 
 type printer struct {
 	w          *tabwriter.Writer
+	depth      int // indent depth
+	formfeed   bool
+	lastPos    position.Position
 	commentPos position.Position
 	cindex     int
-	comment    *ast.CommentGroup
 	comments   []*ast.CommentGroup
-	depth      int // indent depth
-	lastPos    position.Position
+	comment    *ast.CommentGroup
 	err        error
-	skip       bool // skip first byte
 }
 
 func newPrinter(w io.Writer) *printer {
 	return &printer{
-		w:    tabwriter.NewWriter(w, 2, 2, 1, ' ', tabwriter.DiscardEmptyColumns|tabwriter.StripEscape),
-		skip: true,
+		w: tabwriter.NewWriter(w, 2, 2, 1, ' ', tabwriter.DiscardEmptyColumns|tabwriter.StripEscape),
 	}
 }
 
 // Nodes
 
-func (pr *printer) printNode(node ast.Node) {
+func (p *printer) printNode(node ast.Node) {
 	switch node := node.(type) {
 	case *ast.BadExpr:
-		pr.print(node.Pos(), "BadExpr", 0)
+		p.print(node.Pos(), "BadExpr", 0)
 	case *ast.Name:
-		pr.printName(node, 0)
+		p.printName(node, 0)
 	case *ast.Vararg:
-		pr.printVararg(node, 0)
+		p.printVararg(node, 0)
 	case *ast.BasicLit:
-		pr.printBasicLit(node, 0)
+		p.printBasicLit(node, 0)
 	case *ast.FuncLit:
-		pr.printFuncLit(node, 0)
+		p.printFuncLit(node, 0)
 	case *ast.TableLit:
-		pr.printTableLit(node, 0)
+		p.printTableLit(node, 0)
 	case *ast.ParenExpr:
-		pr.printParenExpr(node, 0)
+		p.printParenExpr(node, 0)
 	case *ast.SelectorExpr:
-		pr.printSelectorExpr(node, 0)
+		p.printSelectorExpr(node, 0)
 	case *ast.IndexExpr:
-		pr.printIndexExpr(node, 0)
+		p.printIndexExpr(node, 0)
 	case *ast.CallExpr:
-		pr.printCallExpr(node, 0)
+		p.printCallExpr(node, 0)
 	case *ast.UnaryExpr:
-		pr.printUnaryExpr(node, 0)
+		p.printUnaryExpr(node, 0)
 	case *ast.BinaryExpr:
-		pr.printBinaryExpr(node, token.HighestPrec, 0)
+		p.printBinaryExpr(node, token.HighestPrec, 0)
 	case *ast.KeyValueExpr:
-		pr.print(node.Pos(), "BadKeyValueExpr", 0)
-
+		p.printKeyValueExpr(node, 0)
 	case *ast.BadStmt:
-		pr.print(node.Pos(), "BadStmt", 0)
+		p.print(node.Pos(), "BadStmt", 0)
 	case *ast.EmptyStmt:
 		// skip this
 	case *ast.LocalAssignStmt:
-		pr.printLocalAssignStmt(node)
+		p.printLocalAssignStmt(node)
 	case *ast.LocalFuncStmt:
-		pr.printLocalFuncStmt(node)
+		p.printLocalFuncStmt(node)
 	case *ast.FuncStmt:
-		pr.printFuncStmt(node)
+		p.printFuncStmt(node)
 	case *ast.LabelStmt:
-		pr.printLabelStmt(node)
+		p.printLabelStmt(node)
 	case *ast.ExprStmt:
-		pr.printExprStmt(node)
+		p.printExprStmt(node)
 	case *ast.AssignStmt:
-		pr.printAssignStmt(node)
+		p.printAssignStmt(node)
 	case *ast.GotoStmt:
-		pr.printGotoStmt(node)
+		p.printGotoStmt(node)
 	case *ast.BreakStmt:
-		pr.printBreakStmt(node)
+		p.printBreakStmt(node)
 	case *ast.IfStmt:
-		pr.printIfStmt(node)
+		p.printIfStmt(node)
 	case *ast.DoStmt:
-		pr.printDoStmt(node)
+		p.printDoStmt(node)
 	case *ast.WhileStmt:
-		pr.printWhileStmt(node)
+		p.printWhileStmt(node)
 	case *ast.RepeatStmt:
-		pr.printRepeatStmt(node)
+		p.printRepeatStmt(node)
 	case *ast.ReturnStmt:
-		pr.printReturnStmt(node)
+		p.printReturnStmt(node)
 	case *ast.ForStmt:
-		pr.printForStmt(node)
+		p.printForStmt(node)
 	case *ast.ForEachStmt:
-		pr.printForEachStmt(node)
-
+		p.printForEachStmt(node)
 	case *ast.File:
-		pr.printFile(node)
+		p.printFile(node)
 	case *ast.Block:
-		pr.printBlock(node)
+		p.printBlock(node)
 	case *ast.FuncBody:
-		pr.printFuncBody(node)
+		p.printFuncBody(node)
 	case *ast.Comment:
 	case *ast.CommentGroup:
 	case *ast.ParamList:
-		pr.printParams(node)
+		p.printParams(node)
 
 	default:
 		panic("unreachable")
@@ -145,693 +124,544 @@ func (pr *printer) printNode(node ast.Node) {
 
 // Statements
 
-func (pr *printer) printStmt(stmt ast.Stmt) {
+func (p *printer) printStmt(stmt ast.Stmt) {
 	switch stmt := stmt.(type) {
 	case *ast.BadStmt:
-		pr.print(stmt.Pos(), "BadStmt", 0)
+		p.print(stmt.Pos(), "BadStmt", 0)
 	case *ast.EmptyStmt:
 		// skip this
 	case *ast.LocalAssignStmt:
-		pr.printLocalAssignStmt(stmt)
+		p.printLocalAssignStmt(stmt)
 	case *ast.LocalFuncStmt:
-		pr.printLocalFuncStmt(stmt)
+		p.printLocalFuncStmt(stmt)
 	case *ast.FuncStmt:
-		pr.printFuncStmt(stmt)
+		p.printFuncStmt(stmt)
 	case *ast.LabelStmt:
-		pr.printLabelStmt(stmt)
+		p.printLabelStmt(stmt)
 	case *ast.ExprStmt:
-		pr.printExprStmt(stmt)
+		p.printExprStmt(stmt)
 	case *ast.AssignStmt:
-		pr.printAssignStmt(stmt)
+		p.printAssignStmt(stmt)
 	case *ast.GotoStmt:
-		pr.printGotoStmt(stmt)
+		p.printGotoStmt(stmt)
 	case *ast.BreakStmt:
-		pr.printBreakStmt(stmt)
+		p.printBreakStmt(stmt)
 	case *ast.IfStmt:
-		pr.printIfStmt(stmt)
+		p.printIfStmt(stmt)
 	case *ast.DoStmt:
-		pr.printDoStmt(stmt)
+		p.printDoStmt(stmt)
 	case *ast.WhileStmt:
-		pr.printWhileStmt(stmt)
+		p.printWhileStmt(stmt)
 	case *ast.RepeatStmt:
-		pr.printRepeatStmt(stmt)
+		p.printRepeatStmt(stmt)
 	case *ast.ReturnStmt:
-		pr.printReturnStmt(stmt)
+		p.printReturnStmt(stmt)
 	case *ast.ForStmt:
-		pr.printForStmt(stmt)
+		p.printForStmt(stmt)
 	case *ast.ForEachStmt:
-		pr.printForEachStmt(stmt)
+		p.printForEachStmt(stmt)
 	default:
 		panic("unreachable")
 	}
 }
 
-func (pr *printer) printLocalAssignStmt(stmt *ast.LocalAssignStmt) {
-	pr.printNames(stmt.LHS, noExprIndent|insertSemi)
-	pr.print(stmt.Equal, equal, 0)
-	pr.printExprs(stmt.RHS, 0)
+func (p *printer) printLocalAssignStmt(stmt *ast.LocalAssignStmt) {
+	p.printNames(stmt.LHS, noExpr)
+	p.print(stmt.Equal, "=", 0)
+	p.printExprs(stmt.RHS, noParen)
 }
 
-func (pr *printer) printLocalFuncStmt(stmt *ast.LocalFuncStmt) {
-	pr.print(stmt.Local, "local", noExprIndent|insertSemi)
-	pr.print(stmt.Func, "function", 0)
-	pr.printName(stmt.Name, 0)
-
-	pr.printFuncBody(stmt.Body)
-
-	pr.print(stmt.Body.Body.Closing, "end", noExprIndent)
+func (p *printer) printLocalFuncStmt(stmt *ast.LocalFuncStmt) {
+	p.print(stmt.Local, "local", noExpr)
+	p.print(stmt.Func, "function", noExpr)
+	p.printName(stmt.Name, 0)
+	p.printFuncBody(stmt.Body)
+	p.print(stmt.EndPos, "end", noExpr)
 }
 
-func (pr *printer) printFuncStmt(stmt *ast.FuncStmt) {
-	pr.print(stmt.Func, "function", noExprIndent|insertSemi)
-	for _, name := range stmt.NamePrefix {
-		pr.print(name.Pos(), name.Name+period, 0)
-	}
-
-	if stmt.AccessTok != token.ILLEGAL {
-		pr.print(stmt.AccessPos, stmt.AccessTok.String(), noBlank)
-	}
-
-	pr.printName(stmt.Name, 0)
-
-	pr.printFuncBody(stmt.Body)
-
-	pr.print(stmt.Body.Body.Closing, "end", noExprIndent)
-}
-
-func (pr *printer) printLabelStmt(stmt *ast.LabelStmt) {
-	pr.print(stmt.Label, "::"+stmt.Name.Name+"::", noExprIndent|insertSemi)
-}
-
-func (pr *printer) printExprStmt(stmt *ast.ExprStmt) {
-	pr.printCallExpr(stmt.X, noExprIndent|insertSemi)
-}
-
-func (pr *printer) printAssignStmt(stmt *ast.AssignStmt) {
-	pr.printExprs(stmt.LHS, noExprIndent|insertSemi)
-	pr.print(stmt.Equal, equal, 0)
-	pr.printExprs(stmt.RHS, 0)
-}
-
-func (pr *printer) printGotoStmt(stmt *ast.GotoStmt) {
-	pr.print(stmt.Goto, "goto", noExprIndent|insertSemi)
-	pr.printName(stmt.Label, 0)
-}
-
-func (pr *printer) printBreakStmt(stmt *ast.BreakStmt) {
-	pr.print(stmt.Break, "break", noExprIndent|insertSemi)
-}
-
-func getElseIf(stmt *ast.IfStmt) (*ast.IfStmt, bool) {
-	if stmt.Else != nil && len(stmt.Else.List) == 1 {
-		if ifStmt, ok := stmt.Else.List[0].(*ast.IfStmt); ok {
-			if stmt.Else.Opening == ifStmt.Pos() {
-				return ifStmt, true
-			}
-		}
-	}
-
-	return stmt, false
-}
-
-func (pr *printer) printIfStmt(stmt *ast.IfStmt) {
-	pr.print(stmt.If, "if", noExprIndent|insertSemi)
-	pr.printExpr(stmt.Cond, 0)
-	pr.print(stmt.Body.Opening, "then", 0)
-	pr.printBlock(stmt.Body)
-	if stmt.Else != nil {
-		if last, ok := getElseIf(stmt); ok {
-			pr.print(last.If, "elseif", noExprIndent|insertSemi)
-			pr.printExpr(last.Cond, 0)
-			pr.print(last.Body.Opening, "then", 0)
-			pr.printBlock(last.Body)
-
-			for {
-				last, ok = getElseIf(last)
-				if !ok {
-					break
-				}
-				pr.print(last.If, "elseif", noExprIndent|insertSemi)
-				pr.printExpr(last.Cond, 0)
-				pr.print(last.Body.Opening, "then", 0)
-				pr.printBlock(last.Body)
-			}
-
-			if last.Else != nil {
-				pr.print(last.Else.Opening, "else", 0)
-				pr.printBlock(last.Else)
-				pr.print(last.Else.Closing, "end", noExprIndent)
-			} else {
-				pr.print(last.Body.Closing, "end", noExprIndent)
-			}
-
-			return
-		}
-
-		pr.print(stmt.Else.Opening, "else", 0)
-		pr.printBlock(stmt.Else)
-		pr.print(stmt.Else.Closing, "end", noExprIndent)
-	} else {
-		pr.print(stmt.Body.Closing, "end", noExprIndent)
-	}
-}
-
-func (pr *printer) printDoStmt(stmt *ast.DoStmt) {
-	pr.print(stmt.Body.Opening, "do", noExprIndent|insertSemi)
-
-	pr.printBlock(stmt.Body)
-
-	pr.print(stmt.Body.Closing, "end", noExprIndent)
-}
-
-func (pr *printer) printWhileStmt(stmt *ast.WhileStmt) {
-	pr.print(stmt.While, "while", noExprIndent|insertSemi)
-
-	pr.printExpr(stmt.Cond, 0)
-
-	pr.print(stmt.Body.Opening, "do", 0)
-
-	pr.printBlock(stmt.Body)
-
-	pr.print(stmt.Body.Closing, "end", noExprIndent)
-}
-
-func (pr *printer) printRepeatStmt(stmt *ast.RepeatStmt) {
-	pr.print(stmt.Repeat, "repeat", noExprIndent|insertSemi)
-
-	pr.printBlock(stmt.Body)
-
-	pr.print(stmt.Until, "until", noExprIndent)
-
-	pr.printExpr(stmt.Cond, 0)
-}
-
-func (pr *printer) printReturnStmt(stmt *ast.ReturnStmt) {
-	pr.print(stmt.Return, "return", noExprIndent|insertSemi)
-
-	if len(stmt.Results) == 1 {
-		if expr, ok := stmt.Results[0].(*ast.ParenExpr); ok {
-			pr.printExpr(expr.X, 0)
+func (p *printer) printFuncStmt(stmt *ast.FuncStmt) {
+	p.print(stmt.Func, "function", noExpr)
+	if len(stmt.PathList) > 0 {
+		if len(stmt.PathList) == 1 {
+			path := stmt.PathList[0]
+			p.print(path.Pos(), path.Name, 0)
 		} else {
-			pr.printExpr(stmt.Results[0], 0)
+			path := stmt.PathList[0]
+			p.print(path.Pos(), path.Name+".", 0)
+			for _, path := range stmt.PathList[1 : len(stmt.PathList)-1] {
+				p.print(path.Pos(), path.Name+".", noBlank)
+			}
+			path = stmt.PathList[len(stmt.PathList)-1]
+			p.print(path.Pos(), path.Name, noBlank)
 		}
+		p.print(stmt.AccessPos, stmt.AccessTok.String(), noBlank)
+		p.printName(stmt.Name, noBlank)
 	} else {
-		pr.printExprs(stmt.Results, 0)
+		p.printName(stmt.Name, 0)
 	}
+	p.printFuncBody(stmt.Body)
+	p.print(stmt.EndPos, "end", noExpr)
 }
 
-func (pr *printer) printForStmt(stmt *ast.ForStmt) {
-	pr.print(stmt.For, "for", noExprIndent|insertSemi)
+func (p *printer) printLabelStmt(stmt *ast.LabelStmt) {
+	p.print(stmt.Label, "::", noExpr)
+	p.print(stmt.Name.Pos(), stmt.Name.Name, noBlank)
+	p.print(stmt.EndLabel, "::", noBlank)
+}
 
-	pr.printName(stmt.Name, 0)
-	pr.print(stmt.Equal, equal, 0)
-	pr.printExpr(stmt.Start, 0)
-	pr.print(pr.lastPos, comma, noBlank)
+func (p *printer) printExprStmt(stmt *ast.ExprStmt) {
+	p.printCallExpr(stmt.X, noExpr)
+}
+
+func (p *printer) printAssignStmt(stmt *ast.AssignStmt) {
+	p.printExprs(stmt.LHS, noExpr|noParen)
+	p.print(stmt.Equal, "=", 0)
+	p.printExprs(stmt.RHS, noParen)
+}
+
+func (p *printer) printGotoStmt(stmt *ast.GotoStmt) {
+	p.print(stmt.Goto, "goto", noExpr)
+	p.printName(stmt.Label, 0)
+}
+
+func (p *printer) printBreakStmt(stmt *ast.BreakStmt) {
+	p.print(stmt.Break, "break", noExpr)
+}
+
+func (p *printer) printIfStmt(stmt *ast.IfStmt) {
+	p.print(stmt.If, "if", noExpr)
+	p.printExpr(stmt.Cond, noParen)
+	p.print(stmt.Then, "then", noExpr)
+	p.printBlock(stmt.Body)
+	for _, e := range stmt.ElseIfList {
+		p.print(e.If, "elseif", noExpr)
+		p.printExpr(e.Cond, noParen)
+		p.print(e.Then, "then", noExpr)
+		p.printBlock(e.Body)
+	}
+	if stmt.ElseBody != nil {
+		p.print(stmt.Else, "else", noExpr)
+		p.printBlock(stmt.ElseBody)
+	}
+	p.print(stmt.EndPos, "end", noExpr)
+}
+
+func (p *printer) printDoStmt(stmt *ast.DoStmt) {
+	p.print(stmt.Do, "do", noExpr)
+	p.printBlock(stmt.Body)
+	p.print(stmt.EndPos, "end", noExpr)
+}
+
+func (p *printer) printWhileStmt(stmt *ast.WhileStmt) {
+	p.print(stmt.While, "while", noExpr)
+	p.printExpr(stmt.Cond, noParen)
+	p.print(stmt.EndPos, "do", noExpr)
+	p.printBlock(stmt.Body)
+	p.print(stmt.EndPos, "end", noExpr)
+}
+
+func (p *printer) printRepeatStmt(stmt *ast.RepeatStmt) {
+	p.print(stmt.Repeat, "repeat", noExpr)
+	p.printBlock(stmt.Body)
+	p.print(stmt.Until, "until", noExpr)
+	p.printExpr(stmt.Cond, noParen)
+}
+
+func (p *printer) printReturnStmt(stmt *ast.ReturnStmt) {
+	p.print(stmt.Return, "return", noExpr)
+	p.printExprs(stmt.Results, noParen)
+}
+
+func (p *printer) printForStmt(stmt *ast.ForStmt) {
+	p.print(stmt.For, "for", noExpr)
+	p.printName(stmt.Name, 0)
+	p.print(stmt.Equal, "=", 0)
+	p.printExpr(stmt.Start, noParen)
+	p.print(p.lastPos, ",", noBlank)
 	if stmt.Step != nil {
-		pr.printExpr(stmt.Finish, 0)
-		pr.print(pr.lastPos, comma, noBlank)
-		pr.printExpr(stmt.Step, 0)
+		p.printExpr(stmt.Finish, noParen)
+		p.print(p.lastPos, ",", noBlank)
+		p.printExpr(stmt.Step, noParen)
 	} else {
-		pr.printExpr(stmt.Finish, 0)
+		p.printExpr(stmt.Finish, noParen)
 	}
-	pr.print(stmt.Body.Opening, "do", 0)
-
-	pr.printBlock(stmt.Body)
-
-	pr.print(stmt.Body.Closing, "end", noExprIndent)
+	p.print(stmt.Do, "do", noExpr)
+	p.printBlock(stmt.Body)
+	p.print(stmt.EndPos, "end", noExpr)
 }
 
-func (pr *printer) printForEachStmt(stmt *ast.ForEachStmt) {
-	pr.print(stmt.For, "for", noExprIndent|insertSemi)
-
-	pr.printNames(stmt.Names, 0)
-	pr.print(stmt.In, "in", 0)
-	pr.printExprs(stmt.Exprs, 0)
-
-	pr.print(stmt.Body.Opening, "do", 0)
-
-	pr.printBlock(stmt.Body)
-
-	pr.print(stmt.Body.Closing, "end", noExprIndent)
+func (p *printer) printForEachStmt(stmt *ast.ForEachStmt) {
+	p.print(stmt.For, "for", noExpr)
+	p.printNames(stmt.Names, 0)
+	p.print(stmt.In, "in", noExpr)
+	p.printExprs(stmt.Exprs, noParen)
+	p.print(stmt.Do, "do", noExpr)
+	p.printBlock(stmt.Body)
+	p.print(stmt.EndPos, "end", noExpr)
 }
 
 // Expression
 
-func (pr *printer) printExpr(expr ast.Expr, mode mode) {
+func (p *printer) printExpr(expr ast.Expr, mode mode) {
+	if mode&noParen != 0 {
+		for { // ((expr)) => expr
+			paren, ok := expr.(*ast.ParenExpr)
+			if !ok {
+				break
+			}
+			expr = paren.X
+		}
+		mode &^= noParen
+	}
+
 	switch expr := expr.(type) {
 	case *ast.BadExpr:
-		pr.print(expr.Pos(), "BadExpr", mode)
+		p.print(expr.Pos(), "BadExpr", mode)
 	case *ast.Name:
-		pr.printName(expr, mode)
+		p.printName(expr, mode)
 	case *ast.Vararg:
-		pr.printVararg(expr, mode)
+		p.printVararg(expr, mode)
 	case *ast.BasicLit:
-		pr.printBasicLit(expr, mode)
+		p.printBasicLit(expr, mode)
 	case *ast.FuncLit:
-		pr.printFuncLit(expr, mode)
+		p.printFuncLit(expr, mode)
 	case *ast.TableLit:
-		pr.printTableLit(expr, mode)
+		p.printTableLit(expr, mode)
 	case *ast.ParenExpr:
-		pr.printParenExpr(expr, mode)
+		p.printParenExpr(expr, mode)
 	case *ast.SelectorExpr:
-		pr.printSelectorExpr(expr, mode)
+		p.printSelectorExpr(expr, mode)
 	case *ast.IndexExpr:
-		pr.printIndexExpr(expr, mode)
+		p.printIndexExpr(expr, mode)
 	case *ast.CallExpr:
-		pr.printCallExpr(expr, mode)
+		p.printCallExpr(expr, mode)
 	case *ast.UnaryExpr:
-		pr.printUnaryExpr(expr, mode)
+		p.printUnaryExpr(expr, mode)
 	case *ast.BinaryExpr:
-		pr.printBinaryExpr(expr, token.HighestPrec, mode)
+		p.printBinaryExpr(expr, token.HighestPrec, mode)
 	case *ast.KeyValueExpr:
-		panic("unexpected")
+		p.printKeyValueExpr(expr, mode)
 	default:
 		panic("unreachable")
 	}
 }
 
-func (pr *printer) printName(expr *ast.Name, mode mode) {
-	pr.print(expr.Pos(), expr.Name, mode)
+func (p *printer) printName(expr *ast.Name, mode mode) {
+	p.print(expr.Pos(), expr.Name, mode)
 }
 
-func (pr *printer) printVararg(expr *ast.Vararg, mode mode) {
-	pr.print(expr.Ellipsis, "...", mode)
+func (p *printer) printVararg(expr *ast.Vararg, mode mode) {
+	p.print(expr.Ellipsis, "...", mode)
 }
 
-func (pr *printer) printBasicLit(expr *ast.BasicLit, mode mode) {
+func (p *printer) printBasicLit(expr *ast.BasicLit, mode mode) {
 	if expr.Token.Type == token.STRING {
-		lit := expr.Token.Lit
-		if lit[0] == '\'' {
-			if strings.IndexByte(lit, '"') == -1 {
-				lit = "\"" + lit[1:len(lit)-1] + "\""
-			}
-		}
-		pr.print(expr.Token.Pos, lit, mode|isLit)
+		p.print(expr.Token.Pos, expr.Token.Lit, mode|escape)
 	} else {
-		pr.print(expr.Token.Pos, expr.Token.Lit, mode)
+		p.print(expr.Token.Pos, expr.Token.Lit, mode)
 	}
 }
 
-func (pr *printer) printFuncLit(expr *ast.FuncLit, mode mode) {
-	pr.print(expr.Func, "function", mode)
-	pr.printFuncBody(expr.Body)
-	pr.print(expr.Body.Body.Closing, "end", noExprIndent)
+func (p *printer) printFuncLit(expr *ast.FuncLit, mode mode) {
+	p.print(expr.Func, "function", mode)
+	p.printFuncBody(expr.Body)
+	p.print(expr.EndPos, "end", 0)
 }
 
-func (pr *printer) printTableLit(expr *ast.TableLit, mode mode) {
-	doIndent := pr.lastPos.Line != expr.Lbrace.Line
-
-	pr.print(expr.Lbrace, lbrace, mode)
-
-	// pr.depth++
-
-	pr.printExprs(expr.Fields, 0)
-
-	// pr.depth--
-
-	if doIndent {
-		pr.print(expr.Rbrace, rbrace, 0)
-	} else {
-		pr.print(expr.Rbrace, rbrace, noExprIndent)
-	}
+func (p *printer) printTableLit(expr *ast.TableLit, mode mode) {
+	p.print(expr.Lbrace, "{", mode)
+	p.printExprs(expr.Fields, noBlank|noParen)
+	p.print(expr.Rbrace, "}", noBlank)
 }
 
-func (pr *printer) printParenExpr(expr *ast.ParenExpr, mode mode) {
-	if x, ok := expr.X.(*ast.ParenExpr); ok {
-		pr.printParenExpr(x, mode)
-	} else {
-		pr.print(expr.Lparen, lparen, mode)
-		pr.printExpr(expr.X, noBlank)
-		pr.print(expr.Rparen, rparen, noBlank)
-	}
+func (p *printer) printParenExpr(expr *ast.ParenExpr, mode mode) {
+	p.print(expr.Lparen, "(", mode)
+	p.printExpr(expr.X, noBlank|noParen|inParen)
+	p.print(expr.Rparen, ")", noBlank)
 }
 
-func (pr *printer) printSelectorExpr(expr *ast.SelectorExpr, mode mode) {
-	pr.printExpr(expr.X, mode)
-	pr.print(expr.Period, period, noBlank)
-	pr.printName(expr.Sel, noBlank)
+func (p *printer) printSelectorExpr(expr *ast.SelectorExpr, mode mode) {
+	p.printExpr(expr.X, mode)
+	p.print(expr.Period, ".", noBlank)
+	p.printName(expr.Sel, 0)
 }
 
-func (pr *printer) printIndexExpr(expr *ast.IndexExpr, mode mode) {
-	pr.printExpr(expr.X, mode)
-
-	doIndent := pr.lastPos.Line != expr.Lbrack.Line
-
-	pr.print(expr.Lbrack, lbrack, noBlank)
-
-	// pr.depth++
-
-	pr.printExpr(expr.Index, noBlank)
-
-	// pr.depth--
-
-	if doIndent {
-		pr.print(expr.Rbrack, rbrack, noBlank)
-	} else {
-		pr.print(expr.Rbrack, rbrack, noBlank|noExprIndent)
-	}
+func (p *printer) printIndexExpr(expr *ast.IndexExpr, mode mode) {
+	p.printExpr(expr.X, mode)
+	p.print(expr.Lbrack, "[", noBlank)
+	p.printExpr(expr.Index, noParen)
+	p.print(expr.Rbrack, "]", noBlank)
 }
 
-func (pr *printer) printCallExpr(expr *ast.CallExpr, mode mode) {
-	pr.printExpr(expr.X, mode)
-
+func (p *printer) printCallExpr(expr *ast.CallExpr, mode mode) {
+	p.printExpr(expr.X, mode)
 	if expr.Colon != position.NoPos {
-		pr.print(expr.Colon, colon, noBlank)
-		pr.printName(expr.Name, noBlank)
+		p.print(expr.Colon, ":", noBlank)
+		p.printName(expr.Name, noBlank)
 	}
-
-	pr.print(expr.Lparen, lparen, noBlank)
-	pr.printExprs(expr.Args, noBlank)
-	pr.print(expr.Rparen, rparen, noBlank)
+	p.print(expr.Lparen, "(", noBlank)
+	p.printExprs(expr.Args, noBlank|noParen)
+	p.print(expr.Rparen, ")", noBlank)
 }
 
-func (pr *printer) printUnaryExpr(expr *ast.UnaryExpr, mode mode) {
-	pr.print(expr.OpPos, expr.Op.String(), mode)
+func (p *printer) printUnaryExpr(expr *ast.UnaryExpr, mode mode) {
+	p.print(expr.OpPos, expr.Op.String(), mode)
 	switch x := expr.X.(type) {
 	case *ast.UnaryExpr:
-		pr.print(x.Pos(), lparen, noBlank)
-		pr.printUnaryExpr(x, noBlank)
-		pr.print(x.End(), rparen, noBlank)
+		// - - 6 => -(-6)
+		p.print(x.Pos(), "(", noBlank)
+		p.printUnaryExpr(x, noBlank)
+		p.print(x.End(), ")", noBlank)
 	case *ast.BinaryExpr:
-		if x.Op == token.POW {
-			pr.print(x.Pos(), lparen, noBlank)
-			pr.printBinaryExpr(x, token.HighestPrec, noBlank)
-			pr.print(x.End(), rparen, noBlank)
-		} else {
-			pr.printBinaryExpr(x, token.HighestPrec, noBlank)
-		}
+		p.printBinaryExpr(x, token.HighestPrec, noBlank)
 	default:
-		pr.printExpr(expr.X, noBlank)
+		p.printExpr(expr.X, noBlank)
 	}
 }
 
-func (pr *printer) printBinaryExpr(expr *ast.BinaryExpr, prec1 int, mode mode) {
+func (p *printer) printBinaryExpr(expr *ast.BinaryExpr, prec1 int, mode mode) {
 	prec, _ := expr.Op.Precedence()
 
-	if prec > prec1 && prec > 3 { // should cutoff?
+	if (mode&inParen != 0 || prec > prec1) && prec > 3 { // should cutoff?
+		// (1 + 8 * 9) => (1+8*9)
+		// 1 + 2 * 3 +4/5 +6 ^ 7 +8 => 1 + 2*3 + 4/5 + 6^7 + 8
+
 		if x, ok := expr.X.(*ast.BinaryExpr); ok {
-			pr.printBinaryExpr(x, prec1, mode)
+			p.printBinaryExpr(x, prec1, mode)
 		} else {
-			pr.printExpr(expr.X, mode)
+			p.printExpr(expr.X, mode)
 		}
 
-		pr.print(expr.OpPos, expr.Op.String(), noBlank)
+		p.print(expr.OpPos, expr.Op.String(), noBlank)
+
+		switch y := expr.Y.(type) {
+		case *ast.UnaryExpr:
+			p.printUnaryExpr(y, noBlank)
+		case *ast.BinaryExpr:
+			p.printBinaryExpr(y, prec1, noBlank)
+		default:
+			p.printExpr(expr.Y, noBlank)
+		}
+	} else {
+		if x, ok := expr.X.(*ast.BinaryExpr); ok {
+			p.printBinaryExpr(x, prec, mode)
+		} else {
+			p.printExpr(expr.X, mode)
+		}
+
+		p.print(expr.OpPos, expr.Op.String(), 0)
 
 		switch y := expr.Y.(type) {
 		case *ast.UnaryExpr:
 			switch expr.Op.String() + y.Op.String() {
 			case "--", "~~":
-				pr.print(y.Pos(), lparen, noBlank)
-				pr.printUnaryExpr(y, noBlank)
-				pr.print(y.End(), rparen, noBlank)
+				// 1 - - 2 => 1 - (-2)
+				// 1 ~ ~ 2 => 1 ~ (~2)
+				p.print(y.Pos(), "(", 0)
+				p.printUnaryExpr(y, noBlank)
+				p.print(y.End(), ")", noBlank)
 			default:
-				pr.printUnaryExpr(y, noBlank)
+				p.printUnaryExpr(y, noBlank)
 			}
 		case *ast.BinaryExpr:
-			pr.printBinaryExpr(y, prec1, noBlank)
+			p.printBinaryExpr(y, prec, 0)
 		default:
-			pr.printExpr(expr.Y, noBlank)
-		}
-	} else {
-		if x, ok := expr.X.(*ast.BinaryExpr); ok {
-			pr.printBinaryExpr(x, prec, mode)
-		} else {
-			pr.printExpr(expr.X, mode)
-		}
-
-		pr.print(expr.OpPos, expr.Op.String(), 0)
-
-		if y, ok := expr.Y.(*ast.BinaryExpr); ok {
-			pr.printBinaryExpr(y, prec, 0)
-		} else {
-			pr.printExpr(expr.Y, 0)
+			p.printExpr(expr.Y, 0)
 		}
 	}
 }
 
-func (pr *printer) printKeyValue(expr *ast.KeyValueExpr) {
+func (p *printer) printKeyValueExpr(expr *ast.KeyValueExpr, mode mode) {
 	if expr.Lbrack != position.NoPos {
-		doIndent := pr.lastPos.Line != expr.Lbrack.Line
-
-		pr.print(expr.Lbrack, lbrack, 0)
-
-		// pr.depth++
-
-		pr.printExpr(expr.Key, noBlank)
-
-		// pr.depth--
-
-		if doIndent {
-			pr.print(expr.Rbrack, rbrack, noBlank)
-		} else {
-			pr.print(expr.Rbrack, rbrack, noBlank|noExprIndent)
-		}
-
-		pr.print(expr.Equal, equal, 0)
-
-		pr.printExpr(expr.Value, 0)
+		p.print(expr.Lbrack, "[", mode)
+		p.printExpr(expr.Key, noBlank|noParen)
+		p.print(expr.Rbrack, "]", noBlank)
+		p.print(expr.Equal, "=", 0)
+		p.printExpr(expr.Value, noParen)
 	} else {
-		pr.printExpr(expr.Key, noBlank)
-		pr.print(expr.Equal, equal, 0)
-		pr.printExpr(expr.Value, 0)
+		p.printExpr(expr.Key, mode)
+		p.print(expr.Equal, "=", 0)
+		p.printExpr(expr.Value, noParen)
+	}
+}
+
+func (p *printer) nextComment() {
+	if p.cindex == len(p.comments) {
+		p.comment = nil
+		p.commentPos = position.Position{Line: 1 << 30}
+	} else {
+		p.comment = p.comments[p.cindex]
+		p.commentPos = p.comment.Pos()
+		p.cindex++
 	}
 }
 
 // Other
 
-func (pr *printer) printFile(file *ast.File) {
-	pr.comments = file.Comments
-	pr.nextComment()
+func (p *printer) printFile(file *ast.File) {
+	p.comments = file.Comments
+
+	p.nextComment()
+
 	for _, stmt := range file.Chunk {
-		pr.printStmt(stmt)
+		p.printStmt(stmt)
 	}
 
-	pr.printLastComment()
-
-	// consume remaining comments
-	for pr.comment != nil {
-		pr.writeNewLine(pr.commentPos)
-
-		for _, c := range pr.comment.List {
-			pr.writeIndent()
-			pr.writeByte(escape)
-			pr.writeString(trimRight(c.Text))
-			pr.writeByte(escape)
-		}
-
-		pr.lastPos = pr.comment.End()
-
-		pr.nextComment()
-	}
+	p.insertComment(file.End())
 }
 
-func (pr *printer) printFuncBody(body *ast.FuncBody) {
-	pr.printParams(body.Params)
-	pr.printBlock(body.Body)
+func (p *printer) printFuncBody(body *ast.FuncBody) {
+	p.printParams(body.Params)
+	p.printBlock(body.Body)
 }
 
-func (pr *printer) printParams(params *ast.ParamList) {
-	pr.print(params.Lparen, lparen, 0)
-
-	pr.printNames(params.List, 0)
+func (p *printer) printParams(params *ast.ParamList) {
+	p.print(params.Lparen, "(", noBlank)
+	p.printNames(params.List, noBlank)
 	if params.Ellipsis != position.NoPos {
 		if len(params.List) > 0 {
-			pr.print(pr.lastPos, comma, noBlank)
+			p.print(p.lastPos, ",", noBlank)
 		}
-		pr.print(params.Ellipsis, "...", 0)
+		p.print(params.Ellipsis, "...", 0)
 	}
-
-	pr.print(params.Rparen, rparen, 0)
+	p.print(params.Rparen, ")", noBlank)
 }
 
-func (pr *printer) printBlock(block *ast.Block) {
-	if len(block.List) > 0 {
-		pr.incIndent(block.List[0].Pos())
-	} else {
-		pr.depth++
-	}
+func (p *printer) printBlock(block *ast.Block) {
+	p.insertComment(block.Opening)
+
+	p.formfeed = true
+
+	p.depth++
 
 	for _, stmt := range block.List {
-		pr.printStmt(stmt)
+		p.printStmt(stmt)
 	}
 
-	pr.decIndent(block.Closing)
+	p.insertComment(block.Closing)
+
+	p.depth--
+
+	p.formfeed = true
 }
 
-func (pr *printer) printNames(names []*ast.Name, mode mode) {
+func (p *printer) printNames(names []*ast.Name, mode mode) {
 	if len(names) == 0 {
 		return
 	}
-
-	pr.printName(names[0], mode)
-
+	p.printName(names[0], mode)
 	for _, name := range names[1:] {
-		pr.print(pr.lastPos, comma, noBlank)
-		pr.printName(name, 0)
+		p.print(p.lastPos, ",", noBlank)
+		p.printName(name, 0)
 	}
 }
 
-func (pr *printer) printExprs(exprs []ast.Expr, mode mode) {
+func (p *printer) printExprs(exprs []ast.Expr, mode mode) {
 	if len(exprs) == 0 {
 		return
 	}
-
-	pr.printExpr(exprs[0], mode)
-
+	p.printExpr(exprs[0], mode)
 	for _, expr := range exprs[1:] {
-		pr.print(pr.lastPos, comma, noBlank)
-		pr.printExpr(expr, 0)
+		p.print(p.lastPos, ",", noBlank)
+		p.printExpr(expr, noParen)
 	}
 }
 
-// Util
+func (p *printer) insertComment(pos position.Position) {
+	if p.lastPos.IsValid() {
+		for p.commentPos.LessThan(pos) {
+			for i, c := range p.comment.List {
+				d := c.Pos().Line - p.lastPos.Line
 
-func (pr *printer) incIndent(next position.Position) {
-	if pr.lastPos.Line != next.Line {
-		pr.printLastComment()
+				switch {
+				case d == 0:
+					p.writeString("\t")
+				case d > 0:
+					if i == 0 {
+						p.writeString("\f")
+					} else {
+						if p.formfeed {
+							p.writeString("\f")
+						} else {
+							p.writeString("\n")
+						}
+					}
+					if d > 1 {
+						p.writeString("\f")
+					}
+					for i := 0; i < p.depth; i++ {
+						p.writeString("\t")
+					}
+					p.formfeed = false
+				default:
+					panic("unexpected")
+				}
 
-		pr.w.Flush()
+				p.writeByte(tabwriter.Escape)
+				p.writeString(strings.TrimRight(c.Text, "\t\n\v\f\r "))
+				p.writeByte(tabwriter.Escape)
+
+				p.lastPos = c.Pos()
+			}
+
+			p.nextComment()
+		}
 	}
-
-	pr.depth++
 }
 
-func (pr *printer) decIndent(next position.Position) {
-	if pr.lastPos.Line != next.Line {
-		pr.printLastComment()
+func (p *printer) print(pos position.Position, s string, mode mode) {
+	p.insertComment(pos)
 
-		pr.printComments(next)
+	if p.lastPos.IsValid() {
+		d := pos.Line - p.lastPos.Line
 
-		pr.w.Flush()
+		switch {
+		case d == 0:
+			if mode&noBlank == 0 {
+				p.writeString(" ")
+			}
+		case d > 0:
+			if p.formfeed {
+				p.writeString("\f")
+			} else {
+				p.writeString("\n")
+			}
+			if d > 1 {
+				p.writeString("\f")
+			}
+			if mode&noExpr == 0 {
+				p.writeString("  ")
+			}
+			for i := 0; i < p.depth; i++ {
+				p.writeString("\t")
+			}
+			p.formfeed = false
+		default:
+			panic("unexpected")
+		}
 	}
 
-	pr.depth--
-}
-
-func (pr *printer) nextComment() {
-	if pr.cindex == len(pr.comments) {
-		pr.comment = nil
-		pr.commentPos = position.Position{Line: infinity}
+	if mode&escape != 0 {
+		p.writeByte(tabwriter.Escape)
+		p.writeString(s)
+		p.writeByte(tabwriter.Escape)
 	} else {
-		pr.comment = pr.comments[pr.cindex]
-		pr.commentPos = pr.comment.Pos()
-		pr.cindex++
+		p.writeString(s)
 	}
+
+	p.lastPos = pos
 }
 
-func (pr *printer) printLastComment() {
-	if pr.commentPos.Line == pr.lastPos.Line {
-		for _, c := range pr.comment.List {
-			pr.writeByte(tab)
-			pr.writeByte(escape)
-			pr.writeString(trimRight(c.Text))
-			pr.writeByte(escape)
-		}
-
-		pr.lastPos = pr.comment.End()
-
-		pr.nextComment()
-	}
-}
-
-func (pr *printer) printComments(pos position.Position) {
-	for pr.commentPos.Line < pos.Line {
-		pr.writeNewLine(pr.commentPos)
-
-		for _, c := range pr.comment.List {
-			pr.writeIndent()
-			pr.writeByte(escape)
-			pr.writeString(trimRight(c.Text))
-			pr.writeByte(escape)
-		}
-
-		pr.lastPos = pr.comment.End()
-
-		pr.nextComment()
-	}
-}
-
-func (pr *printer) print(pos position.Position, s string, mode mode) {
-	if pr.lastPos.Line == pos.Line {
-		if mode&insertSemi != 0 {
-			pr.writeByte(semicolon)
-		}
-		if mode&noBlank == 0 {
-			pr.writeByte(blank)
-		}
-	} else {
-		pr.printLastComment()
-
-		if mode&noExprIndent == 0 {
-			pr.depth++
-
-			pr.printComments(pos)
-
-			pr.writeNewLine(pos)
-
-			pr.writeIndent()
-
-			pr.depth--
-		} else {
-			pr.printComments(pos)
-
-			pr.writeNewLine(pos)
-
-			pr.writeIndent()
-		}
-	}
-
-	if mode&isLit != 0 {
-		pr.writeByte(escape)
-		pr.writeString(s)
-		pr.writeByte(escape)
-	} else {
-		pr.writeString(s)
-	}
-
-	pr.lastPos = pos
-}
-
-func (pr *printer) writeString(s string) {
-	pr.write([]byte(s))
-}
-
-func (pr *printer) write(bs []byte) {
-	if pr.skip {
-		if len(bs) > 0 {
-			pr.skip = false
-
-			bs = bs[1:]
-		}
-	}
-
-	if pr.err != nil {
+func (p *printer) writeByte(c byte) {
+	if p.err != nil {
 		return
 	}
-	_, pr.err = pr.w.Write(bs)
+	_, p.err = p.w.Write([]byte{c})
 }
 
-func (pr *printer) writeByte(b byte) {
-	pr.write([]byte{b})
-}
-
-func (pr *printer) writeIndent() {
-	for i := 0; i < pr.depth; i++ {
-		pr.writeString(indent)
+func (p *printer) writeString(s string) {
+	if p.err != nil {
+		return
 	}
-}
-
-func (pr *printer) writeNewLine(pos position.Position) {
-	pr.writeByte(newline)
-
-	switch diffLine := pos.Line - pr.lastPos.Line; {
-	case diffLine <= 0:
-		// panic("unexpected")
-	case diffLine > 1: // truncate multiple newlines
-		pr.writeByte(formfeed)
-	}
-}
-
-func trimRight(s string) string {
-	return strings.TrimRightFunc(s, unicode.IsSpace)
+	_, p.err = p.w.Write([]byte(s))
 }

@@ -7,13 +7,13 @@ import (
 	"github.com/hirochachacha/plua/compiler/token"
 )
 
-func ExampleHello() {
+func ExampleNewScanner() {
 	f, err := os.Open("testdata/example.lua")
 	if err != nil {
 		panic(err)
 	}
 
-	s := NewScanner(f, "@example.lua", 0)
+	s := NewScanner(f, "@testdata/example.lua", 0)
 
 	for {
 		tok := s.Scan()

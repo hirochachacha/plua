@@ -2,27 +2,24 @@ package printer
 
 import (
 	"io"
-	"os"
 
 	"github.com/hirochachacha/plua/compiler/ast"
 )
 
-func FprintTree(w io.Writer, node ast.Node) {
-	treeprinter{w}.print(node, "", 0)
+func FprintTree(w io.Writer, node ast.Node) error {
+	p := treeprinter{w: w}
+	p.printNode(node, "", 0)
+	return p.err
 }
 
-func PrintTree(node ast.Node) {
-	FprintTree(os.Stdout, node)
-}
-
-func Fprint(w io.Writer, node ast.Node) {
+func Fprint(w io.Writer, node ast.Node) error {
 	p := newPrinter(w)
-
 	p.printNode(node)
-
-	p.w.Flush()
-}
-
-func Print(node ast.Node) {
-	Fprint(os.Stdout, node)
+	if p.err != nil {
+		return p.err
+	}
+	if err := p.w.Flush(); err != nil {
+		return err
+	}
+	return nil
 }

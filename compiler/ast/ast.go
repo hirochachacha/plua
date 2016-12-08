@@ -76,39 +76,28 @@ type (
 	//
 	BadExpr struct {
 		From, To position.Position // position range of bad expression
-
-		// Parent Node
 	}
 
 	// An Name node represents an identifier.
 	Name struct {
 		NamePos position.Position // identifier position
 		Name    string            // identifier name
-
-		// Version int
-		// IsLHS   bool
-		// Parent  Node
 	}
 
 	Vararg struct {
 		Ellipsis position.Position // position of "..."
-
-		// Parent Node
 	}
 
 	// A BasicLit node represents a literal of basic type.
 	BasicLit struct {
 		token.Token
-
-		// Parent Node
 	}
 
 	// A FuncLit node represents a function literal.
 	FuncLit struct {
-		Func position.Position // position of "function" keyword
-		Body *FuncBody         // function body
-
-		// Parent Node
+		Func   position.Position // position of "function" keyword
+		Body   *FuncBody         // function body
+		EndPos position.Position
 	}
 
 	// A TableLit node represents a composite literal.
@@ -116,8 +105,6 @@ type (
 		Lbrace position.Position // position of "{"
 		Fields []Expr            // fields
 		Rbrace position.Position // position of "}"
-
-		// Parent Node
 	}
 
 	// A ParenExpr node represents a parenthesized expression.
@@ -125,8 +112,6 @@ type (
 		Lparen position.Position // position of "("
 		X      Expr              // parenthesized expression
 		Rparen position.Position // position of ")"
-
-		// Parent Node
 	}
 
 	// A SelectorExpr node represents an expression followed by a selector.
@@ -134,9 +119,6 @@ type (
 		X      Expr              // expression
 		Period position.Position // position of "."
 		Sel    *Name             // field selector
-
-		// IsLHS  bool
-		// Parent Node
 	}
 
 	// An IndexExpr node represents an expression followed by an index.
@@ -145,9 +127,6 @@ type (
 		Lbrack position.Position // position of "["
 		Index  Expr              // index expression
 		Rbrack position.Position // position of "]"
-
-		// IsLHS  bool
-		// Parent Node
 	}
 
 	// A CallExpr node represents an expression followed by an argument list.
@@ -158,8 +137,6 @@ type (
 		Lparen position.Position // position of "(" or position.NoPos
 		Args   []Expr            // function arguments; or nil
 		Rparen position.Position // position of ")" or position.NoPos
-
-		// Parent Node
 	}
 
 	// A UnaryExpr node represents a unary expression.
@@ -167,8 +144,6 @@ type (
 		OpPos position.Position // position of Op
 		Op    token.Type        // operator
 		X     Expr              // operand
-
-		// Parent Node
 	}
 
 	// A BinaryExpr node represents a binary expression.
@@ -177,8 +152,6 @@ type (
 		OpPos position.Position // position of Op
 		Op    token.Type        // operator
 		Y     Expr              // right operand
-
-		// Parent Node
 	}
 
 	// A KeyValueExpr node represents (key = value) pairs or (value)
@@ -190,17 +163,7 @@ type (
 		Rbrack position.Position // position of "]"; or position.NoPos
 		Equal  position.Position // position of "="; or position.NoPos
 		Value  Expr
-
-		// Parent Node
 	}
-
-	// z = Φ(x, y)
-	// Phi struct {
-	// Name string
-	// X    int
-	// Y    int
-	// Z    int
-	// }
 )
 
 func (*BadExpr) Type() Type      { return BAD_EXPR }
@@ -245,7 +208,7 @@ func (x *BadExpr) End() position.Position      { return x.To }
 func (x *Name) End() position.Position         { return x.NamePos.Offset(x.Name) }
 func (x *Vararg) End() position.Position       { return x.Ellipsis.OffsetColumn(3) }
 func (x *BasicLit) End() position.Position     { return x.Token.Pos.Offset(x.Token.Lit) }
-func (x *FuncLit) End() position.Position      { return x.Body.End() }
+func (x *FuncLit) End() position.Position      { return x.EndPos.OffsetColumn(3) }
 func (x *TableLit) End() position.Position     { return x.Rbrace.OffsetColumn(1) }
 func (x *ParenExpr) End() position.Position    { return x.Rparen.OffsetColumn(1) }
 func (x *SelectorExpr) End() position.Position { return x.Sel.End() }
@@ -311,20 +274,22 @@ type (
 	}
 
 	LocalFuncStmt struct {
-		Local position.Position // position of "local" keyword
-		Func  position.Position // position of "function" keyword
-		Name  *Name
-		Body  *FuncBody // function body
+		Local  position.Position // position of "local" keyword
+		Func   position.Position // position of "function" keyword
+		Name   *Name
+		Body   *FuncBody // function body
+		EndPos position.Position
 	}
 
 	// A FuncStmt node represents a function statement.
 	FuncStmt struct {
-		Func       position.Position // position of "function" keyword
-		NamePrefix []*Name
-		AccessTok  token.Type        // "." or ":"
-		AccessPos  position.Position // position of AccessTok
-		Name       *Name
-		Body       *FuncBody // function body
+		Func      position.Position // position of "function" keyword
+		PathList  []*Name
+		AccessTok token.Type        // "." or ":"
+		AccessPos position.Position // position of AccessTok
+		Name      *Name
+		Body      *FuncBody // function body
+		EndPos    position.Position
 	}
 
 	// A LabelStmt node represents a label statement.
@@ -332,8 +297,6 @@ type (
 		Label    position.Position // position of "::"
 		Name     *Name
 		EndLabel position.Position // position of "::"
-
-		// Postlude []*Phi
 	}
 
 	// An ExprStmt node represents a (stand-alone) expression
@@ -363,29 +326,35 @@ type (
 
 	// An IfStmt node represents an if statement.
 	IfStmt struct {
-		If   position.Position // position of "if" or "elseif" keyword
-		Cond Expr              // condition
-		Body *Block
-		Else *Block // else branch; or nil
-
-		// Postlude []*Phi
+		If         position.Position // position of "if"
+		Cond       Expr              // condition
+		Then       position.Position // position of "then"
+		Body       *Block
+		ElseIfList []struct { // elseif branches; or nil
+			If   position.Position // position of "elseif"
+			Cond Expr              // condition
+			Then position.Position // position of "then"
+			Body *Block
+		}
+		Else     position.Position // position of "else" or position.NoPos
+		ElseBody *Block            // else branch; or nil
+		EndPos   position.Position
 	}
 
 	// A DoStmt represents a do statement.
 	DoStmt struct {
-		Body *Block
-
-		// Postlude []*Phi
+		Do     position.Position
+		Body   *Block
+		EndPos position.Position
 	}
 
 	// A WhileStmt represents a while statement.
 	WhileStmt struct {
-		While position.Position // position of "while" keyword
-		Cond  Expr              // condition
-		Body  *Block
-
-		// Prelude  []*Phi
-		// Postlude []*Phi
+		While  position.Position // position of "while" keyword
+		Cond   Expr              // condition
+		Do     position.Position // position of "do" keyword
+		Body   *Block
+		EndPos position.Position
 	}
 
 	// A RepeatStmt represents a repeat statement.
@@ -394,9 +363,6 @@ type (
 		Body   *Block
 		Until  position.Position // position of  "until" keyword
 		Cond   Expr              // condition
-
-		// Prelude  []*Phi
-		// Postlude []*Phi
 	}
 
 	// A ReturnStmt represents a return statement.
@@ -414,22 +380,20 @@ type (
 		Start  Expr
 		Finish Expr
 		Step   Expr // or nil
+		Do     position.Position
 		Body   *Block
-
-		// Prelude  []*Phi
-		// Postlude []*Phi
+		EndPos position.Position
 	}
 
 	// A ForEachStmt represents a for statement with a range clause.
 	ForEachStmt struct {
-		For   position.Position // position of "for" keyword
-		Names []*Name           // Key, Value may be nil
-		In    position.Position // position of "in" keyword
-		Exprs []Expr            // value to range over
-		Body  *Block
-
-		// Prelude  []*Phi
-		// Postlude []*Phi
+		For    position.Position // position of "for" keyword
+		Names  []*Name           // Key, Value may be nil
+		In     position.Position // position of "in" keyword
+		Exprs  []Expr            // value to range over
+		Do     position.Position
+		Body   *Block
+		EndPos position.Position
 	}
 )
 
@@ -460,16 +424,21 @@ func (s *LocalFuncStmt) Pos() position.Position   { return s.Local }
 func (s *FuncStmt) Pos() position.Position        { return s.Func }
 func (s *LabelStmt) Pos() position.Position       { return s.Label }
 func (s *ExprStmt) Pos() position.Position        { return s.X.Pos() }
-func (s *AssignStmt) Pos() position.Position      { return s.LHS[0].Pos() }
-func (s *GotoStmt) Pos() position.Position        { return s.Goto }
-func (s *IfStmt) Pos() position.Position          { return s.If }
-func (s *DoStmt) Pos() position.Position          { return s.Body.Pos() }
-func (s *WhileStmt) Pos() position.Position       { return s.While }
-func (s *RepeatStmt) Pos() position.Position      { return s.Repeat }
-func (s *BreakStmt) Pos() position.Position       { return s.Break }
-func (s *ReturnStmt) Pos() position.Position      { return s.Return }
-func (s *ForStmt) Pos() position.Position         { return s.For }
-func (s *ForEachStmt) Pos() position.Position     { return s.For }
+func (s *AssignStmt) Pos() position.Position {
+	if len(s.LHS) > 0 {
+		return s.LHS[0].Pos()
+	}
+	return position.NoPos
+}
+func (s *GotoStmt) Pos() position.Position    { return s.Goto }
+func (s *IfStmt) Pos() position.Position      { return s.If }
+func (s *DoStmt) Pos() position.Position      { return s.Do }
+func (s *WhileStmt) Pos() position.Position   { return s.While }
+func (s *RepeatStmt) Pos() position.Position  { return s.Repeat }
+func (s *BreakStmt) Pos() position.Position   { return s.Break }
+func (s *ReturnStmt) Pos() position.Position  { return s.Return }
+func (s *ForStmt) Pos() position.Position     { return s.For }
+func (s *ForEachStmt) Pos() position.Position { return s.For }
 
 func (s *BadStmt) End() position.Position   { return s.To }
 func (s *EmptyStmt) End() position.Position { return s.Semicolon.OffsetColumn(1) }
@@ -478,26 +447,29 @@ func (s *LocalAssignStmt) End() position.Position {
 		if len(s.RHS) > 0 {
 			return s.RHS[len(s.RHS)-1].End()
 		}
-		return s.Equal.OffsetColumn(1)
+		return position.NoPos
 	}
-	return s.LHS[len(s.LHS)-1].End()
+	if len(s.LHS) > 0 {
+		return s.LHS[len(s.LHS)-1].End()
+	}
+	return position.NoPos
 }
-func (s *LocalFuncStmt) End() position.Position { return s.Body.End() }
-func (s *FuncStmt) End() position.Position      { return s.Body.End() }
+func (s *LocalFuncStmt) End() position.Position { return s.EndPos.OffsetColumn(3) }
+func (s *FuncStmt) End() position.Position      { return s.EndPos.OffsetColumn(3) }
 func (s *LabelStmt) End() position.Position     { return s.EndLabel.OffsetColumn(2) }
 func (s *ExprStmt) End() position.Position      { return s.X.End() }
-func (s *AssignStmt) End() position.Position    { return s.RHS[len(s.RHS)-1].End() }
+func (s *AssignStmt) End() position.Position {
+	if len(s.RHS) > 0 {
+		return s.RHS[len(s.RHS)-1].End()
+	}
+	return position.NoPos
+}
 func (s *GotoStmt) End() position.Position {
 	return s.Label.End()
 }
-func (s *IfStmt) End() position.Position {
-	if s.Else != nil {
-		return s.Else.End()
-	}
-	return s.Body.End()
-}
-func (s *DoStmt) End() position.Position     { return s.Body.End() }
-func (s *WhileStmt) End() position.Position  { return s.Body.End() }
+func (s *IfStmt) End() position.Position     { return s.EndPos.OffsetColumn(3) }
+func (s *DoStmt) End() position.Position     { return s.EndPos.OffsetColumn(3) }
+func (s *WhileStmt) End() position.Position  { return s.EndPos.OffsetColumn(3) }
 func (s *RepeatStmt) End() position.Position { return s.Cond.End() }
 func (s *BreakStmt) End() position.Position  { return s.Break.OffsetColumn(5) }
 func (s *ReturnStmt) End() position.Position {
@@ -509,8 +481,8 @@ func (s *ReturnStmt) End() position.Position {
 	}
 	return s.Return.OffsetColumn(6)
 }
-func (s *ForStmt) End() position.Position     { return s.Body.End() }
-func (s *ForEachStmt) End() position.Position { return s.Body.End() }
+func (s *ForStmt) End() position.Position     { return s.EndPos.OffsetColumn(3) }
+func (s *ForEachStmt) End() position.Position { return s.EndPos.OffsetColumn(3) }
 
 // stmtNode() ensures that only statement nodes can be
 // assigned to a StmtNode.
@@ -571,18 +543,20 @@ func (f *File) End() position.Position {
 
 // A Block node represents a scoped statement list.
 type Block struct {
-	Opening position.Position // position of "do", "then", "repeat" or params.End()
-
-	List []Stmt
-
-	Closing position.Position // position of "end", "elseif", "else" or "until"
+	Opening position.Position // end of "do", "then", "repeat", ...
+	List    []Stmt
+	Closing position.Position // start of "end", "elseif", "until", ...
 }
 
 func (b *Block) Type() Type { return BLOCK }
 
-func (b *Block) Pos() position.Position { return b.Opening }
+func (b *Block) Pos() position.Position {
+	return b.Opening
+}
 
-func (b *Block) End() position.Position { return b.Closing }
+func (b *Block) End() position.Position {
+	return b.Closing
+}
 
 // ----------------------------------------------------------------------------
 // Function Block
@@ -658,9 +632,19 @@ type CommentGroup struct {
 	List []*Comment // len(List) > 0
 }
 
-func (g *CommentGroup) Type() Type             { return COMMENT_GROUP }
-func (g *CommentGroup) Pos() position.Position { return g.List[0].Pos() }
-func (g *CommentGroup) End() position.Position { return g.List[len(g.List)-1].End() }
+func (g *CommentGroup) Type() Type { return COMMENT_GROUP }
+func (g *CommentGroup) Pos() position.Position {
+	if len(g.List) > 0 {
+		return g.List[0].Pos()
+	}
+	return position.NoPos
+}
+func (g *CommentGroup) End() position.Position {
+	if len(g.List) > 0 {
+		return g.List[len(g.List)-1].End()
+	}
+	return position.NoPos
+}
 
 func isSpace(c byte) bool {
 	return c == ' ' || uint(c)-'\t' < 5

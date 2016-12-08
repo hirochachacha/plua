@@ -178,7 +178,7 @@ func walkStmt(stmt Stmt, visit visit) bool {
 		}
 		return walkFuncBody(stmt.Body, visit)
 	case *FuncStmt:
-		for _, name := range stmt.NamePrefix {
+		for _, name := range stmt.PathList {
 			if walkName(name, visit) {
 				return true
 			}
@@ -228,7 +228,15 @@ func walkStmt(stmt Stmt, visit visit) bool {
 		if walkBlock(stmt.Body, visit) {
 			return true
 		}
-		return walkBlock(stmt.Else, visit)
+		for _, s := range stmt.ElseIfList {
+			if walkExpr(s.Cond, visit) {
+				return true
+			}
+			if walkBlock(s.Body, visit) {
+				return true
+			}
+		}
+		return walkBlock(stmt.ElseBody, visit)
 	case *DoStmt:
 		return walkBlock(stmt.Body, visit)
 	case *WhileStmt:
@@ -373,7 +381,7 @@ func walk(node Node, visit visit) (skip bool) {
 		}
 		return walkFuncBody(node.Body, visit)
 	case *FuncStmt:
-		for _, name := range node.NamePrefix {
+		for _, name := range node.PathList {
 			if walkName(name, visit) {
 				return true
 			}
@@ -423,7 +431,15 @@ func walk(node Node, visit visit) (skip bool) {
 		if walkBlock(node.Body, visit) {
 			return true
 		}
-		return walkBlock(node.Else, visit)
+		for _, n := range node.ElseIfList {
+			if walkExpr(n.Cond, visit) {
+				return true
+			}
+			if walkBlock(n.Body, visit) {
+				return true
+			}
+		}
+		return walkBlock(node.ElseBody, visit)
 	case *DoStmt:
 		return walkBlock(node.Body, visit)
 	case *WhileStmt:

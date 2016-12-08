@@ -120,7 +120,7 @@ func (g *generator) genFuncStmt(stmt *ast.FuncStmt) {
 	sp := g.sp
 
 	name := stmt.Name
-	prefix := stmt.NamePrefix
+	prefix := stmt.PathList
 
 	body := stmt.Body
 
@@ -330,6 +330,29 @@ func (g *generator) genBreakStmt(stmt *ast.BreakStmt) {
 }
 
 func (g *generator) genIfStmt(stmt *ast.IfStmt) {
+	if stmt.ElseIfList != nil {
+		elseBody := stmt.ElseBody
+		root := &ast.IfStmt{
+			Cond: stmt.Cond,
+			Body: stmt.Body,
+		}
+		leaf := root
+		for _, stmt := range stmt.ElseIfList {
+			nextLeaf := &ast.IfStmt{
+				Cond: stmt.Cond,
+				Body: stmt.Body,
+			}
+			leaf.ElseBody = &ast.Block{
+				List: []ast.Stmt{
+					nextLeaf,
+				},
+			}
+			leaf = nextLeaf
+		}
+		leaf.ElseBody = elseBody
+		stmt = root
+	}
+
 	g.openScope()
 
 	switch g.genTest(stmt.Cond, false) {
@@ -338,8 +361,8 @@ func (g *generator) genIfStmt(stmt *ast.IfStmt) {
 			g.genBlock(stmt.Body)
 		}
 	case immFalse:
-		if stmt.Else != nil {
-			g.genBlock(stmt.Else)
+		if stmt.ElseBody != nil {
+			g.genBlock(stmt.ElseBody)
 		}
 	default:
 		elseJump := g.genJumpPoint()
@@ -352,14 +375,14 @@ func (g *generator) genIfStmt(stmt *ast.IfStmt) {
 			g.closeScope()
 		}
 
-		if stmt.Else != nil {
+		if stmt.ElseBody != nil {
 			doneJump := g.genJumpPoint()
 
 			g.genJumpFrom(elseJump)
 
 			g.openScope()
 
-			g.genBlock(stmt.Else)
+			g.genBlock(stmt.ElseBody)
 
 			g.closeScope()
 

@@ -410,9 +410,7 @@ func (p *parser) isEndOfBlock() bool {
 	return false
 }
 
-func (p *parser) parseStmtList() []ast.Stmt {
-	var list []ast.Stmt
-
+func (p *parser) parseStmtList() (list []ast.Stmt, closing position.Position) {
 	for {
 		if p.isEndOfBlock() {
 			break
@@ -424,37 +422,56 @@ func (p *parser) parseStmtList() []ast.Stmt {
 		list = append(list, p.parseStmt())
 	}
 
-	return list
+	closing = p.tok.Pos
+
+	return list, closing
 }
 
 func (p *parser) parseChunk() []ast.Stmt {
 	p.allowEllipsis = true
 
-	list := p.parseStmtList()
+	list, _ := p.parseStmtList()
 
 	p.expect(token.EOF)
 
 	return list
 }
 
-func (p *parser) parseThenBlock() *ast.Block {
-	opening := p.expect(token.THEN)
+func (p *parser) parseThenBlock() (then position.Position, body *ast.Block) {
+	then = p.expect(token.THEN)
 
-	list := p.parseStmtList()
-
-	var closing position.Position
+	body = p.parseBody(then.Offset("then"))
 
 	switch p.tok.Type {
 	case token.ELSEIF:
-		closing = p.tok.Pos
 	case token.ELSE:
-		closing = p.tok.Pos
 	case token.END:
-		closing = p.tok.Pos.OffsetColumn(3)
 	default:
 		p.errorExpected(p.tok, "ELSEIF, ELSE or END")
 	}
 
+	return then, body
+}
+
+func (p *parser) parseRepeatBlockUntil() (repeat position.Position, body *ast.Block, until position.Position) {
+	repeat = p.skip()
+	body = p.parseBody(repeat.Offset("repeat"))
+	until = p.expect(token.UNTIL)
+
+	return repeat, body, until
+}
+
+func (p *parser) parseDoBlockEnd() (do position.Position, body *ast.Block, end position.Position) {
+	do = p.expect(token.DO)
+	body = p.parseBody(do.Offset("do"))
+	end = p.expect(token.END)
+
+	return do, body, end
+}
+
+func (p *parser) parseBody(opening position.Position) *ast.Block {
+	list, closing := p.parseStmtList()
+
 	return &ast.Block{
 		Opening: opening,
 		List:    list,
@@ -462,47 +479,7 @@ func (p *parser) parseThenBlock() *ast.Block {
 	}
 }
 
-func (p *parser) parseRepeatBlock() *ast.Block {
-	opening := p.skip()
-
-	list := p.parseStmtList()
-
-	closing := p.expect(token.UNTIL).OffsetColumn(5)
-
-	return &ast.Block{
-		Opening: opening,
-		List:    list,
-		Closing: closing,
-	}
-}
-
-func (p *parser) parseDoBlockEnd() *ast.Block {
-	opening := p.expect(token.DO)
-
-	list := p.parseStmtList()
-
-	closing := p.expect(token.END).OffsetColumn(3)
-
-	return &ast.Block{
-		Opening: opening,
-		List:    list,
-		Closing: closing,
-	}
-}
-
-func (p *parser) parseBody(pos position.Position) *ast.Block {
-	list := p.parseStmtList()
-
-	closing := p.expect(token.END).OffsetColumn(3)
-
-	return &ast.Block{
-		Opening: pos,
-		List:    list,
-		Closing: closing,
-	}
-}
-
-func (p *parser) parseFuncBody() *ast.FuncBody {
+func (p *parser) parseFuncBodyEnd() (fbody *ast.FuncBody, end position.Position) {
 	params := p.parseParameters()
 
 	old := p.allowEllipsis
@@ -512,10 +489,14 @@ func (p *parser) parseFuncBody() *ast.FuncBody {
 
 	p.allowEllipsis = old
 
-	return &ast.FuncBody{
+	end = p.expect(token.END)
+
+	fbody = &ast.FuncBody{
 		Params: params,
 		Body:   body,
 	}
+
+	return fbody, end
 }
 
 // ----------------------------------------------------------------------------
@@ -648,13 +629,14 @@ func (p *parser) parseTableLit() *ast.TableLit {
 }
 
 func (p *parser) parseFuncLit() *ast.FuncLit {
-	pos := p.expect(token.FUNCTION)
+	fn := p.expect(token.FUNCTION)
 
-	f := p.parseFuncBody()
+	f, end := p.parseFuncBodyEnd()
 
 	return &ast.FuncLit{
-		Func: pos,
-		Body: f,
+		Func:   fn,
+		Body:   f,
+		EndPos: end,
 	}
 }
 
@@ -884,20 +866,20 @@ func (p *parser) parseRHS() ast.Expr {
 // Statements
 
 func (p *parser) parseAssign(LHS []ast.Expr) ast.Stmt {
-	pos := p.skip()
+	eq := p.skip()
 
 	rhs := p.parseRHSList()
 
 	assign := &ast.AssignStmt{
 		LHS:   LHS,
-		Equal: pos,
+		Equal: eq,
 		RHS:   rhs,
 	}
 
 	return assign
 }
 
-func (p *parser) parseLocalAssignStmt(pos position.Position) ast.Stmt {
+func (p *parser) parseLocalAssignStmt(local position.Position) ast.Stmt {
 	LHS := p.parseNameList()
 
 	var stmt ast.Stmt
@@ -909,14 +891,14 @@ func (p *parser) parseLocalAssignStmt(pos position.Position) ast.Stmt {
 		rhs := p.parseRHSList()
 
 		stmt = &ast.LocalAssignStmt{
-			Local: pos,
+			Local: local,
 			LHS:   LHS,
 			Equal: eq,
 			RHS:   rhs,
 		}
 	} else {
 		stmt = &ast.LocalAssignStmt{
-			Local: pos,
+			Local: local,
 			LHS:   LHS,
 		}
 	}
@@ -925,28 +907,29 @@ func (p *parser) parseLocalAssignStmt(pos position.Position) ast.Stmt {
 }
 
 func (p *parser) parseLocalStmt() ast.Stmt {
-	pos := p.skip()
+	local := p.skip()
 
 	if p.tok.Type == token.FUNCTION {
-		pos := p.skip()
+		fn := p.skip()
 
 		name := p.parseName()
 
-		f := p.parseFuncBody()
+		f, end := p.parseFuncBodyEnd()
 
 		return &ast.LocalFuncStmt{
-			Local: pos,
-			Func:  pos,
-			Name:  name,
-			Body:  f,
+			Local:  local,
+			Func:   fn,
+			Name:   name,
+			Body:   f,
+			EndPos: end,
 		}
 	}
 
-	return p.parseLocalAssignStmt(pos)
+	return p.parseLocalAssignStmt(local)
 }
 
 func (p *parser) parseFuncStmt() *ast.FuncStmt {
-	pos := p.skip()
+	fn := p.skip()
 
 	var prefix []*ast.Name
 	var accessTok token.Type
@@ -985,18 +968,17 @@ func (p *parser) parseFuncStmt() *ast.FuncStmt {
 		accessPos = periodPos
 	}
 
-	f := p.parseFuncBody()
+	f, end := p.parseFuncBodyEnd()
 
-	fn := &ast.FuncStmt{
-		Func:       pos,
-		NamePrefix: prefix,
-		AccessTok:  accessTok,
-		AccessPos:  accessPos,
-		Name:       name,
-		Body:       f,
+	return &ast.FuncStmt{
+		Func:      fn,
+		PathList:  prefix,
+		AccessTok: accessTok,
+		AccessPos: accessPos,
+		Name:      name,
+		Body:      f,
+		EndPos:    end,
 	}
-
-	return fn
 }
 
 func (p *parser) parseExprOrAssignStmt() (stmt ast.Stmt) {
@@ -1020,12 +1002,12 @@ func (p *parser) parseExprOrAssignStmt() (stmt ast.Stmt) {
 }
 
 func (p *parser) parseReturnStmt() *ast.ReturnStmt {
-	pos := p.skip()
+	ret := p.skip()
 	semi := position.NoPos
 
 	if p.isEndOfBlock() {
 		return &ast.ReturnStmt{
-			Return:    pos,
+			Return:    ret,
 			Semicolon: semi,
 		}
 	}
@@ -1036,7 +1018,7 @@ func (p *parser) parseReturnStmt() *ast.ReturnStmt {
 		p.next()
 
 		return &ast.ReturnStmt{
-			Return:    pos,
+			Return:    ret,
 			Semicolon: semi,
 		}
 	}
@@ -1050,56 +1032,56 @@ func (p *parser) parseReturnStmt() *ast.ReturnStmt {
 	}
 
 	return &ast.ReturnStmt{
-		Return:    pos,
+		Return:    ret,
 		Results:   results,
 		Semicolon: semi,
 	}
 }
 
 func (p *parser) parseLabelStmt() *ast.LabelStmt {
-	pos := p.skip()
+	label := p.skip()
 
 	name := p.parseName()
 
 	end := p.expect(token.LABEL)
 
-	label := &ast.LabelStmt{
-		Label:    pos,
+	return &ast.LabelStmt{
+		Label:    label,
 		Name:     name,
 		EndLabel: end,
 	}
-
-	return label
 }
 
 func (p *parser) parseGotoStmt() *ast.GotoStmt {
-	pos := p.skip()
+	_goto := p.skip()
 
 	label := p.parseName()
 
-	return &ast.GotoStmt{Goto: pos, Label: label}
+	return &ast.GotoStmt{Goto: _goto, Label: label}
 }
 
 func (p *parser) parseBreak() ast.Stmt {
 	if !p.allowBreak {
-		pos := p.tok.Pos
-		p.error(pos, errIllegalBreak)
+		from := p.tok.Pos
+		p.error(from, errIllegalBreak)
 
 		// syncStmt(p)
 
-		return &ast.BadStmt{From: pos, To: p.tok.Pos}
+		return &ast.BadStmt{From: from, To: p.tok.Pos}
 	}
 
-	pos := p.skip()
+	brk := p.skip()
 
-	return &ast.BreakStmt{Break: pos}
+	return &ast.BreakStmt{Break: brk}
 }
 
 func (p *parser) parseDoStmt() *ast.DoStmt {
-	body := p.parseDoBlockEnd()
+	do, body, end := p.parseDoBlockEnd()
 
 	return &ast.DoStmt{
-		Body: body,
+		Do:     do,
+		Body:   body,
+		EndPos: end,
 	}
 }
 
@@ -1108,20 +1090,22 @@ func (p *parser) parseRepeatStmt() *ast.RepeatStmt {
 
 	p.allowBreak = true
 
-	body := p.parseRepeatBlock()
+	repeat, body, until := p.parseRepeatBlockUntil()
 
 	p.allowBreak = old
 
 	cond := p.parseRHS()
 
 	return &ast.RepeatStmt{
-		Body: body,
-		Cond: cond,
+		Repeat: repeat,
+		Body:   body,
+		Until:  until,
+		Cond:   cond,
 	}
 }
 
 func (p *parser) parseWhileStmt() *ast.WhileStmt {
-	pos := p.skip()
+	while := p.skip()
 
 	cond := p.parseRHS()
 
@@ -1129,76 +1113,67 @@ func (p *parser) parseWhileStmt() *ast.WhileStmt {
 
 	p.allowBreak = true
 
-	body := p.parseDoBlockEnd()
+	do, body, end := p.parseDoBlockEnd()
 
 	p.allowBreak = old
 
 	return &ast.WhileStmt{
-		While: pos,
-		Cond:  cond,
-		Body:  body,
+		While:  while,
+		Cond:   cond,
+		Do:     do,
+		Body:   body,
+		EndPos: end,
 	}
 }
 
 func (p *parser) parseIfStmt() *ast.IfStmt {
-	pos := p.skip()
+	_if := p.skip()
 
 	cond := p.parseRHS()
 
-	body := p.parseThenBlock()
+	then, body := p.parseThenBlock()
 
-	ifRoot := &ast.IfStmt{
-		If:   pos,
+	stmt := &ast.IfStmt{
+		If:   _if,
 		Cond: cond,
+		Then: then,
 		Body: body,
 	}
 
-	last := ifRoot
 	for {
-		pos := p.tok.Pos
+		elseif := p.tok.Pos
 		if !p.accept(token.ELSEIF) {
 			break
 		}
 
 		cond := p.parseRHS()
-		body := p.parseThenBlock()
+		then, body := p.parseThenBlock()
 
-		ifLeaf := &ast.IfStmt{
-			If:   pos,
-			Cond: cond,
-			Body: body,
-		}
-
-		last.Else = &ast.Block{
-			Opening: ifLeaf.Pos(),
-			List:    []ast.Stmt{ifLeaf},
-			Closing: ifLeaf.End(),
-		}
-
-		last = ifLeaf
+		stmt.ElseIfList = append(stmt.ElseIfList, struct {
+			If   position.Position
+			Cond ast.Expr
+			Then position.Position
+			Body *ast.Block
+		}{
+			elseif,
+			cond,
+			then,
+			body,
+		})
 	}
 
 	if p.tok.Type == token.ELSE {
-		opening := p.skip()
-
-		list := p.parseStmtList()
-
-		closing := p.expect(token.END).OffsetColumn(3)
-
-		last.Else = &ast.Block{
-			Opening: opening,
-			List:    list,
-			Closing: closing,
-		}
-	} else {
-		p.expect(token.END)
+		stmt.Else = p.skip()
+		stmt.ElseBody = p.parseBody(stmt.Else.Offset("else"))
 	}
 
-	return ifRoot
+	stmt.EndPos = p.expect(token.END)
+
+	return stmt
 }
 
 func (p *parser) parseForStmt() ast.Stmt {
-	pos := p.skip()
+	_for := p.skip()
 
 	names := p.parseNameList()
 
@@ -1245,18 +1220,20 @@ func (p *parser) parseForStmt() ast.Stmt {
 
 		p.allowBreak = true
 
-		body := p.parseDoBlockEnd()
+		do, body, end := p.parseDoBlockEnd()
 
 		p.allowBreak = old
 
 		return &ast.ForStmt{
-			For:    pos,
+			For:    _for,
 			Name:   names[0],
 			Equal:  eq,
 			Start:  start,
 			Finish: finish,
 			Step:   step,
+			Do:     do,
 			Body:   body,
+			EndPos: end,
 		}
 	}
 
@@ -1268,16 +1245,18 @@ foreach:
 
 		p.allowBreak = true
 
-		body := p.parseDoBlockEnd()
+		do, body, end := p.parseDoBlockEnd()
 
 		p.allowBreak = old
 
 		return &ast.ForEachStmt{
-			For:   pos,
-			Names: names,
-			In:    in,
-			Exprs: exprs,
-			Body:  body,
+			For:    _for,
+			Names:  names,
+			In:     in,
+			Exprs:  exprs,
+			Do:     do,
+			Body:   body,
+			EndPos: end,
 		}
 	}
 }

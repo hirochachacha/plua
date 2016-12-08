@@ -8,18 +8,18 @@ import (
 	"github.com/hirochachacha/plua/compiler/scanner"
 )
 
-func ExampleHello() {
+func ExampleParse() {
 	f, err := os.Open("testdata/example.lua")
 	if err != nil {
 		panic(err)
 	}
 
-	ast, err := parser.Parse(scanner.NewScanner(f, "@hello.lua", 0), 0)
+	ast, err := parser.Parse(scanner.NewScanner(f, "@testdata/example.lua", 0), 0)
 	if err != nil {
 		panic(err)
 	}
 
-	printer.PrintTree(ast)
+	printer.FprintTree(os.Stdout, ast)
 
 	// Output:
 	// File { ?:1-?:3
