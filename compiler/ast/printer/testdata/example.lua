@@ -34,4 +34,8 @@ print("hello"..     "world",    "hello"     .."world")
 print(1+  7)
 print(1+  7, 1  +8)
 
+y = foo[  x +  5  ] + 8
+
+t = { [ 5 + 9 ] = y ,   11  }
+
 return ((x)+1)

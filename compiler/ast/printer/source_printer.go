@@ -392,7 +392,7 @@ func (p *printer) printSelectorExpr(expr *ast.SelectorExpr, mode mode) {
 func (p *printer) printIndexExpr(expr *ast.IndexExpr, mode mode) {
 	p.printExpr(expr.X, mode)
 	p.print(expr.Lbrack, "[", noBlank)
-	p.printExpr(expr.Index, noParen)
+	p.printExpr(expr.Index, noBlank|noParen|compact)
 	p.print(expr.Rbrack, "]", noBlank)
 }
 
