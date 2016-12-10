@@ -15,6 +15,7 @@ var (
 	errIntegerOverflow    = &Error{errors.New("integer overflow")}
 	errFloatOverflow      = &Error{errors.New("float overflow")}
 	errFloatUnderflow     = &Error{errors.New("float underflow")}
+	errByteOverflow       = &Error{errors.New("byte overflow")}
 	errInvalidIntSize     = &Error{errors.New("IntSize should be power of 2")}
 	errInvalidSizeTSize   = &Error{errors.New("SizeTSize should be power of 2")}
 	errInvalidIntegerSize = &Error{errors.New("IntegerSize should be power of 2")}
@@ -155,6 +156,9 @@ type dumper struct {
 }
 
 func (d *dumper) dumpByte(x int) error {
+	if x > 255 {
+		return errByteOverflow
+	}
 	return d.byte(byte(x))
 }
 
