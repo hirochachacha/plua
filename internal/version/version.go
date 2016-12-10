@@ -25,4 +25,7 @@ const (
 
 	MAX_TAG_LOOP     = 2000
 	MAX_VM_RECURSION = 200
+
+	MAXUPVAL = 255
+	MAXVAR   = 200
 )

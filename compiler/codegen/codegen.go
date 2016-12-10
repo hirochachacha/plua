@@ -7,6 +7,7 @@ import (
 	"github.com/hirochachacha/plua/compiler/ast"
 	"github.com/hirochachacha/plua/compiler/token"
 	"github.com/hirochachacha/plua/internal/strconv"
+	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/opcode"
 	"github.com/hirochachacha/plua/position"
@@ -18,6 +19,14 @@ const (
 	skipConstantFolding      = false
 )
 
+var tmp ast.Name
+
+func tmpName(name string) *ast.Name {
+	t := &tmp
+	t.Name = name
+	return t
+}
+
 func Generate(f *ast.File) (proto *object.Proto, err error) {
 	g := newGenerator(nil)
 
@@ -26,20 +35,17 @@ func Generate(f *ast.File) (proto *object.Proto, err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			_ = r.(bailout)
+			b := r.(bailout)
 
-			err = g.err
+			err = b.err
 		}
 	}()
 
 	g.genFile(f)
 
-	proto, err = g.Proto, g.err
-	if err != nil {
-		return nil, g.err
-	}
+	proto = g.Proto
 
-	return proto, nil
+	return
 }
 
 type label struct {
@@ -70,11 +76,11 @@ type generator struct {
 
 	locktmp  bool // don't remove tmp variable by peep hole optimization
 	lockpeep bool // don't do peep hole optimization, because here is jump destination
-
-	err error
 }
 
-type bailout struct{}
+type bailout struct {
+	err error
+}
 
 func newGenerator(outer *generator) *generator {
 	g := &generator{
@@ -95,12 +101,12 @@ func newGenerator(outer *generator) *generator {
 func (g *generator) error(pos position.Position, err error) {
 	pos.SourceName = g.Source
 
-	g.err = &Error{
-		Pos: pos,
-		Err: err,
-	}
-
-	panic(bailout{})
+	panic(bailout{
+		err: &Error{
+			Pos: pos,
+			Err: err,
+		},
+	})
 }
 
 func (g *generator) pc() int {
@@ -217,36 +223,54 @@ func (g *generator) closeJumps() {
 	}
 }
 
-func (g *generator) resolve(name string) (link, bool) {
+func (g *generator) resolveName(name *ast.Name) (link, bool) {
 	if g == nil {
 		return link{}, false
 	}
 
-	if l, ok := g.resolveLocal(name); ok {
+	if l, ok := g.resolveLocal(name.Name); ok {
 		return l, true
 	}
 
-	if up, ok := g.outer.resolve(name); ok {
-		return g.declareUpvalue(name, up), true
+	if up, ok := g.outer.resolveName(name); ok {
+		return g.declareUpvalueName(name, up), true
 	}
 
 	return link{}, false
 }
 
-func (g *generator) declareLocal(name string, sp int) {
+func (g *generator) resolve(name string) (link, bool) {
+	return g.resolveName(tmpName(name))
+}
+
+func (g *generator) declareLocalName(name *ast.Name, sp int) {
+	nlocals := g.scope.nlocals
+
+	if outer := g.scope.outer; outer != nil {
+		nlocals -= outer.nlocals
+	}
+
+	if nlocals >= version.MAXVAR {
+		g.error(name.Pos(), fmt.Errorf("too many local variables (limit is %d)", version.MAXVAR))
+	}
+
 	locVar := object.LocVar{
-		Name:    name,
+		Name:    name.Name,
 		StartPC: g.pc(),
 	}
 
 	g.LocVars = append(g.LocVars, locVar)
 
-	g.scope.declare(name, link{
+	g.scope.declare(name.Name, link{
 		kind:  linkLocal,
 		index: sp,
 	})
 
 	g.nlocals++
+}
+
+func (g *generator) declareLocal(name string, sp int) {
+	g.declareLocalName(tmpName(name), sp)
 }
 
 func (g *generator) declareEnviron() {
@@ -264,7 +288,11 @@ func (g *generator) declareEnviron() {
 	})
 }
 
-func (g *generator) declareUpvalue(name string, up link) link {
+func (g *generator) declareUpvalueName(name *ast.Name, up link) link {
+	if len(g.Upvalues) >= version.MAXUPVAL {
+		g.error(name.Pos(), fmt.Errorf("too many upvalues (limit is %d)", version.MAXUPVAL))
+	}
+
 	instack := up.kind == linkLocal
 
 	// mark upvalue whether it should be closed
@@ -272,7 +300,7 @@ func (g *generator) declareUpvalue(name string, up link) link {
 		scope := g.outer.scope
 
 		for {
-			_, ok := scope.symbols[name]
+			_, ok := scope.symbols[name.Name]
 			if ok {
 				break
 			}
@@ -286,7 +314,7 @@ func (g *generator) declareUpvalue(name string, up link) link {
 	}
 
 	ud := object.UpvalueDesc{
-		Name:    name,
+		Name:    name.Name,
 		Instack: instack,
 		Index:   up.index,
 	}
@@ -298,7 +326,7 @@ func (g *generator) declareUpvalue(name string, up link) link {
 		index: len(g.Upvalues) - 1,
 	}
 
-	g.scope.root().declare(name, link)
+	g.scope.root().declare(name.Name, link)
 
 	return link
 }

@@ -78,11 +78,15 @@ func newRuntimeError(err error) *object.RuntimeError {
 			Level:     1,
 			Traceback: []position.Position{err.Pos},
 		}
+	case *codegen.Error:
+		return &object.RuntimeError{
+			Value:     object.String(err.Err.Error()),
+			Level:     1,
+			Traceback: []position.Position{err.Pos},
+		}
 	case *dump.Error:
 		return object.NewRuntimeError(err.Err.Error())
 	case *undump.Error:
-		return object.NewRuntimeError(err.Err.Error())
-	case *codegen.Error:
 		return object.NewRuntimeError(err.Err.Error())
 	default:
 		return object.NewRuntimeError(err.Error())

@@ -42,13 +42,13 @@ func (g *generator) genFuncBody(f *ast.FuncBody, self bool, endLine int) {
 		g.declareLocal("self", 0)
 
 		for i, param := range f.Params.List {
-			g.declareLocal(param.Name, i+1)
+			g.declareLocalName(param, i+1)
 		}
 
 		g.NParams = len(f.Params.List) + 1
 	} else {
 		for i, param := range f.Params.List {
-			g.declareLocal(param.Name, i)
+			g.declareLocalName(param, i)
 		}
 
 		g.NParams = len(f.Params.List)

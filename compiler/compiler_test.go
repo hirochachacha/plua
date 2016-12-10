@@ -18,6 +18,8 @@ var compileErrorTestCases = []struct {
 	{"forward_jump_over_local_assign.lua", "forward jump over local 'name'"},
 	{"unreachable_code.lua", "expected 'end', found 'NAME'"},
 	{"unreachable_code2.lua", "expected 'EOF', found 'return'"},
+	{"maxvar.lua", "too many local variables"},
+	{"maxupval.lua", "too many upvalues"},
 }
 
 func TestCompileError(t *testing.T) {

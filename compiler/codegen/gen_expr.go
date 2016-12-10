@@ -138,7 +138,7 @@ func (g *generator) genName(expr *ast.Name, typ genType) (rk int) {
 		return g.markRK(g.constant(object.String(expr.Name)))
 	}
 
-	l, ok := g.resolve(expr.Name)
+	l, ok := g.resolveName(expr)
 	if !ok {
 		return g.genGetGlobal(expr)
 	}

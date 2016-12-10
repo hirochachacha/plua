@@ -94,7 +94,7 @@ func (g *generator) genLocalAssignStmt(stmt *ast.LocalAssignStmt) {
 	g.locktmp = false
 
 	for i, name := range stmt.LHS {
-		g.declareLocal(name.Name, sp+i)
+		g.declareLocalName(name, sp+i)
 	}
 
 	g.setSP(sp + len(stmt.LHS))
@@ -107,7 +107,7 @@ func (g *generator) genLocalFuncStmt(stmt *ast.LocalFuncStmt) {
 
 	endLine := stmt.End().Line
 
-	g.declareLocal(name.Name, g.sp) // declare before genFuncBody (for recursive function)
+	g.declareLocalName(name, g.sp) // declare before genFuncBody (for recursive function)
 
 	p := g.proto(body, false, endLine)
 
@@ -127,7 +127,7 @@ func (g *generator) genFuncStmt(stmt *ast.FuncStmt) {
 	endLine := stmt.End().Line
 
 	if prefix == nil {
-		l, ok := g.resolve(name.Name)
+		l, ok := g.resolveName(name)
 
 		p := g.proto(body, false, endLine)
 
@@ -243,7 +243,7 @@ func (g *generator) genAssignStmt(stmt *ast.AssignStmt) {
 func (g *generator) genAssignSimple(lhs ast.Expr, r int) {
 	switch lhs := lhs.(type) {
 	case *ast.Name:
-		if l, ok := g.resolve(lhs.Name); ok {
+		if l, ok := g.resolveName(lhs); ok {
 			switch l.kind {
 			case linkLocal:
 				g.pushInst(opcode.AB(opcode.MOVE, l.index, r))
@@ -281,7 +281,7 @@ func (g *generator) genAssign(LHS []ast.Expr, base int) {
 
 		switch lhs := lhs.(type) {
 		case *ast.Name:
-			if l, ok := g.resolve(lhs.Name); ok {
+			if l, ok := g.resolveName(lhs); ok {
 				switch l.kind {
 				case linkLocal:
 					assigns[i] = opcode.AB(opcode.MOVE, l.index, r)
@@ -293,7 +293,7 @@ func (g *generator) genAssign(LHS []ast.Expr, base int) {
 			} else {
 				rk := g.markRK(g.constant(object.String(lhs.Name)))
 
-				env := g.genName(&ast.Name{Name: version.LUA_ENV}, genR|genMove)
+				env := g.genName(tmpName(version.LUA_ENV), genR|genMove)
 
 				assigns[i] = opcode.ABC(opcode.SETTABLE, env, rk, r)
 			}
@@ -535,7 +535,7 @@ func (g *generator) genForStmt(stmt *ast.ForStmt) {
 
 	g.openScope()
 
-	g.declareLocal(stmt.Name.Name, g.sp)
+	g.declareLocalName(stmt.Name, g.sp)
 
 	g.addSP(1)
 
@@ -604,7 +604,7 @@ func (g *generator) genForEachStmt(stmt *ast.ForEachStmt) {
 	g.openScope()
 
 	for i, name := range stmt.Names {
-		g.declareLocal(name.Name, g.sp+i)
+		g.declareLocalName(name, g.sp+i)
 	}
 
 	g.addSP(len(stmt.Names))
