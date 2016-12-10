@@ -34,6 +34,7 @@ package parser
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/hirochachacha/plua/compiler/ast"
 	"github.com/hirochachacha/plua/compiler/scanner"
@@ -46,11 +47,32 @@ var (
 	errIllegalBreak  = errors.New("cannot use 'break' outside of loop")
 )
 
-type Mode uint // currently, no mode are defined
+type Mode uint
 
-func Parse(s *scanner.Scanner, mode Mode) (f *ast.File, err error) {
+const (
+	ParseComments Mode = 1 << iota
+)
+
+func ParseFile(filename string, mode Mode) (*ast.File, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var m scanner.Mode
+	if mode&ParseComments != 0 {
+		m = scanner.ScanComments
+	}
+
+	s := scanner.Scan(f, "@"+filename, m)
+
+	return Parse(s, mode)
+}
+
+func Parse(s *scanner.ScanState, mode Mode) (f *ast.File, err error) {
 	p := &parser{
-		scanner: s,
+		scanState: s,
 	}
 
 	defer func() {
@@ -66,7 +88,7 @@ func Parse(s *scanner.Scanner, mode Mode) (f *ast.File, err error) {
 	f = p.parseFile()
 
 	if p.err == nil {
-		if serr := p.scanner.Err(); serr != nil {
+		if serr := p.scanState.Err(); serr != nil {
 			p.err = serr
 		}
 	}
@@ -78,8 +100,7 @@ func Parse(s *scanner.Scanner, mode Mode) (f *ast.File, err error) {
 
 // The parser structure holds the parser's internal state.
 type parser struct {
-	// scanner
-	scanner *scanner.Scanner
+	scanState *scanner.ScanState
 
 	// Comments
 	comments    []*ast.CommentGroup
@@ -139,7 +160,7 @@ func (p *parser) markRHS(x ast.Expr) {
 
 // Advance to the next token.
 func (p *parser) next0() {
-	p.tok = p.scanner.Scan()
+	p.tok = p.scanState.Next()
 }
 
 // Consume a comment and return it and the line on which it ends.
@@ -236,10 +257,10 @@ func (p *parser) next() {
 }
 
 func (p *parser) error(pos position.Position, err error) {
-	if serr := p.scanner.Err(); serr != nil {
+	if serr := p.scanState.Err(); serr != nil {
 		p.err = serr
 	} else {
-		pos.SourceName = p.scanner.SourceName
+		pos.SourceName = p.scanState.SourceName()
 
 		p.err = &Error{
 			Pos: pos,
@@ -1303,8 +1324,8 @@ func (p *parser) parseFile() *ast.File {
 	chunk := p.parseChunk()
 
 	return &ast.File{
-		Filename: p.scanner.SourceName,
-		Shebang:  p.scanner.Shebang,
+		Filename: p.scanState.SourceName(),
+		Shebang:  p.scanState.Shebang(),
 		Chunk:    chunk,
 		Comments: p.comments,
 	}

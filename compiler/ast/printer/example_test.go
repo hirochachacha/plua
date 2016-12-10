@@ -5,16 +5,10 @@ import (
 
 	"github.com/hirochachacha/plua/compiler/ast/printer"
 	"github.com/hirochachacha/plua/compiler/parser"
-	"github.com/hirochachacha/plua/compiler/scanner"
 )
 
 func ExampleFprint() {
-	f, err := os.Open("testdata/example.lua")
-	if err != nil {
-		panic(err)
-	}
-
-	ast, err := parser.Parse(scanner.NewScanner(f, "@testdata/example.lua", scanner.ScanComments), 0)
+	ast, err := parser.ParseFile("testdata/example.lua", parser.ParseComments)
 	if err != nil {
 		panic(err)
 	}

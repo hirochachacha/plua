@@ -65,9 +65,9 @@ const (
 	ScanComments = 1 << iota
 )
 
-type Scanner struct {
-	SourceName string
-	Shebang    string
+type ScanState struct {
+	sourceName string
+	shebang    string
 
 	mode Mode
 
@@ -90,10 +90,10 @@ type Scanner struct {
 	err error
 }
 
-func NewScanner(r io.Reader, srcname string, mode Mode) *Scanner {
-	s := &Scanner{
+func Scan(r io.Reader, srcname string, mode Mode) *ScanState {
+	s := &ScanState{
 		r:          r,
-		SourceName: srcname,
+		sourceName: srcname,
 		buf:        make([]byte, 4096),
 		mode:       mode,
 		_mark:      -1,
@@ -105,15 +105,15 @@ func NewScanner(r io.Reader, srcname string, mode Mode) *Scanner {
 	case bom1:
 		s.skipBom()
 	case '#':
-		s.Shebang = s.scanSheBang()
+		s.shebang = s.scanSheBang()
 	}
 
 	return s
 }
 
-func (s *Scanner) Reset(r io.Reader, filename string, mode Mode) {
-	s.SourceName = filename
-	s.Shebang = ""
+func (s *ScanState) Reset(r io.Reader, srcname string, mode Mode) {
+	s.sourceName = srcname
+	s.shebang = ""
 
 	s.mode = mode
 	s.r = r
@@ -137,15 +137,23 @@ func (s *Scanner) Reset(r io.Reader, filename string, mode Mode) {
 	case bom1:
 		s.skipBom()
 	case '#':
-		s.Shebang = s.scanSheBang()
+		s.shebang = s.scanSheBang()
 	}
 }
 
-func (s *Scanner) Err() error {
+func (s *ScanState) SourceName() string {
+	return s.sourceName
+}
+
+func (s *ScanState) Shebang() string {
+	return s.shebang
+}
+
+func (s *ScanState) Err() error {
 	return s.err
 }
 
-func (s *Scanner) Scan() token.Token {
+func (s *ScanState) Next() token.Token {
 	var typ token.Type
 	var pos position.Position
 	var lit string
@@ -345,7 +353,7 @@ scanAgain:
 	return token.Token{Type: typ, Pos: pos, Lit: lit}
 }
 
-func (s *Scanner) skipBom() {
+func (s *ScanState) skipBom() {
 	if s.peek(2) == string(bom) {
 		s.next()
 		s.next()
@@ -359,7 +367,7 @@ func trimRightCR(s string) string {
 	return s
 }
 
-func (s *Scanner) scanSheBang() (shebang string) {
+func (s *ScanState) scanSheBang() (shebang string) {
 	s.mark()
 
 	s.next()
@@ -377,7 +385,7 @@ func (s *Scanner) scanSheBang() (shebang string) {
 	return
 }
 
-func (s *Scanner) scanComment() (lit string) {
+func (s *ScanState) scanComment() (lit string) {
 	var err error
 
 	s.mark()
@@ -418,7 +426,7 @@ func (s *Scanner) scanComment() (lit string) {
 	return
 }
 
-func (s *Scanner) scanIdentifier() (lit string) {
+func (s *ScanState) scanIdentifier() (lit string) {
 	s.mark()
 
 	s.next()
@@ -430,13 +438,13 @@ func (s *Scanner) scanIdentifier() (lit string) {
 	return string(s.capture())
 }
 
-func (s *Scanner) skipMantissa(base int) {
+func (s *ScanState) skipMantissa(base int) {
 	for digitVal(s.ch) < base {
 		s.next()
 	}
 }
 
-func (s *Scanner) scanNumber(seenDecimalPoint bool) (tok token.Type, lit string) {
+func (s *ScanState) scanNumber(seenDecimalPoint bool) (tok token.Type, lit string) {
 	s.mark()
 
 	tok = token.INT
@@ -521,7 +529,7 @@ exit:
 	return
 }
 
-func (s *Scanner) scanString(quote int) (lit string) {
+func (s *ScanState) scanString(quote int) (lit string) {
 	s.mark()
 
 	s.next()
@@ -549,7 +557,7 @@ func (s *Scanner) scanString(quote int) (lit string) {
 	return
 }
 
-func (s *Scanner) skipEscape(quote int) {
+func (s *ScanState) skipEscape(quote int) {
 	s.next()
 
 	pos := s.pos()
@@ -655,7 +663,7 @@ func (s *Scanner) skipEscape(quote int) {
 	}
 }
 
-func (s *Scanner) scanLongString(simple bool) (lit string) {
+func (s *ScanState) scanLongString(simple bool) (lit string) {
 	var err error
 
 	s.mark()
@@ -672,7 +680,7 @@ func (s *Scanner) scanLongString(simple bool) (lit string) {
 	return
 }
 
-func (s *Scanner) skipLongString(comment bool, simple bool) (err error) {
+func (s *ScanState) skipLongString(comment bool, simple bool) (err error) {
 	s.next()
 
 	if simple {
@@ -750,15 +758,15 @@ func (s *Scanner) skipLongString(comment bool, simple bool) (err error) {
 	return
 }
 
-func (s *Scanner) skipSpace() {
+func (s *ScanState) skipSpace() {
 	for isSpace(s.ch) {
 		s.next()
 	}
 }
 
-func (s *Scanner) error(pos position.Position, err error) {
+func (s *ScanState) error(pos position.Position, err error) {
 	if s.err == nil {
-		pos.SourceName = s.SourceName
+		pos.SourceName = s.sourceName
 
 		s.err = &Error{
 			Pos: pos,
@@ -767,14 +775,14 @@ func (s *Scanner) error(pos position.Position, err error) {
 	}
 }
 
-func (s *Scanner) pos() position.Position {
+func (s *ScanState) pos() position.Position {
 	return position.Position{
 		Line:   s.lineNum + 1,
 		Column: s.offset - s.lineOffset,
 	}
 }
 
-func (s *Scanner) mark() {
+func (s *ScanState) mark() {
 	if s._mark != -1 {
 		panic("mark twice")
 	}
@@ -782,7 +790,7 @@ func (s *Scanner) mark() {
 	s._mark = s.start
 }
 
-func (s *Scanner) capture() []byte {
+func (s *ScanState) capture() []byte {
 	if s._mark == -1 {
 		panic("no mark")
 	}
@@ -800,7 +808,7 @@ func (s *Scanner) capture() []byte {
 	return buf
 }
 
-func (s *Scanner) init() {
+func (s *ScanState) init() {
 	s.fill()
 
 	if s.start == s.end {
@@ -814,7 +822,7 @@ func (s *Scanner) init() {
 	s.ch = int(s.buf[s.start])
 }
 
-func (s *Scanner) next() {
+func (s *ScanState) next() {
 	if s.ch == -1 {
 		return
 	}
@@ -841,7 +849,7 @@ func (s *Scanner) next() {
 	s.ch = int(s.buf[s.start])
 }
 
-func (s *Scanner) peek(n int) string {
+func (s *ScanState) peek(n int) string {
 	if n > s.end-s.start {
 		s.fill()
 		if n > s.end-s.start {
@@ -852,7 +860,7 @@ func (s *Scanner) peek(n int) string {
 	return string(s.buf[s.start : s.start+n])
 }
 
-func (s *Scanner) fill() {
+func (s *ScanState) fill() {
 	if s.filled {
 		return
 	}

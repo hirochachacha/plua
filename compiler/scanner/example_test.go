@@ -1,22 +1,23 @@
-package scanner
+package scanner_test
 
 import (
 	"fmt"
 	"os"
 
+	"github.com/hirochachacha/plua/compiler/scanner"
 	"github.com/hirochachacha/plua/compiler/token"
 )
 
-func ExampleNewScanner() {
+func ExampleScan() {
 	f, err := os.Open("testdata/example.lua")
 	if err != nil {
 		panic(err)
 	}
 
-	s := NewScanner(f, "@testdata/example.lua", 0)
+	s := scanner.Scan(f, "@"+"testdata/example.lua", 0)
 
 	for {
-		tok := s.Scan()
+		tok := s.Next()
 		if tok.Type == token.EOF {
 			break
 		}

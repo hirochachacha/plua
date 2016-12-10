@@ -41,7 +41,7 @@ type readerAt interface {
 }
 
 type Compiler struct {
-	s *scanner.Scanner
+	s *scanner.ScanState
 	u *bufio.Reader // buffer for undump
 	r readerAt
 	b [1]byte
@@ -67,7 +67,7 @@ func (c *Compiler) Compile(r io.Reader, srcname string, typ FormatType) (*object
 		}
 
 		if c.s == nil {
-			c.s = scanner.NewScanner(c.r, srcname, 0)
+			c.s = scanner.Scan(c.r, srcname, 0)
 		} else {
 			c.s.Reset(c.r, srcname, 0)
 		}

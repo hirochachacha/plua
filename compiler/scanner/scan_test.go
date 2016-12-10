@@ -28,9 +28,9 @@ func TestScan(t *testing.T) {
 		}
 		defer f.Close()
 
-		s := scanner.NewScanner(f, "@"+fname, 0)
+		s := scanner.Scan(f, "@"+fname, 0)
 		for {
-			tok := s.Scan()
+			tok := s.Next()
 			if tok.Type == token.EOF {
 				break
 			}

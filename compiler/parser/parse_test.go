@@ -1,15 +1,13 @@
 package parser_test
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/hirochachacha/plua/compiler/parser"
-	"github.com/hirochachacha/plua/compiler/scanner"
 )
 
-func TestParse(t *testing.T) {
+func TestParseFile(t *testing.T) {
 	matches, err := filepath.Glob("testdata/*.lua")
 	if err != nil {
 		t.Fatal(err)
@@ -19,13 +17,7 @@ func TestParse(t *testing.T) {
 			continue
 		}
 
-		f, err := os.Open(fname)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer f.Close()
-
-		ast, err := parser.Parse(scanner.NewScanner(f, "@"+fname, 0), 0)
+		ast, err := parser.ParseFile(fname, 0)
 		if err != nil {
 			t.Error(err)
 		}
