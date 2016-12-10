@@ -21,7 +21,7 @@ const (
 	escape
 	noExpr
 	noParen
-	inParen
+	compact
 )
 
 type printer struct {
@@ -376,7 +376,7 @@ func (p *printer) printTableLit(expr *ast.TableLit, mode mode) {
 
 func (p *printer) printParenExpr(expr *ast.ParenExpr, mode mode) {
 	p.print(expr.Lparen, "(", mode)
-	p.printExpr(expr.X, noBlank|noParen|inParen)
+	p.printExpr(expr.X, noBlank|noParen|compact)
 	p.print(expr.Rparen, ")", noBlank)
 }
 
@@ -422,7 +422,7 @@ func (p *printer) printUnaryExpr(expr *ast.UnaryExpr, mode mode) {
 func (p *printer) printBinaryExpr(expr *ast.BinaryExpr, prec1 int, mode mode) {
 	prec, _ := expr.Op.Precedence()
 
-	if (mode&inParen != 0 || prec > prec1) && prec > 3 { // should cutoff?
+	if (mode&compact != 0 || prec > prec1) && prec > 3 { // should cutoff?
 		// (1 + 8 * 9) => (1+8*9)
 		// 1 + 2 * 3 +4/5 +6 ^ 7 +8 => 1 + 2*3 + 4/5 + 6^7 + 8
 
@@ -474,7 +474,7 @@ func (p *printer) printBinaryExpr(expr *ast.BinaryExpr, prec1 int, mode mode) {
 func (p *printer) printKeyValueExpr(expr *ast.KeyValueExpr, mode mode) {
 	if expr.Lbrack != position.NoPos {
 		p.print(expr.Lbrack, "[", mode)
-		p.printExpr(expr.Key, noBlank|noParen)
+		p.printExpr(expr.Key, noBlank|noParen|compact)
 		p.print(expr.Rbrack, "]", noBlank)
 		p.print(expr.Equal, "=", 0)
 		p.printExpr(expr.Value, noParen)
@@ -557,13 +557,17 @@ func (p *printer) printNames(names []*ast.Name, mode mode) {
 }
 
 func (p *printer) printExprs(exprs []ast.Expr, mode mode) {
-	if len(exprs) == 0 {
+	switch len(exprs) {
+	case 0:
 		return
-	}
-	p.printExpr(exprs[0], mode)
-	for _, expr := range exprs[1:] {
-		p.print(p.lastPos, ",", noBlank)
-		p.printExpr(expr, noParen)
+	case 1:
+		p.printExpr(exprs[0], mode)
+	default:
+		p.printExpr(exprs[0], mode|compact)
+		for _, expr := range exprs[1:] {
+			p.print(p.lastPos, ",", noBlank)
+			p.printExpr(expr, noParen|compact)
+		}
 	}
 }
 
@@ -590,7 +594,7 @@ func (p *printer) insertComment(pos position.Position) {
 						p.writeString("\f")
 					}
 					for i := 0; i < p.depth; i++ {
-						p.writeString("\t")
+						p.writeString(indent)
 					}
 					p.formfeed = false
 				default:
@@ -630,10 +634,10 @@ func (p *printer) print(pos position.Position, s string, mode mode) {
 				p.writeString("\f")
 			}
 			if mode&noExpr == 0 {
-				p.writeString("  ")
+				p.writeString(indent)
 			}
 			for i := 0; i < p.depth; i++ {
-				p.writeString("\t")
+				p.writeString(indent)
 			}
 			p.formfeed = false
 		default:

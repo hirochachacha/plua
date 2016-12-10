@@ -29,4 +29,9 @@ if ((x ~= 10) == true) then
 	print(x)
 end
 
+print(      "hello"     .."world")
+print("hello"..     "world",    "hello"     .."world")
+print(1+  7)
+print(1+  7, 1  +8)
+
 return ((x)+1)
