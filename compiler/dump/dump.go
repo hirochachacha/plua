@@ -156,7 +156,7 @@ type dumper struct {
 }
 
 func (d *dumper) dumpByte(x int) error {
-	if x > 255 {
+	if x < 0 || x > 255 {
 		return errByteOverflow
 	}
 	return d.byte(byte(x))
