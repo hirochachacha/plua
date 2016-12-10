@@ -62,5 +62,7 @@ func ExampleFprint() {
 	//
 	// t = {[5+9] = y, 11}
 	//
+	// local foo
+	//
 	// return (x) + 1
 }

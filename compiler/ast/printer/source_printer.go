@@ -167,9 +167,12 @@ func (p *printer) printStmt(stmt ast.Stmt) {
 }
 
 func (p *printer) printLocalAssignStmt(stmt *ast.LocalAssignStmt) {
-	p.printNames(stmt.LHS, noExpr)
-	p.print(stmt.Equal, "=", 0)
-	p.printExprs(stmt.RHS, noParen)
+	p.print(stmt.Local, "local", noExpr)
+	p.printNames(stmt.LHS, 0)
+	if stmt.Equal.IsValid() {
+		p.print(stmt.Equal, "=", 0)
+		p.printExprs(stmt.RHS, noParen)
+	}
 }
 
 func (p *printer) printLocalFuncStmt(stmt *ast.LocalFuncStmt) {

@@ -38,4 +38,6 @@ y = foo[  x +  5  ] + 8
 
 t = { [ 5 + 9 ] = y ,   11  }
 
+local foo
+
 return ((x)+1)
