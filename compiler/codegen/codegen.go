@@ -182,6 +182,8 @@ func (g *generator) declareLabelPos(name string, pos position.Position) {
 }
 
 func (g *generator) genSetJumpPoint(name string, pos position.Position) {
+	g.tokLine = pos.Line
+
 	jmp := g.genJumpPoint()
 
 	jmp.pos = pos
@@ -215,8 +217,11 @@ func (g *generator) closeJumps() {
 			}
 
 			reljmp := label.pc - jmp.pc - 1
-
-			g.Code[jmp.pc] = opcode.AsBx(opcode.JMP, label.sp+1, reljmp)
+			if reljmp >= 0 { // forward jump
+				g.Code[jmp.pc] = opcode.AsBx(opcode.JMP, 0, reljmp)
+			} else { // backward jump
+				g.Code[jmp.pc] = opcode.AsBx(opcode.JMP, label.sp+1, reljmp)
+			}
 		}
 
 		delete(g.pendingJumps, scope)
