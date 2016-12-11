@@ -191,11 +191,9 @@ scanAgain:
 				typ = token.COLON
 			}
 		case '.':
-			s.next()
-
-			if '0' <= s.ch && s.ch <= '9' {
-				typ, lit = s.scanNumber(true)
-			} else if s.ch == '.' {
+			switch p := s.peek(2); p {
+			case "..":
+				s.next()
 				s.next()
 				if s.ch == '.' {
 					s.next()
@@ -203,8 +201,13 @@ scanAgain:
 				} else {
 					typ = token.CONCAT
 				}
-			} else {
-				typ = token.PERIOD
+			default:
+				if len(p) == 2 && '0' <= p[1] && p[1] <= '9' {
+					typ, lit = s.scanNumber(true)
+				} else {
+					s.next()
+					typ = token.PERIOD
+				}
 			}
 		case ',':
 			s.next()
@@ -446,6 +449,10 @@ func (s *ScanState) skipMantissa(base int) {
 
 func (s *ScanState) scanNumber(seenDecimalPoint bool) (tok token.Type, lit string) {
 	s.mark()
+
+	if seenDecimalPoint {
+		s.next() // skip .
+	}
 
 	tok = token.INT
 
