@@ -50,10 +50,9 @@ import (
 
 var (
 	// main operation modes
-	list        = flag.Bool("l", false, "list files whose formatting differs from luafmt's")
-	write       = flag.Bool("w", false, "write result to (source) file instead of stdout")
-	simplifyAST = flag.Bool("s", false, "simplify code")
-	doDiff      = flag.Bool("d", false, "display diffs instead of rewriting files")
+	list   = flag.Bool("l", false, "list files whose formatting differs from luafmt's")
+	write  = flag.Bool("w", false, "write result to (source) file instead of stdout")
+	doDiff = flag.Bool("d", false, "display diffs instead of rewriting files")
 )
 
 const (
