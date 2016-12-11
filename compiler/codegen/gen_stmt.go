@@ -113,6 +113,8 @@ func (g *generator) genLocalFuncStmt(stmt *ast.LocalFuncStmt) {
 
 	g.pushInstLine(opcode.ABx(opcode.CLOSURE, g.sp, p), endLine)
 
+	g.LocVars[len(g.LocVars)-1].StartPC++ // adjust StartPC (start from CLOSURE)
+
 	g.nextSP()
 }
 
