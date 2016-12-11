@@ -1201,7 +1201,7 @@ func (p *parser) parseForStmt() ast.Stmt {
 	var in, eq position.Position
 
 	if len(names) > 1 {
-		p.expect(token.IN)
+		in = p.expect(token.IN)
 		goto foreach
 	}
 
