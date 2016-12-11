@@ -23,12 +23,14 @@ const (
 	noExpr
 	noParen
 	compact
+	insertSemi
 )
 
 type printer struct {
 	w          *tabwriter.Writer
 	depth      int // indent depth
 	formfeed   bool
+	stmtEnd    bool
 	lastPos    position.Position
 	commentPos position.Position
 	cindex     int
@@ -167,10 +169,12 @@ func (p *printer) printStmt(stmt ast.Stmt) {
 	default:
 		panic("unreachable")
 	}
+
+	p.stmtEnd = true
 }
 
 func (p *printer) printLocalAssignStmt(stmt *ast.LocalAssignStmt) {
-	p.print(stmt.Local, "local", noExpr)
+	p.print(stmt.Local, "local", noExpr|insertSemi)
 	p.printNames(stmt.LHS, 0)
 	if stmt.Equal.IsValid() {
 		p.print(stmt.Equal, "=", 0)
@@ -179,7 +183,7 @@ func (p *printer) printLocalAssignStmt(stmt *ast.LocalAssignStmt) {
 }
 
 func (p *printer) printLocalFuncStmt(stmt *ast.LocalFuncStmt) {
-	p.print(stmt.Local, "local", noExpr)
+	p.print(stmt.Local, "local", noExpr|insertSemi)
 	p.print(stmt.Func, "function", noExpr)
 	p.printName(stmt.Name, 0)
 	p.printFuncBody(stmt.Body)
@@ -187,7 +191,7 @@ func (p *printer) printLocalFuncStmt(stmt *ast.LocalFuncStmt) {
 }
 
 func (p *printer) printFuncStmt(stmt *ast.FuncStmt) {
-	p.print(stmt.Func, "function", noExpr)
+	p.print(stmt.Func, "function", noExpr|insertSemi)
 	if len(stmt.PathList) > 0 {
 		if len(stmt.PathList) == 1 {
 			path := stmt.PathList[0]
@@ -211,32 +215,32 @@ func (p *printer) printFuncStmt(stmt *ast.FuncStmt) {
 }
 
 func (p *printer) printLabelStmt(stmt *ast.LabelStmt) {
-	p.print(stmt.Label, "::", noExpr)
+	p.print(stmt.Label, "::", noExpr|insertSemi)
 	p.print(stmt.Name.Pos(), stmt.Name.Name, noBlank)
 	p.print(stmt.EndLabel, "::", noBlank)
 }
 
 func (p *printer) printExprStmt(stmt *ast.ExprStmt) {
-	p.printCallExpr(stmt.X, noExpr)
+	p.printCallExpr(stmt.X, noExpr|insertSemi)
 }
 
 func (p *printer) printAssignStmt(stmt *ast.AssignStmt) {
-	p.printExprs(stmt.LHS, noExpr|noParen)
+	p.printExprs(stmt.LHS, noExpr|noParen|insertSemi)
 	p.print(stmt.Equal, "=", 0)
 	p.printExprs(stmt.RHS, noParen)
 }
 
 func (p *printer) printGotoStmt(stmt *ast.GotoStmt) {
-	p.print(stmt.Goto, "goto", noExpr)
+	p.print(stmt.Goto, "goto", noExpr|insertSemi)
 	p.printName(stmt.Label, 0)
 }
 
 func (p *printer) printBreakStmt(stmt *ast.BreakStmt) {
-	p.print(stmt.Break, "break", noExpr)
+	p.print(stmt.Break, "break", noExpr|insertSemi)
 }
 
 func (p *printer) printIfStmt(stmt *ast.IfStmt) {
-	p.print(stmt.If, "if", noExpr)
+	p.print(stmt.If, "if", noExpr|insertSemi)
 	p.printExpr(stmt.Cond, noParen)
 	p.print(stmt.Then, "then", noExpr)
 	p.printBlock(stmt.Body)
@@ -254,13 +258,13 @@ func (p *printer) printIfStmt(stmt *ast.IfStmt) {
 }
 
 func (p *printer) printDoStmt(stmt *ast.DoStmt) {
-	p.print(stmt.Do, "do", noExpr)
+	p.print(stmt.Do, "do", noExpr|insertSemi)
 	p.printBlock(stmt.Body)
 	p.print(stmt.EndPos, "end", noExpr)
 }
 
 func (p *printer) printWhileStmt(stmt *ast.WhileStmt) {
-	p.print(stmt.While, "while", noExpr)
+	p.print(stmt.While, "while", noExpr|insertSemi)
 	p.printExpr(stmt.Cond, noParen)
 	p.print(stmt.Do, "do", noExpr)
 	p.printBlock(stmt.Body)
@@ -268,19 +272,19 @@ func (p *printer) printWhileStmt(stmt *ast.WhileStmt) {
 }
 
 func (p *printer) printRepeatStmt(stmt *ast.RepeatStmt) {
-	p.print(stmt.Repeat, "repeat", noExpr)
+	p.print(stmt.Repeat, "repeat", noExpr|insertSemi)
 	p.printBlock(stmt.Body)
 	p.print(stmt.Until, "until", noExpr)
 	p.printExpr(stmt.Cond, noParen)
 }
 
 func (p *printer) printReturnStmt(stmt *ast.ReturnStmt) {
-	p.print(stmt.Return, "return", noExpr)
+	p.print(stmt.Return, "return", noExpr|insertSemi)
 	p.printExprs(stmt.Results, noParen)
 }
 
 func (p *printer) printForStmt(stmt *ast.ForStmt) {
-	p.print(stmt.For, "for", noExpr)
+	p.print(stmt.For, "for", noExpr|insertSemi)
 	p.printName(stmt.Name, 0)
 	p.print(stmt.Equal, "=", 0)
 	p.printExpr(stmt.Start, noParen)
@@ -298,7 +302,7 @@ func (p *printer) printForStmt(stmt *ast.ForStmt) {
 }
 
 func (p *printer) printForEachStmt(stmt *ast.ForEachStmt) {
-	p.print(stmt.For, "for", noExpr)
+	p.print(stmt.For, "for", noExpr|insertSemi)
 	p.printNames(stmt.Names, 0)
 	p.print(stmt.In, "in", noExpr)
 	p.printExprs(stmt.Exprs, noParen)
@@ -622,20 +626,20 @@ func (p *printer) insertComment(pos position.Position) {
 			switch {
 			case d == 0:
 				if p.lastPos != initPos {
-					p.writeString("\t")
+					p.writeByte('\t')
 				}
 			case d > 0:
 				if i == 0 {
-					p.writeString("\f")
+					p.writeByte('\f')
 				} else {
 					if p.formfeed {
-						p.writeString("\f")
+						p.writeByte('\f')
 					} else {
-						p.writeString("\n")
+						p.writeByte('\n')
 					}
 				}
 				if d > 1 {
-					p.writeString("\f")
+					p.writeByte('\f')
 				}
 				for i := 0; i < p.depth; i++ {
 					p.writeString(indent)
@@ -665,17 +669,20 @@ func (p *printer) print(pos position.Position, s string, mode mode) {
 	case d == 0:
 		if mode&noBlank == 0 {
 			if p.lastPos != initPos {
-				p.writeString(" ")
+				if p.stmtEnd && mode&insertSemi != 0 {
+					p.writeByte(';')
+				}
+				p.writeByte(' ')
 			}
 		}
 	case d > 0:
 		if p.formfeed {
-			p.writeString("\f")
+			p.writeByte('\f')
 		} else {
-			p.writeString("\n")
+			p.writeByte('\n')
 		}
 		if d > 1 {
-			p.writeString("\f")
+			p.writeByte('\f')
 		}
 		if mode&noExpr == 0 {
 			p.writeString(indent)
@@ -697,6 +704,8 @@ func (p *printer) print(pos position.Position, s string, mode mode) {
 	}
 
 	p.lastPos = pos
+
+	p.stmtEnd = false
 }
 
 func (p *printer) writeByte(c byte) {

@@ -58,5 +58,7 @@ func ExampleFprint() {
 	//
 	// local foo
 	//
+	// x = 10; y = 24
+	//
 	// return (x) + 1
 }

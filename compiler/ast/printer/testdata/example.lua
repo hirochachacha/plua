@@ -40,4 +40,6 @@ t = { [ 5 + 9 ] = y ,   11  }
 
 local foo
 
+x = 10 y = 24
+
 return ((x)+1)
