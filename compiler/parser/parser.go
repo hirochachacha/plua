@@ -609,11 +609,14 @@ func (p *parser) parseElement() ast.Expr {
 
 	if p.tok.Type == token.ASSIGN {
 		// key = value
+
+		eq := p.tok.Pos
+
 		p.next()
 
 		y := p.parseRHS()
 
-		return &ast.KeyValueExpr{Lbrack: lbrack, Key: x, Rbrack: rbrack, Equal: p.tok.Pos, Value: y}
+		return &ast.KeyValueExpr{Lbrack: lbrack, Key: x, Rbrack: rbrack, Equal: eq, Value: y}
 	}
 
 	// value
@@ -1210,6 +1213,7 @@ func (p *parser) parseForStmt() ast.Stmt {
 		eq = p.tok.Pos
 		p.next()
 	case token.IN:
+		in = p.tok.Pos
 		p.next()
 		goto foreach
 	default:
