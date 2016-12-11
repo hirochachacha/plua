@@ -233,9 +233,19 @@ func modf(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		return nil, err
 	}
 
-	i, frac := math.Modf(f)
+	int, frac := math.Modf(f)
 
-	return []object.Value{object.Integer(i), object.Number(frac)}, nil
+	if math.IsNaN(frac) && !math.IsNaN(int) {
+		frac = 0
+	}
+
+	fval := object.Number(int)
+
+	if ival, ok := object.ToInteger(fval); ok {
+		return []object.Value{ival, object.Number(frac)}, nil
+	}
+
+	return []object.Value{fval, object.Number(frac)}, nil
 }
 
 func rad(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
