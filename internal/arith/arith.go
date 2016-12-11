@@ -214,15 +214,25 @@ func Idiv(x, y object.Value) (object.Value, bool) {
 				return nil, false
 			}
 
-			return x / y, true
+			z := x / y
+
+			if (x^y) < 0 && x%y != 0 {
+				z--
+			}
+
+			return z, true
 		}
 	}
 
-	if x, ok := object.ToNumber(x); ok {
-		if y, ok := object.ToNumber(y); ok {
-			f, _ := math.Modf(float64(x) / float64(y))
+	if xf, ok := object.ToGoFloat64(x); ok {
+		if yf, ok := object.ToGoFloat64(y); ok {
+			zf, frac := math.Modf(xf / yf)
 
-			return object.Number(f), true
+			if math.Signbit(xf) != math.Signbit(yf) && frac != 0 {
+				zf--
+			}
+
+			return object.Number(zf), true
 		}
 	}
 
