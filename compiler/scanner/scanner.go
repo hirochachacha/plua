@@ -85,7 +85,7 @@ type ScanState struct {
 
 	offset     int
 	lineOffset int
-	lineNum    int
+	line       int
 
 	err error
 }
@@ -97,6 +97,8 @@ func Scan(r io.Reader, srcname string, mode Mode) *ScanState {
 		buf:        make([]byte, 4096),
 		mode:       mode,
 		_mark:      -1,
+		lineOffset: -1,
+		line:       1,
 	}
 
 	s.init()
@@ -126,8 +128,8 @@ func (s *ScanState) Reset(r io.Reader, srcname string, mode Mode) {
 	s.clip.Reset()
 
 	s.offset = 0
-	s.lineOffset = 0
-	s.lineNum = 0
+	s.lineOffset = -1
+	s.line = 1
 
 	s.err = nil
 
@@ -784,7 +786,7 @@ func (s *ScanState) error(pos position.Position, err error) {
 
 func (s *ScanState) pos() position.Position {
 	return position.Position{
-		Line:   s.lineNum + 1,
+		Line:   s.line,
 		Column: s.offset - s.lineOffset,
 	}
 }
@@ -836,7 +838,7 @@ func (s *ScanState) next() {
 
 	if s.ch == '\n' {
 		s.lineOffset = s.offset
-		s.lineNum++
+		s.line++
 	}
 
 	s.start++
