@@ -6,10 +6,7 @@ import (
 	"github.com/hirochachacha/plua/internal/util"
 )
 
-var NoPos = Position{
-	Line:   -1,
-	Column: -1,
-}
+var NoPos = Position{}
 
 type Position struct {
 	SourceName string
