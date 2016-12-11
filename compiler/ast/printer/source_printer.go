@@ -37,9 +37,12 @@ type printer struct {
 	err        error
 }
 
+var initPos = position.Position{Line: 1}
+
 func newPrinter(w io.Writer) *printer {
 	return &printer{
-		w: tabwriter.NewWriter(w, 2, 2, 1, ' ', tabwriter.DiscardEmptyColumns|tabwriter.StripEscape),
+		w:       tabwriter.NewWriter(w, 2, 2, 1, ' ', tabwriter.DiscardEmptyColumns|tabwriter.StripEscape),
+		lastPos: initPos,
 	}
 }
 
@@ -259,7 +262,7 @@ func (p *printer) printDoStmt(stmt *ast.DoStmt) {
 func (p *printer) printWhileStmt(stmt *ast.WhileStmt) {
 	p.print(stmt.While, "while", noExpr)
 	p.printExpr(stmt.Cond, noParen)
-	p.print(stmt.EndPos, "do", noExpr)
+	p.print(stmt.Do, "do", noExpr)
 	p.printBlock(stmt.Body)
 	p.print(stmt.EndPos, "end", noExpr)
 }
@@ -389,7 +392,7 @@ func (p *printer) printParenExpr(expr *ast.ParenExpr, mode mode) {
 func (p *printer) printSelectorExpr(expr *ast.SelectorExpr, mode mode) {
 	p.printExpr(expr.X, mode)
 	p.print(expr.Period, ".", noBlank)
-	p.printName(expr.Sel, 0)
+	p.printName(expr.Sel, noBlank)
 }
 
 func (p *printer) printIndexExpr(expr *ast.IndexExpr, mode mode) {
@@ -405,9 +408,15 @@ func (p *printer) printCallExpr(expr *ast.CallExpr, mode mode) {
 		p.print(expr.Colon, ":", noBlank)
 		p.printName(expr.Name, noBlank)
 	}
-	p.print(expr.Lparen, "(", noBlank)
-	p.printExprs(expr.Args, noBlank|noParen)
-	p.print(expr.Rparen, ")", noBlank)
+	if expr.Lparen != position.NoPos {
+		p.print(expr.Lparen, "(", noBlank)
+		p.printExprs(expr.Args, noBlank|noParen)
+		if expr.Rparen != position.NoPos {
+			p.print(expr.Rparen, ")", noBlank)
+		}
+	} else {
+		p.printExprs(expr.Args, noParen)
+	}
 }
 
 func (p *printer) printUnaryExpr(expr *ast.UnaryExpr, mode mode) {
@@ -416,7 +425,12 @@ func (p *printer) printUnaryExpr(expr *ast.UnaryExpr, mode mode) {
 	case *ast.UnaryExpr:
 		if rewrite {
 			// - - 6 => -(-6)
-			p.print(x.Pos(), "(", noBlank)
+			// not not true => not (not true)
+			if expr.Op != token.NOT {
+				p.print(x.Pos(), "(", noBlank)
+			} else {
+				p.print(x.Pos(), "(", 0)
+			}
 			p.printUnaryExpr(x, noBlank)
 			p.print(x.End(), ")", noBlank)
 		} else {
@@ -424,9 +438,17 @@ func (p *printer) printUnaryExpr(expr *ast.UnaryExpr, mode mode) {
 			p.printUnaryExpr(x, 0)
 		}
 	case *ast.BinaryExpr:
-		p.printBinaryExpr(x, token.HighestPrec, noBlank)
+		if expr.Op != token.NOT {
+			p.printBinaryExpr(x, token.HighestPrec, noBlank)
+		} else {
+			p.printBinaryExpr(x, token.HighestPrec, 0)
+		}
 	default:
-		p.printExpr(expr.X, noBlank)
+		if expr.Op != token.NOT {
+			p.printExpr(expr.X, noBlank)
+		} else {
+			p.printExpr(expr.X, 0)
+		}
 	}
 }
 
@@ -478,7 +500,7 @@ func (p *printer) printBinaryExpr(expr *ast.BinaryExpr, prec1 int, mode mode) {
 					p.printUnaryExpr(y, 0)
 				}
 			default:
-				p.printUnaryExpr(y, noBlank)
+				p.printUnaryExpr(y, 0)
 			}
 		case *ast.BinaryExpr:
 			p.printBinaryExpr(y, prec, 0)
@@ -516,6 +538,10 @@ func (p *printer) nextComment() {
 // Other
 
 func (p *printer) printFile(file *ast.File) {
+	if file.Shebang != "" {
+		p.writeString(file.Shebang)
+	}
+
 	p.comments = file.Comments
 
 	p.nextComment()
@@ -589,77 +615,77 @@ func (p *printer) printExprs(exprs []ast.Expr, mode mode) {
 }
 
 func (p *printer) insertComment(pos position.Position) {
-	if p.lastPos.IsValid() {
-		for p.commentPos.LessThan(pos) {
-			for i, c := range p.comment.List {
-				d := c.Pos().Line - p.lastPos.Line
+	for p.commentPos.LessThan(pos) {
+		for i, c := range p.comment.List {
+			d := c.Pos().Line - p.lastPos.Line
 
-				switch {
-				case d == 0:
+			switch {
+			case d == 0:
+				if p.lastPos != initPos {
 					p.writeString("\t")
-				case d > 0:
-					if i == 0 {
+				}
+			case d > 0:
+				if i == 0 {
+					p.writeString("\f")
+				} else {
+					if p.formfeed {
 						p.writeString("\f")
 					} else {
-						if p.formfeed {
-							p.writeString("\f")
-						} else {
-							p.writeString("\n")
-						}
+						p.writeString("\n")
 					}
-					if d > 1 {
-						p.writeString("\f")
-					}
-					for i := 0; i < p.depth; i++ {
-						p.writeString(indent)
-					}
-					p.formfeed = false
-				default:
-					panic("unexpected")
 				}
-
-				p.writeByte(tabwriter.Escape)
-				p.writeString(strings.TrimRight(c.Text, "\t\n\v\f\r "))
-				p.writeByte(tabwriter.Escape)
-
-				p.lastPos = c.Pos()
+				if d > 1 {
+					p.writeString("\f")
+				}
+				for i := 0; i < p.depth; i++ {
+					p.writeString(indent)
+				}
+				p.formfeed = false
+			default:
+				panic("unexpected")
 			}
 
-			p.nextComment()
+			p.writeByte(tabwriter.Escape)
+			p.writeString(strings.TrimRight(c.Text, "\t\n\v\f\r "))
+			p.writeByte(tabwriter.Escape)
+
+			p.lastPos = c.Pos()
 		}
+
+		p.nextComment()
 	}
 }
 
 func (p *printer) print(pos position.Position, s string, mode mode) {
 	p.insertComment(pos)
 
-	if p.lastPos.IsValid() {
-		d := pos.Line - p.lastPos.Line
+	d := pos.Line - p.lastPos.Line
 
-		switch {
-		case d == 0:
-			if mode&noBlank == 0 {
+	switch {
+	case d == 0:
+		if mode&noBlank == 0 {
+			if p.lastPos != initPos {
 				p.writeString(" ")
 			}
-		case d > 0:
-			if p.formfeed {
-				p.writeString("\f")
-			} else {
-				p.writeString("\n")
-			}
-			if d > 1 {
-				p.writeString("\f")
-			}
-			if mode&noExpr == 0 {
-				p.writeString(indent)
-			}
-			for i := 0; i < p.depth; i++ {
-				p.writeString(indent)
-			}
-			p.formfeed = false
-		default:
-			panic("unexpected")
 		}
+	case d > 0:
+		if p.formfeed {
+			p.writeString("\f")
+		} else {
+			p.writeString("\n")
+		}
+		if d > 1 {
+			p.writeString("\f")
+		}
+		if mode&noExpr == 0 {
+			p.writeString(indent)
+		}
+		for i := 0; i < p.depth; i++ {
+			p.writeString(indent)
+		}
+		p.formfeed = false
+	default:
+		panic("unexpected")
 	}
 
 	if mode&escape != 0 {
