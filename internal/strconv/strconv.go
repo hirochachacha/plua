@@ -73,24 +73,33 @@ func ParseInt(s string) (int64, error) {
 		return 0, ErrSyntax
 	}
 
-	if s[0] == '-' {
-		if len(s) > 2 && s[1] == '0' && (s[2] == 'x' || s[2] == 'X') {
-			i, err := strconv.ParseInt("-"+s[3:], 16, 64)
-			return i, unwrap(err)
+	t := s
+
+	var neg bool
+
+	switch s[0] {
+	case '-':
+		neg = true
+		t = t[1:]
+	case '+':
+		t = t[1:]
+	}
+
+	var i int64
+	var err error
+
+	if len(t) > 1 && t[0] == '0' && (t[1] == 'x' || t[1] == 'X') {
+		var u uint64
+		u, err = strconv.ParseUint(t[2:], 16, 64)
+		i = int64(u)
+		if neg {
+			i = -i
 		}
 	} else {
-		if len(s) > 1 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
-			i, err := strconv.ParseInt(s[2:], 16, 64)
-			return i, unwrap(err)
-		}
+		i, err = strconv.ParseInt(s, 10, 64)
 	}
 
-	i, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return i, unwrap(err)
-	}
-
-	return i, nil
+	return i, unwrap(err)
 }
 
 func ParseFloat(s string) (float64, error) {
@@ -98,41 +107,35 @@ func ParseFloat(s string) (float64, error) {
 		return 0, ErrSyntax
 	}
 
+	t := s
+
+	var neg bool
+
+	switch s[0] {
+	case '-':
+		neg = true
+		t = t[1:]
+	case '+':
+		t = t[1:]
+	}
+
 	var f float64
 	var err error
-	{
-		if s[0] == '-' {
-			if len(s) > 2 && s[1] == '0' && (s[2] == 'x' || s[2] == 'X') {
-				f, err = parseHexFloat("-" + s[3:])
 
-				goto parseEnd
-			}
+	if len(t) > 1 && t[0] == '0' && (t[1] == 'x' || t[1] == 'X') {
+		f, err = parseHexFloat(t[2:])
+		if neg {
+			f = math.Copysign(f, -1)
+		}
+	} else {
+		if len(t) > 0 && !(('0' <= t[0] && t[0] <= '9') || t[0] == '.') { // drop special cases. e.g "inf", "nan", ...
+			err = ErrSyntax
 		} else {
-			if len(s) > 1 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
-				f, err = parseHexFloat(s[2:])
-
-				goto parseEnd
-			}
-		}
-
-		f, err = strconv.ParseFloat(s, 64)
-		if err != nil {
-			err = unwrap(err)
+			f, err = strconv.ParseFloat(s, 64)
 		}
 	}
 
-parseEnd:
-	if err != nil {
-		return 0, err
-	}
-
-	if f == 0 {
-		if s[0] == '-' {
-			f = math.Copysign(0, -1)
-		}
-	}
-
-	return f, nil
+	return f, unwrap(err)
 }
 
 func ScanUint(sc io.ByteScanner) (uint64, error) {
@@ -192,17 +195,6 @@ func ScanFloat(sc io.ByteScanner) (float64, error) {
 func parseHexFloat(s string) (float64, error) {
 	if len(s) == 0 {
 		return 0, ErrSyntax
-	}
-
-	var neg bool
-
-	if s[0] == '-' {
-		neg = true
-		s = s[1:]
-
-		if len(s) == 0 {
-			return 0, ErrSyntax
-		}
 	}
 
 	var integer string
@@ -272,10 +264,6 @@ func parseHexFloat(s string) (float64, error) {
 		f = f * math.Pow(2, float64(e))
 	}
 
-	if neg {
-		f = -f
-	}
-
 	return f, nil
 }
 
@@ -297,5 +285,9 @@ func unwrap(err error) error {
 		return nil
 	}
 
-	return err.(*strconv.NumError).Err
+	if nerr, ok := err.(*strconv.NumError); ok {
+		return nerr.Err
+	}
+
+	return err
 }
