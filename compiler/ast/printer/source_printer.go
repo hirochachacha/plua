@@ -20,7 +20,6 @@ type mode uint
 const (
 	noBlank mode = 1 << iota
 	escape
-	noExpr
 	noParen
 	compact
 	insertSemi
@@ -29,6 +28,7 @@ const (
 type printer struct {
 	w          *tabwriter.Writer
 	depth      int // indent depth
+	exprDepth  int
 	formfeed   bool
 	stmtEnd    bool
 	lastPos    position.Position
@@ -171,27 +171,33 @@ func (p *printer) printStmt(stmt ast.Stmt) {
 	}
 
 	p.stmtEnd = true
+	p.exprDepth = 0
 }
 
 func (p *printer) printLocalAssignStmt(stmt *ast.LocalAssignStmt) {
-	p.print(stmt.Local, "local", noExpr|insertSemi)
+	p.print(stmt.Local, "local", insertSemi)
+	p.exprDepth++
 	p.printNames(stmt.LHS, 0)
 	if stmt.Equal.IsValid() {
 		p.print(stmt.Equal, "=", 0)
 		p.printExprs(stmt.RHS, noParen)
 	}
+	p.exprDepth--
 }
 
 func (p *printer) printLocalFuncStmt(stmt *ast.LocalFuncStmt) {
-	p.print(stmt.Local, "local", noExpr|insertSemi)
-	p.print(stmt.Func, "function", noExpr)
+	p.print(stmt.Local, "local", insertSemi)
+	p.print(stmt.Func, "function", 0)
+	p.exprDepth++
 	p.printName(stmt.Name, 0)
+	p.exprDepth--
 	p.printFuncBody(stmt.Body)
-	p.print(stmt.EndPos, "end", noExpr)
+	p.print(stmt.EndPos, "end", 0)
 }
 
 func (p *printer) printFuncStmt(stmt *ast.FuncStmt) {
-	p.print(stmt.Func, "function", noExpr|insertSemi)
+	p.print(stmt.Func, "function", insertSemi)
+	p.exprDepth++
 	if len(stmt.PathList) > 0 {
 		if len(stmt.PathList) == 1 {
 			path := stmt.PathList[0]
@@ -210,81 +216,97 @@ func (p *printer) printFuncStmt(stmt *ast.FuncStmt) {
 	} else {
 		p.printName(stmt.Name, 0)
 	}
+	p.exprDepth--
 	p.printFuncBody(stmt.Body)
-	p.print(stmt.EndPos, "end", noExpr)
+	p.print(stmt.EndPos, "end", 0)
 }
 
 func (p *printer) printLabelStmt(stmt *ast.LabelStmt) {
-	p.print(stmt.Label, "::", noExpr|insertSemi)
+	p.print(stmt.Label, "::", insertSemi)
+	p.exprDepth++
 	p.print(stmt.Name.Pos(), stmt.Name.Name, noBlank)
 	p.print(stmt.EndLabel, "::", noBlank)
+	p.exprDepth--
 }
 
 func (p *printer) printExprStmt(stmt *ast.ExprStmt) {
-	p.printCallExpr(stmt.X, noExpr|insertSemi)
+	p.printCallExpr(stmt.X, insertSemi)
 }
 
 func (p *printer) printAssignStmt(stmt *ast.AssignStmt) {
-	p.printExprs(stmt.LHS, noExpr|noParen|insertSemi)
+	p.printExprs(stmt.LHS, noParen|insertSemi)
+	p.exprDepth++
 	p.print(stmt.Equal, "=", 0)
 	p.printExprs(stmt.RHS, noParen)
+	p.exprDepth--
 }
 
 func (p *printer) printGotoStmt(stmt *ast.GotoStmt) {
-	p.print(stmt.Goto, "goto", noExpr|insertSemi)
+	p.print(stmt.Goto, "goto", insertSemi)
+	p.exprDepth++
 	p.printName(stmt.Label, 0)
+	p.exprDepth--
 }
 
 func (p *printer) printBreakStmt(stmt *ast.BreakStmt) {
-	p.print(stmt.Break, "break", noExpr|insertSemi)
+	p.print(stmt.Break, "break", insertSemi)
 }
 
 func (p *printer) printIfStmt(stmt *ast.IfStmt) {
-	p.print(stmt.If, "if", noExpr|insertSemi)
+	p.print(stmt.If, "if", insertSemi)
+	p.exprDepth++
 	p.printExpr(stmt.Cond, noParen)
-	p.print(stmt.Then, "then", noExpr)
+	p.exprDepth--
+	p.print(stmt.Then, "then", 0)
 	p.printBlock(stmt.Body)
 	for _, e := range stmt.ElseIfList {
-		p.print(e.If, "elseif", noExpr)
+		p.print(e.If, "elseif", 0)
+		p.exprDepth++
 		p.printExpr(e.Cond, noParen)
-		p.print(e.Then, "then", noExpr)
+		p.exprDepth--
+		p.print(e.Then, "then", 0)
 		p.printBlock(e.Body)
 	}
 	if stmt.ElseBody != nil {
-		p.print(stmt.Else, "else", noExpr)
+		p.print(stmt.Else, "else", 0)
 		p.printBlock(stmt.ElseBody)
 	}
-	p.print(stmt.EndPos, "end", noExpr)
+	p.print(stmt.EndPos, "end", 0)
 }
 
 func (p *printer) printDoStmt(stmt *ast.DoStmt) {
-	p.print(stmt.Do, "do", noExpr|insertSemi)
+	p.print(stmt.Do, "do", insertSemi)
 	p.printBlock(stmt.Body)
-	p.print(stmt.EndPos, "end", noExpr)
+	p.print(stmt.EndPos, "end", 0)
 }
 
 func (p *printer) printWhileStmt(stmt *ast.WhileStmt) {
-	p.print(stmt.While, "while", noExpr|insertSemi)
+	p.print(stmt.While, "while", insertSemi)
+	p.exprDepth++
 	p.printExpr(stmt.Cond, noParen)
-	p.print(stmt.Do, "do", noExpr)
+	p.exprDepth--
+	p.print(stmt.Do, "do", 0)
 	p.printBlock(stmt.Body)
-	p.print(stmt.EndPos, "end", noExpr)
+	p.print(stmt.EndPos, "end", 0)
 }
 
 func (p *printer) printRepeatStmt(stmt *ast.RepeatStmt) {
-	p.print(stmt.Repeat, "repeat", noExpr|insertSemi)
+	p.print(stmt.Repeat, "repeat", insertSemi)
 	p.printBlock(stmt.Body)
-	p.print(stmt.Until, "until", noExpr)
+	p.print(stmt.Until, "until", 0)
+	p.exprDepth++
 	p.printExpr(stmt.Cond, noParen)
+	p.exprDepth--
 }
 
 func (p *printer) printReturnStmt(stmt *ast.ReturnStmt) {
-	p.print(stmt.Return, "return", noExpr|insertSemi)
+	p.print(stmt.Return, "return", insertSemi)
 	p.printExprs(stmt.Results, noParen)
 }
 
 func (p *printer) printForStmt(stmt *ast.ForStmt) {
-	p.print(stmt.For, "for", noExpr|insertSemi)
+	p.print(stmt.For, "for", insertSemi)
+	p.exprDepth++
 	p.printName(stmt.Name, 0)
 	p.print(stmt.Equal, "=", 0)
 	p.printExpr(stmt.Start, noParen)
@@ -296,19 +318,22 @@ func (p *printer) printForStmt(stmt *ast.ForStmt) {
 	} else {
 		p.printExpr(stmt.Finish, noParen)
 	}
-	p.print(stmt.Do, "do", noExpr)
+	p.exprDepth--
+	p.print(stmt.Do, "do", 0)
 	p.printBlock(stmt.Body)
-	p.print(stmt.EndPos, "end", noExpr)
+	p.print(stmt.EndPos, "end", 0)
 }
 
 func (p *printer) printForEachStmt(stmt *ast.ForEachStmt) {
-	p.print(stmt.For, "for", noExpr|insertSemi)
+	p.print(stmt.For, "for", insertSemi)
+	p.exprDepth++
 	p.printNames(stmt.Names, 0)
-	p.print(stmt.In, "in", noExpr)
+	p.print(stmt.In, "in", 0)
 	p.printExprs(stmt.Exprs, noParen)
-	p.print(stmt.Do, "do", noExpr)
+	p.exprDepth--
+	p.print(stmt.Do, "do", 0)
 	p.printBlock(stmt.Body)
-	p.print(stmt.EndPos, "end", noExpr)
+	p.print(stmt.EndPos, "end", 0)
 }
 
 // Expression
@@ -376,21 +401,64 @@ func (p *printer) printBasicLit(expr *ast.BasicLit, mode mode) {
 }
 
 func (p *printer) printFuncLit(expr *ast.FuncLit, mode mode) {
+	onLine := expr.Func.Line-p.lastPos.Line == 0
+	if onLine {
+		p.exprDepth--
+	}
 	p.print(expr.Func, "function", mode)
 	p.printFuncBody(expr.Body)
 	p.print(expr.EndPos, "end", 0)
+	if onLine {
+		p.exprDepth++
+	}
 }
 
 func (p *printer) printTableLit(expr *ast.TableLit, mode mode) {
-	p.print(expr.Lbrace, "{", mode)
-	p.printExprs(expr.Fields, noBlank|noParen)
-	p.print(expr.Rbrace, "}", noBlank)
+	onLine := expr.Lbrace.Line-p.lastPos.Line == 0
+	if onLine {
+		p.exprDepth--
+	}
+	if expr.Lbrace.Line == expr.Rbrace.Line {
+		p.print(expr.Lbrace, "{", mode)
+		p.printExprs(expr.Fields, noBlank|noParen)
+		if expr.Rbrace.Line-p.lastPos.Line > 0 {
+			p.writeByte(',')
+		}
+		p.print(expr.Rbrace, "}", noBlank)
+	} else {
+		p.print(expr.Lbrace, "{", mode)
+		p.incIndent(expr.Lbrace)
+		p.printExprs(expr.Fields, noBlank|noParen)
+		if expr.Rbrace.Line-p.lastPos.Line > 0 {
+			p.writeByte(',')
+		}
+		p.decIndent(expr.Rbrace)
+		p.print(expr.Rbrace, "}", noBlank)
+	}
+	if onLine {
+		p.exprDepth++
+	}
 }
 
 func (p *printer) printParenExpr(expr *ast.ParenExpr, mode mode) {
-	p.print(expr.Lparen, "(", mode)
-	p.printExpr(expr.X, noBlank|noParen|compact)
-	p.print(expr.Rparen, ")", noBlank)
+	onLine := expr.Lparen.Line-p.lastPos.Line == 0
+	if onLine {
+		p.exprDepth--
+	}
+	if expr.Lparen.Line == expr.Rparen.Line {
+		p.print(expr.Lparen, "(", mode)
+		p.printExpr(expr.X, noBlank|noParen|compact)
+		p.print(expr.Rparen, ")", noBlank)
+	} else {
+		p.print(expr.Lparen, "(", mode)
+		p.incIndent(expr.Lparen)
+		p.printExpr(expr.X, noBlank|noParen|compact)
+		p.decIndent(expr.Rparen)
+		p.print(expr.Rparen, ")", noBlank)
+	}
+	if onLine {
+		p.exprDepth++
+	}
 }
 
 func (p *printer) printSelectorExpr(expr *ast.SelectorExpr, mode mode) {
@@ -401,9 +469,25 @@ func (p *printer) printSelectorExpr(expr *ast.SelectorExpr, mode mode) {
 
 func (p *printer) printIndexExpr(expr *ast.IndexExpr, mode mode) {
 	p.printExpr(expr.X, mode)
-	p.print(expr.Lbrack, "[", noBlank)
-	p.printExpr(expr.Index, noBlank|noParen|compact)
-	p.print(expr.Rbrack, "]", noBlank)
+
+	onLine := expr.Lbrack.Line-p.lastPos.Line == 0
+	if onLine {
+		p.exprDepth--
+	}
+	if expr.Lbrack.Line == expr.Rbrack.Line {
+		p.print(expr.Lbrack, "[", noBlank)
+		p.printExpr(expr.Index, noBlank|noParen|compact)
+		p.print(expr.Rbrack, "]", noBlank)
+	} else {
+		p.print(expr.Lbrack, "[", noBlank)
+		p.incIndent(expr.Lbrack)
+		p.printExpr(expr.Index, noBlank|noParen|compact)
+		p.decIndent(expr.Rbrack)
+		p.print(expr.Rbrack, "]", noBlank)
+	}
+	if onLine {
+		p.exprDepth++
+	}
 }
 
 func (p *printer) printCallExpr(expr *ast.CallExpr, mode mode) {
@@ -413,10 +497,23 @@ func (p *printer) printCallExpr(expr *ast.CallExpr, mode mode) {
 		p.printName(expr.Name, noBlank)
 	}
 	if expr.Lparen != position.NoPos {
-		p.print(expr.Lparen, "(", noBlank)
-		p.printExprs(expr.Args, noBlank|noParen)
-		if expr.Rparen != position.NoPos {
+		onLine := expr.Lparen.Line-p.lastPos.Line == 0
+		if onLine {
+			p.exprDepth--
+		}
+		if expr.Lparen.Line == expr.Rparen.Line {
+			p.print(expr.Lparen, "(", noBlank)
+			p.printExprs(expr.Args, noBlank|noParen)
 			p.print(expr.Rparen, ")", noBlank)
+		} else {
+			p.print(expr.Lparen, "(", noBlank)
+			p.incIndent(expr.Lparen)
+			p.printExprs(expr.Args, noBlank|noParen)
+			p.decIndent(expr.Rparen)
+			p.print(expr.Rparen, ")", noBlank)
+		}
+		if onLine {
+			p.exprDepth++
 		}
 	} else {
 		p.printExprs(expr.Args, noParen)
@@ -516,15 +613,35 @@ func (p *printer) printBinaryExpr(expr *ast.BinaryExpr, prec1 int, mode mode) {
 
 func (p *printer) printKeyValueExpr(expr *ast.KeyValueExpr, mode mode) {
 	if expr.Lbrack != position.NoPos {
-		p.print(expr.Lbrack, "[", mode)
-		p.printExpr(expr.Key, noBlank|noParen|compact)
-		p.print(expr.Rbrack, "]", noBlank)
+		onLine := expr.Lbrack.Line-p.lastPos.Line == 0
+		if onLine {
+			p.exprDepth--
+		}
+		if expr.Lbrack.Line == expr.Rbrack.Line {
+			p.print(expr.Lbrack, "[", mode)
+			p.printExpr(expr.Key, noBlank|noParen|compact)
+			p.print(expr.Rbrack, "]", noBlank)
+		} else {
+			p.print(expr.Lbrack, "[", mode)
+			p.incIndent(expr.Lbrack)
+			p.printExpr(expr.Key, noBlank|noParen|compact)
+			p.decIndent(expr.Rbrack)
+			p.print(expr.Rbrack, "]", noBlank)
+		}
+		if onLine {
+			p.exprDepth++
+		}
+
+		p.exprDepth++
 		p.print(expr.Equal, "=", 0)
 		p.printExpr(expr.Value, noParen)
+		p.exprDepth--
 	} else {
 		p.printExpr(expr.Key, mode)
+		p.exprDepth++
 		p.print(expr.Equal, "=", 0)
 		p.printExpr(expr.Value, noParen)
+		p.exprDepth--
 	}
 }
 
@@ -563,33 +680,44 @@ func (p *printer) printFuncBody(body *ast.FuncBody) {
 }
 
 func (p *printer) printParams(params *ast.ParamList) {
-	p.print(params.Lparen, "(", noBlank)
-	p.printNames(params.List, noBlank)
-	if params.Ellipsis != position.NoPos {
-		if len(params.List) > 0 {
-			p.print(p.lastPos, ",", noBlank)
-		}
-		p.print(params.Ellipsis, "...", 0)
+	onLine := params.Lparen.Line-p.lastPos.Line == 0
+	if onLine {
+		p.exprDepth--
 	}
-	p.print(params.Rparen, ")", noBlank)
+	if params.Lparen.Line == params.Rparen.Line {
+		p.print(params.Lparen, "(", noBlank)
+		p.printNames(params.List, noBlank)
+		if params.Ellipsis != position.NoPos {
+			if len(params.List) > 0 {
+				p.print(p.lastPos, ",", noBlank)
+			}
+			p.print(params.Ellipsis, "...", 0)
+		}
+		p.print(params.Rparen, ")", noBlank)
+	} else {
+		p.print(params.Lparen, "(", noBlank)
+		p.incIndent(params.Lparen)
+		p.printNames(params.List, noBlank)
+		if params.Ellipsis != position.NoPos {
+			if len(params.List) > 0 {
+				p.print(p.lastPos, ",", noBlank)
+			}
+			p.print(params.Ellipsis, "...", 0)
+		}
+		p.decIndent(params.Rparen)
+		p.print(params.Rparen, ")", noBlank)
+	}
+	if onLine {
+		p.exprDepth++
+	}
 }
 
 func (p *printer) printBlock(block *ast.Block) {
-	p.insertComment(block.Opening)
-
-	p.formfeed = true
-
-	p.depth++
-
+	p.incIndent(block.Opening)
 	for _, stmt := range block.List {
 		p.printStmt(stmt)
 	}
-
-	p.insertComment(block.Closing)
-
-	p.depth--
-
-	p.formfeed = true
+	p.decIndent(block.Closing)
 }
 
 func (p *printer) printNames(names []*ast.Name, mode mode) {
@@ -616,6 +744,22 @@ func (p *printer) printExprs(exprs []ast.Expr, mode mode) {
 			p.printExpr(expr, noParen|compact)
 		}
 	}
+}
+
+func (p *printer) incIndent(pos position.Position) {
+	p.insertComment(pos)
+
+	p.formfeed = true
+
+	p.depth++
+}
+
+func (p *printer) decIndent(end position.Position) {
+	p.insertComment(end)
+
+	p.depth--
+
+	p.formfeed = true
 }
 
 func (p *printer) insertComment(pos position.Position) {
@@ -653,7 +797,7 @@ func (p *printer) insertComment(pos position.Position) {
 			p.writeString(strings.TrimRight(c.Text, "\t\n\v\f\r "))
 			p.writeByte(tabwriter.Escape)
 
-			p.lastPos = c.Pos()
+			p.lastPos = c.End()
 		}
 
 		p.nextComment()
@@ -684,7 +828,7 @@ func (p *printer) print(pos position.Position, s string, mode mode) {
 		if d > 1 {
 			p.writeByte('\f')
 		}
-		if mode&noExpr == 0 {
+		for i := 0; i < p.exprDepth; i++ {
 			p.writeString(indent)
 		}
 		for i := 0; i < p.depth; i++ {
@@ -703,7 +847,7 @@ func (p *printer) print(pos position.Position, s string, mode mode) {
 		p.writeString(s)
 	}
 
-	p.lastPos = pos
+	p.lastPos = pos.Offset(s)
 
 	p.stmtEnd = false
 }
