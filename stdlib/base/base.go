@@ -595,6 +595,9 @@ func tonumber(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 	}
 
 	if n, ok := object.ToNumber(val); ok {
+		if n == 0 { // for ErrRange
+			return []object.Value{object.Integer(0)}, nil
+		}
 		return []object.Value{n}, nil
 	}
 
