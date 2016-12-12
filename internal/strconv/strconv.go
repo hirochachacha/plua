@@ -199,6 +199,10 @@ func parseHexFloat(s string) (float64, error) {
 	if s[0] == '-' {
 		neg = true
 		s = s[1:]
+
+		if len(s) == 0 {
+			return 0, ErrSyntax
+		}
 	}
 
 	var integer string
