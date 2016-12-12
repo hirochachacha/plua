@@ -195,48 +195,55 @@ func parseHexFloat(s string) (float64, error) {
 	}
 
 	var neg bool
+
 	if s[0] == '-' {
-		s = s[1:]
 		neg = true
+		s = s[1:]
 	}
 
-	j := strings.IndexRune(s, '.')
-	if j != -1 {
-		var i int64
-		var err error
+	var integer string
+	var fraction string
+	var exponent string
 
-		if j != 0 {
-			i, err = strconv.ParseInt(s[:j], 16, 64)
-			if err != nil {
-				return 0, unwrap(err)
-			}
+	if j := strings.IndexRune(s, '.'); j != -1 {
+		integer = s[:j]
+		s = s[j+1:]
+		if k := strings.IndexAny(s, "pP"); k != -1 {
+			fraction = s[:k]
+			exponent = s[k+1:]
+		} else {
+			fraction = s
+		}
+	} else {
+		if k := strings.IndexAny(s, "pP"); k != -1 {
+			integer = s[:k]
+			exponent = s[k+1:]
+		} else {
+			integer = s
+		}
+	}
+
+	var f float64
+
+	if integer != "" {
+		i, err := strconv.ParseInt(integer, 16, 64)
+		if err != nil {
+			return 0, unwrap(err)
 		}
 
-		f := float64(i)
+		f = float64(i)
+	}
 
+	if fraction != "" {
 		coef := 16.0
 
 		var x int
-		for k, r := range s[j+1:] {
+		for _, r := range fraction {
 			if r >= utf8.RuneSelf {
 				return 0, ErrSyntax
 			}
 			x = digitVal(byte(r))
 			if x == 16 {
-				if r == 'p' || r == 'P' {
-					e, err := strconv.ParseInt(s[j+k+2:], 10, 64)
-					if err != nil {
-						return 0, unwrap(err)
-					}
-
-					f *= math.Pow(2, float64(e))
-
-					if neg {
-						f = -f
-					}
-
-					return f, nil
-				}
 				return 0, ErrSyntax
 			}
 
@@ -250,41 +257,16 @@ func parseHexFloat(s string) (float64, error) {
 
 			coef *= 16
 		}
-
-		if neg {
-			f = -f
-		}
-
-		return f, nil
 	}
 
-	k := strings.IndexAny(s, "pP")
-	if k != -1 {
-		i, err := strconv.ParseInt(s[:k], 16, 64)
+	if exponent != "" {
+		e, err := strconv.ParseInt(exponent, 10, 64)
 		if err != nil {
 			return 0, unwrap(err)
 		}
 
-		e, err := strconv.ParseInt(s[k+1:], 10, 64)
-		if err != nil {
-			return 0, unwrap(err)
-		}
-
-		f := float64(i) * math.Pow(2, float64(e))
-
-		if neg {
-			f = -f
-		}
-
-		return f, nil
+		f = f * math.Pow(2, float64(e))
 	}
-
-	i, err := strconv.ParseInt(s, 16, 64)
-	if err != nil {
-		return 0, unwrap(err)
-	}
-
-	f := float64(i)
 
 	if neg {
 		f = -f
