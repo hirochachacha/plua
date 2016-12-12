@@ -501,31 +501,28 @@ func (g *generator) unquoteString(tok token.Token) string {
 	return us
 }
 
-func (g *generator) parseInteger(tok token.Token, negate bool) (ret object.Integer, inf int) {
+func (g *generator) parseInteger(tok token.Token, negate bool) (ret object.Integer, ok bool) {
 	if negate {
 		tok.Lit = "-" + tok.Lit
 	}
+
 	i, err := strconv.ParseInt(tok.Lit)
 	if err != nil {
 		if err != strconv.ErrRange {
 			g.error(tok.Pos, fmt.Errorf("failed to parse int %s, err: %v", tok.Lit, err))
 		}
 
-		// infinity
-		if i < 0 {
-			return 0, -1
-		}
-
-		return 0, 1
+		return 0, false
 	}
 
-	return object.Integer(i), 0
+	return object.Integer(i), true
 }
 
 func (g *generator) parseNumber(tok token.Token, negate bool) object.Number {
 	if negate {
 		tok.Lit = "-" + tok.Lit
 	}
+
 	f, err := strconv.ParseFloat(tok.Lit)
 	if err != nil {
 		if err != strconv.ErrRange {

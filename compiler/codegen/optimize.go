@@ -50,15 +50,10 @@ func (g *generator) foldBasic(expr *ast.BasicLit) (val object.Value, ok bool) {
 	case token.TRUE:
 		val = object.True
 	case token.INT:
-		i, inf := g.parseInteger(tok, false)
-		if inf != 0 {
-			if inf > 0 {
-				val = object.Infinity
-			} else {
-				val = object.Infinity
-			}
-		} else {
+		if i, ok := g.parseInteger(tok, false); ok {
 			val = i
+		} else {
+			val = g.parseNumber(tok, false)
 		}
 	case token.FLOAT:
 		val = g.parseNumber(tok, false)
@@ -92,15 +87,10 @@ func (g *generator) foldUnary(expr *ast.UnaryExpr) (val object.Value, ok bool) {
 			case token.INT:
 				var val object.Value
 
-				i, inf := g.parseInteger(tok, true)
-				if inf != 0 {
-					if inf > 0 {
-						val = object.Infinity
-					} else {
-						val = object.Infinity
-					}
-				} else {
+				if i, ok := g.parseInteger(tok, true); ok {
 					val = i
+				} else {
+					val = g.parseNumber(tok, true)
 				}
 
 				g.cfolds[expr] = val
