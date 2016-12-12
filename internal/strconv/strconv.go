@@ -207,6 +207,9 @@ func parseHexFloat(s string) (float64, error) {
 		if k := strings.IndexAny(s, "pP"); k != -1 {
 			fraction = s[:k]
 			exponent = s[k+1:]
+			if exponent == "" {
+				return 0, ErrSyntax
+			}
 		} else {
 			fraction = s
 		}
@@ -214,6 +217,9 @@ func parseHexFloat(s string) (float64, error) {
 		if k := strings.IndexAny(s, "pP"); k != -1 {
 			integer = s[:k]
 			exponent = s[k+1:]
+			if exponent == "" {
+				return 0, ErrSyntax
+			}
 		} else {
 			integer = s
 		}
