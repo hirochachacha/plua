@@ -233,7 +233,7 @@ func (g *generator) foldBinary(expr *ast.BinaryExpr) (val object.Value, ok bool)
 	case token.GT:
 		if x, ok := g.foldExpr(expr.X); ok {
 			if y, ok := g.foldExpr(expr.Y); ok {
-				if b := arith.GreaterThan(x, y); b != nil {
+				if b := arith.LessThan(y, x); b != nil {
 					val = b
 				}
 			}
@@ -241,7 +241,7 @@ func (g *generator) foldBinary(expr *ast.BinaryExpr) (val object.Value, ok bool)
 	case token.GE:
 		if x, ok := g.foldExpr(expr.X); ok {
 			if y, ok := g.foldExpr(expr.Y); ok {
-				if b := arith.GreaterThanOrEqualTo(x, y); b != nil {
+				if b := arith.LessThanOrEqualTo(y, x); b != nil {
 					val = b
 				}
 			}

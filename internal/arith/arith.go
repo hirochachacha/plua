@@ -49,6 +49,32 @@ func NotEqual(x, y object.Value) object.Value {
 	return !object.Boolean(object.Equal(x, y))
 }
 
+func ltIntNum(x object.Integer, y object.Number) bool {
+	if -1<<52 <= x && x <= 1<<52 {
+		return object.Number(x) < y
+	}
+	if y >= -object.Number(object.MinInteger) {
+		return true
+	}
+	if y > object.Number(object.MinInteger) {
+		return x < object.Integer(y)
+	}
+	return false
+}
+
+func leIntNum(x object.Integer, y object.Number) bool {
+	if -1<<52 <= x && x <= 1<<52 {
+		return object.Number(x) <= y
+	}
+	if y >= -object.Number(object.MinInteger) {
+		return true
+	}
+	if y >= object.Number(object.MinInteger) {
+		return x <= object.Integer(y)
+	}
+	return false
+}
+
 func LessThan(x, y object.Value) object.Value {
 	switch x := x.(type) {
 	case object.Integer:
@@ -56,12 +82,15 @@ func LessThan(x, y object.Value) object.Value {
 		case object.Integer:
 			return object.Boolean(x < y)
 		case object.Number:
-			return object.Boolean(object.Number(x) < y)
+			return object.Boolean(ltIntNum(x, y))
 		}
 	case object.Number:
 		switch y := y.(type) {
 		case object.Integer:
-			return object.Boolean(x < object.Number(y))
+			if math.IsNaN(float64(x)) {
+				return object.False
+			}
+			return object.Boolean(!leIntNum(y, x))
 		case object.Number:
 			return object.Boolean(x < y)
 		}
@@ -81,68 +110,21 @@ func LessThanOrEqualTo(x, y object.Value) object.Value {
 		case object.Integer:
 			return object.Boolean(x <= y)
 		case object.Number:
-			return object.Boolean(object.Number(x) <= y)
+			return object.Boolean(leIntNum(x, y))
 		}
 	case object.Number:
 		switch y := y.(type) {
 		case object.Integer:
-			return object.Boolean(x <= object.Number(y))
+			if math.IsNaN(float64(x)) {
+				return object.False
+			}
+			return object.Boolean(!ltIntNum(y, x))
 		case object.Number:
 			return object.Boolean(x <= y)
 		}
 	case object.String:
 		if y, ok := y.(object.String); ok {
 			return object.Boolean(x <= y)
-		}
-	}
-
-	return nil
-}
-
-func GreaterThan(x, y object.Value) object.Value {
-	switch x := x.(type) {
-	case object.Integer:
-		switch y := y.(type) {
-		case object.Integer:
-			return object.Boolean(x > y)
-		case object.Number:
-			return object.Boolean(object.Number(x) > y)
-		}
-	case object.Number:
-		switch y := y.(type) {
-		case object.Integer:
-			return object.Boolean(x > object.Number(y))
-		case object.Number:
-			return object.Boolean(x > y)
-		}
-	case object.String:
-		if y, ok := y.(object.String); ok {
-			return object.Boolean(x > y)
-		}
-	}
-
-	return nil
-}
-
-func GreaterThanOrEqualTo(x, y object.Value) object.Value {
-	switch x := x.(type) {
-	case object.Integer:
-		switch y := y.(type) {
-		case object.Integer:
-			return object.Boolean(x >= y)
-		case object.Number:
-			return object.Boolean(object.Number(x) >= y)
-		}
-	case object.Number:
-		switch y := y.(type) {
-		case object.Integer:
-			return object.Boolean(x >= object.Number(y))
-		case object.Number:
-			return object.Boolean(x >= y)
-		}
-	case object.String:
-		if y, ok := y.(object.String); ok {
-			return object.Boolean(x >= y)
 		}
 	}
 
