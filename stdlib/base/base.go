@@ -3,6 +3,8 @@ package base
 import (
 	"fmt"
 	"runtime"
+	"strconv"
+	"strings"
 
 	"github.com/hirochachacha/plua/compiler"
 	"github.com/hirochachacha/plua/internal/compiler_pool"
@@ -585,23 +587,46 @@ func setmetatable(th object.Thread, args ...object.Value) ([]object.Value, *obje
 func tonumber(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
-	val, err := ap.ToValue(0)
+	switch len(args) {
+	case 0, 1:
+		val, err := ap.ToValue(0)
+		if err != nil {
+			return nil, err
+		}
+
+		if i, ok := object.ToInteger(val); ok {
+			return []object.Value{i}, nil
+		}
+
+		if n, ok := object.ToNumber(val); ok {
+			if n == 0 { // for ErrRange
+				return []object.Value{object.Integer(0)}, nil
+			}
+			return []object.Value{n}, nil
+		}
+
+		return []object.Value{nil}, nil
+	}
+
+	base, err := ap.OptGoInt(1, 10)
 	if err != nil {
 		return nil, err
 	}
 
-	if i, ok := object.ToInteger(val); ok {
-		return []object.Value{i}, nil
+	if base < 2 || base > 36 {
+		return nil, ap.ArgError(1, "base out of range")
 	}
 
-	if n, ok := object.ToNumber(val); ok {
-		if n == 0 { // for ErrRange
-			return []object.Value{object.Integer(0)}, nil
-		}
-		return []object.Value{n}, nil
+	s, err := ap.ToGoString(0)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, nil
+	if i, err := strconv.ParseInt(strings.TrimSpace(s), base, 64); err == nil {
+		return []object.Value{object.Integer(i)}, nil
+	}
+
+	return []object.Value{nil}, nil
 }
 
 func tostring(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
