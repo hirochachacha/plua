@@ -384,7 +384,7 @@ func (g *generator) proto(f *ast.FuncBody, self bool, endLine int) (p int) {
 }
 
 func (g *generator) markRK(k int, next bool) (rk int) {
-	if k > opcode.MaxRKindex {
+	if k > opcode.MaxRKIndex {
 		if k > opcode.MaxBx {
 			g.pushInst(opcode.ABx(opcode.LOADKX, g.sp, 0))
 			g.pushInst(opcode.Ax(opcode.EXTRAARG, k))

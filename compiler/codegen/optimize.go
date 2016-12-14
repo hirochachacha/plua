@@ -920,7 +920,7 @@ func (g *generator) peepLine(i opcode.Instruction, line int) {
 					a0 := i0.A()
 					bx0 := i0.Bx()
 
-					if bx0 <= opcode.MaxBx && a0 == c {
+					if bx0 <= opcode.MaxRKIndex && a0 == c {
 						a := i.A()
 						b := i.B()
 
@@ -967,7 +967,7 @@ func (g *generator) peepLine(i opcode.Instruction, line int) {
 					a0 := i0.A()
 					bx0 := i0.Bx()
 
-					if bx0 <= opcode.MaxBx && a0 == c {
+					if bx0 <= opcode.MaxRKIndex && a0 == c {
 						a := i.A()
 						b := i.B()
 

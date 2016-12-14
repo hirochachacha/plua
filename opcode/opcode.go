@@ -23,7 +23,7 @@ const (
 	MaxAx  = (1 << SizeAx) - 1
 
 	BitRK      = 256
-	MaxRKindex = BitRK - 1
+	MaxRKIndex = BitRK - 1
 )
 
 type Instruction uint32
