@@ -511,6 +511,14 @@ func rawset(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
+	if key == nil {
+		return nil, errors.ErrNilIndex
+	}
+
+	if object.IsNaN(key) {
+		return nil, errors.ErrNaNIndex
+	}
+
 	val, err := ap.ToValue(2)
 	if err != nil {
 		return nil, err
