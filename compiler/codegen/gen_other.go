@@ -270,7 +270,7 @@ func (g *generator) genConst(val object.Value, typ genType) (rk int) {
 	k := g.constant(val)
 
 	if typ&genK != 0 {
-		return g.markRK(k)
+		return g.markRK(k, true)
 	}
 
 	if k > opcode.MaxBx {
@@ -293,7 +293,7 @@ func (g *generator) genSetGlobal(name *ast.Name, r int) {
 		panic("unexpected")
 	}
 
-	rk := g.markRK(g.constant(object.String(name.Name)))
+	rk := g.markRK(g.constant(object.String(name.Name)), false)
 
 	switch env.kind {
 	case linkLocal:
@@ -311,7 +311,7 @@ func (g *generator) genGetGlobal(name *ast.Name) (r int) {
 		panic("unexpected")
 	}
 
-	rk := g.markRK(g.constant(object.String(name.Name)))
+	rk := g.markRK(g.constant(object.String(name.Name)), false)
 
 	switch env.kind {
 	case linkLocal:

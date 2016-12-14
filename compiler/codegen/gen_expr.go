@@ -135,7 +135,7 @@ func (g *generator) genName(expr *ast.Name, typ genType) (rk int) {
 	g.tokLine = expr.Pos().Line
 
 	if typ&genKey != 0 {
-		return g.markRK(g.constant(object.String(expr.Name)))
+		return g.markRK(g.constant(object.String(expr.Name)), true)
 	}
 
 	l, ok := g.resolveName(expr)

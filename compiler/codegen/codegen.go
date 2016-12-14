@@ -383,7 +383,7 @@ func (g *generator) proto(f *ast.FuncBody, self bool, endLine int) (p int) {
 	return len(g.Protos) - 1
 }
 
-func (g *generator) markRK(k int) (rk int) {
+func (g *generator) markRK(k int, next bool) (rk int) {
 	if k > opcode.MaxRKindex {
 		if k > opcode.MaxBx {
 			g.pushInst(opcode.ABx(opcode.LOADKX, g.sp, 0))
@@ -394,9 +394,11 @@ func (g *generator) markRK(k int) (rk int) {
 
 		rk = g.sp
 
-		g.nextSP()
+		if next {
+			g.nextSP()
+		}
 
-		return
+		return rk
 	}
 
 	return k | opcode.BitRK

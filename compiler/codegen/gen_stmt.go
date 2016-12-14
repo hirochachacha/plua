@@ -293,9 +293,9 @@ func (g *generator) genAssign(LHS []ast.Expr, base int) {
 					panic("unreachable")
 				}
 			} else {
-				rk := g.markRK(g.constant(object.String(lhs.Name)))
-
 				env := g.genName(tmpName(version.LUA_ENV), genR|genMove)
+
+				rk := g.markRK(g.constant(object.String(lhs.Name)), false)
 
 				assigns[i] = opcode.ABC(opcode.SETTABLE, env, rk, r)
 			}
