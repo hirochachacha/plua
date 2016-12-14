@@ -234,7 +234,7 @@ func Mod(x, y object.Value) (object.Value, bool) {
 
 			rem := x % y
 
-			if rem < 0 {
+			if x^y < 0 && rem != 0 {
 				rem += y
 			}
 
@@ -242,15 +242,15 @@ func Mod(x, y object.Value) (object.Value, bool) {
 		}
 	}
 
-	if x, ok := object.ToNumber(x); ok {
-		if y, ok := object.ToNumber(y); ok {
-			rem := object.Number(math.Mod(float64(x), float64(y)))
+	if xf, ok := object.ToGoFloat64(x); ok {
+		if yf, ok := object.ToGoFloat64(y); ok {
+			rem := math.Mod(xf, yf)
 
-			if rem < 0 {
-				rem += y
+			if math.Signbit(xf) != math.Signbit(yf) && rem != 0 {
+				rem += yf
 			}
 
-			return rem, true
+			return object.Number(rem), true
 		}
 	}
 
