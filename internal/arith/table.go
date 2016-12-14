@@ -46,7 +46,7 @@ func CallSettable(th object.Thread, t, key, val object.Value) *object.RuntimeErr
 					return errors.ErrNilIndex
 				}
 
-				if key == object.NaN {
+				if object.IsNaN(key) {
 					return errors.ErrNaNIndex
 				}
 
