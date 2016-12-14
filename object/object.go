@@ -1,6 +1,7 @@
 package object
 
 import (
+	"math"
 	"reflect"
 
 	"github.com/hirochachacha/plua/internal/limits"
@@ -127,4 +128,11 @@ func ToGoString(val Value) (string, bool) {
 
 func ToGoBool(val Value) bool {
 	return bool(ToBoolean(val))
+}
+
+func IsNaN(val Value) bool {
+	if val, ok := val.(Number); ok {
+		return math.IsNaN(float64(val))
+	}
+	return false
 }
