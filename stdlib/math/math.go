@@ -4,6 +4,7 @@ import (
 	"math"
 	"math/rand"
 
+	"github.com/hirochachacha/plua/internal/arith"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/object/fnutil"
 )
@@ -52,23 +53,40 @@ func asin(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 func atan(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
-	f, err := ap.ToGoFloat64(0)
+	y, err := ap.ToGoFloat64(0)
 	if err != nil {
 		return nil, err
 	}
 
-	return []object.Value{object.Number(math.Atan(f))}, nil
+	x, err := ap.OptGoFloat64(1, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	return []object.Value{object.Number(math.Atan2(y, x))}, nil
 }
 
 func ceil(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
+	if i, err := ap.ToInteger(0); err == nil {
+		return []object.Value{i}, nil
+	}
+
 	f, err := ap.ToGoFloat64(0)
 	if err != nil {
 		return nil, err
 	}
 
-	return []object.Value{object.Number(math.Ceil(f))}, nil
+	f = math.Ceil(f)
+
+	fval := object.Number(f)
+
+	if ival, ok := object.ToInteger(fval); ok {
+		return []object.Value{ival}, nil
+	}
+
+	return []object.Value{fval}, nil
 }
 
 func cos(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -107,16 +125,44 @@ func exp(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 func floor(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
+	if i, err := ap.ToInteger(0); err == nil {
+		return []object.Value{i}, nil
+	}
+
 	f, err := ap.ToGoFloat64(0)
 	if err != nil {
 		return nil, err
 	}
 
-	return []object.Value{object.Number(math.Floor(f))}, nil
+	f = math.Floor(f)
+
+	fval := object.Number(f)
+
+	if ival, ok := object.ToInteger(fval); ok {
+		return []object.Value{ival}, nil
+	}
+
+	return []object.Value{fval}, nil
 }
 
 func fmod(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
+
+	if len(args) >= 2 {
+		if x, ok := args[0].(object.Integer); ok {
+			if y, ok := args[1].(object.Integer); ok {
+				if y == 0 {
+					return nil, ap.ArgError(1, "zero")
+				}
+
+				if x == object.MinInteger && y == -1 {
+					return []object.Value{object.Integer(0)}, nil
+				}
+
+				return []object.Value{x % y}, nil
+			}
+		}
+	}
 
 	x, err := ap.ToGoFloat64(0)
 	if err != nil {
@@ -162,30 +208,18 @@ func log(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 func max(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
-	maxi := 0
-
-	max, err := ap.ToNumber(0)
+	max, err := ap.ToValue(0)
 	if err != nil {
 		return nil, err
 	}
 
-	for i := range args[1:] {
-		f, err := ap.ToNumber(i + 1)
+	for _, arg := range args[1:] {
+		b, err := arith.CallLessThan(th, false, max, arg)
 		if err != nil {
 			return nil, err
 		}
-
-		if max < f {
-			maxi = i + 1
-			max = f
-		}
-	}
-
-	maxv := args[maxi]
-
-	if _, ok := maxv.(object.Number); !ok {
-		if i, ok := object.ToInteger(maxv); ok {
-			return []object.Value{i}, nil
+		if b {
+			max = arg
 		}
 	}
 
@@ -195,30 +229,18 @@ func max(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 func min(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
-	mini := 0
-
-	min, err := ap.ToNumber(0)
+	min, err := ap.ToValue(0)
 	if err != nil {
 		return nil, err
 	}
 
-	for i := range args[1:] {
-		f, err := ap.ToNumber(i + 1)
+	for _, arg := range args[1:] {
+		b, err := arith.CallLessThan(th, false, arg, min)
 		if err != nil {
 			return nil, err
 		}
-
-		if min > f {
-			mini = i + 1
-			min = f
-		}
-	}
-
-	minv := args[mini]
-
-	if _, ok := minv.(object.Number); !ok {
-		if i, ok := object.ToInteger(minv); ok {
-			return []object.Value{i}, nil
+		if b {
+			min = arg
 		}
 	}
 
@@ -263,38 +285,49 @@ func rad(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 func random(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
+	r := rand.Float64()
+
 	switch len(args) {
 	case 0:
-		return []object.Value{object.Number(rand.Float64())}, nil
+		return []object.Value{object.Number(r)}, nil
 	case 1:
-		m := int64(1)
+		m := object.Integer(1)
 
-		n, err := ap.ToGoInt64(0)
+		n, err := ap.ToInteger(0)
 		if err != nil {
 			return nil, err
 		}
 
-		if n < m {
+		if m > n {
 			return nil, ap.ArgError(1, "interval is empty")
 		}
 
-		return []object.Value{object.Integer(rand.Int63n(n-m) + m)}, nil
+		r *= float64(n-m) + 1.0
+
+		return []object.Value{object.Integer(r) + m}, nil
+	case 2:
+		m, err := ap.ToInteger(0)
+		if err != nil {
+			return nil, err
+		}
+
+		n, err := ap.ToInteger(1)
+		if err != nil {
+			return nil, err
+		}
+
+		if m > n {
+			return nil, ap.ArgError(1, "interval is empty")
+		}
+		if m < 0 && n > math.MaxInt64+m {
+			return nil, ap.ArgError(1, "interval too large")
+		}
+
+		r *= float64(n-m) + 1.0
+
+		return []object.Value{object.Integer(r) + m}, nil
 	default:
-		m, err := ap.ToGoInt64(0)
-		if err != nil {
-			return nil, err
-		}
-
-		n, err := ap.ToGoInt64(1)
-		if err != nil {
-			return nil, err
-		}
-
-		if n < m {
-			return nil, ap.ArgError(1, "interval is empty")
-		}
-
-		return []object.Value{object.Integer(rand.Int63n(n-m) + m)}, nil
+		return nil, object.NewRuntimeError("wrong number of arguments")
 	}
 }
 
@@ -399,7 +432,7 @@ func ult(th object.Thread, args ...object.Value) ([]object.Value, *object.Runtim
 func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	m := th.NewTableSize(0, 27)
 
-	m.Set(object.String("huge"), object.Infinity)
+	m.Set(object.String("huge"), object.Number(math.Inf(1)))
 	m.Set(object.String("pi"), object.Number(math.Pi))
 	m.Set(object.String("mininteger"), object.MinInteger)
 	m.Set(object.String("maxinteger"), object.MaxInteger)
