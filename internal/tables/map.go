@@ -85,7 +85,7 @@ func (m *luaMap) Delete(key object.Value) {
 	var i int
 	var elem, prev *bucket
 
-	i, elem = m.findBucket(index, sum, key, &prev)
+	i, elem = m.findBucket(index, sum, key, prev)
 	if elem == nil {
 		return
 	}
@@ -185,9 +185,7 @@ func (m *luaMap) insertBucket(index int, key object.Value) (elem *bucket) {
 	return
 }
 
-func (m *luaMap) findBucket(index int, sum uint64, key object.Value, prev **bucket) (i int, elem *bucket) {
-	var _prev *bucket
-
+func (m *luaMap) findBucket(index int, sum uint64, key object.Value, prev *bucket) (i int, elem *bucket) {
 	elem = &m.buckets[index]
 
 	for elem != nil {
@@ -195,12 +193,8 @@ func (m *luaMap) findBucket(index int, sum uint64, key object.Value, prev **buck
 			break
 		}
 
-		_prev = elem
+		prev = elem
 		elem = elem.next
-	}
-
-	if prev != nil {
-		*prev = _prev
 	}
 
 	return
