@@ -153,18 +153,19 @@ func (m *concurrentMap) Delete(key object.Value) {
 
 func (m *concurrentMap) Next(key object.Value) (nkey, nval object.Value, ok bool) {
 	if key == nil {
+		m.lastKey = nil
+
 		ok = true
 
-		m.nextSegmentIndex = len(m.segments) - 1
 		m.nextIndex = -1
+		m.nextSegmentIndex = len(m.segments) - 1
+		m.nextBucket = nil
+		m.nextBuckets = nil
 
 		m.advance()
 
 		bucket := m.nextBucket
-
 		if bucket == nil {
-			m.lastKey = nil
-
 			return
 		}
 
@@ -172,20 +173,19 @@ func (m *concurrentMap) Next(key object.Value) (nkey, nval object.Value, ok bool
 		nval = *(*object.Value)(atomic.LoadPointer(&bucket.val))
 
 		m.lastKey = nkey
-
-		m.advance()
 
 		return
 	}
 
 	if key == m.lastKey {
+		m.lastKey = nil
+
 		ok = true
 
+		m.advance()
+
 		bucket := m.nextBucket
-
 		if bucket == nil {
-			m.lastKey = nil
-
 			return
 		}
 
@@ -194,10 +194,10 @@ func (m *concurrentMap) Next(key object.Value) (nkey, nval object.Value, ok bool
 
 		m.lastKey = nkey
 
-		m.advance()
-
 		return
 	}
+
+	m.lastKey = nil
 
 	sum := m.sum(key)
 	sindex := sum >> segmentShift
@@ -211,27 +211,21 @@ func (m *concurrentMap) Next(key object.Value) (nkey, nval object.Value, ok bool
 			if elem.sum == sum && object.Equal(elem.key, key) {
 				ok = true
 
-				m.nextIndex = int(index)
-				m.nextSegmentIndex = int(sindex)
+				m.nextIndex = int(index) - 1
+				m.nextSegmentIndex = int(sindex) - 1
 				m.nextBucket = elem
 				m.nextBuckets = buckets
 
 				m.advance()
 
 				bucket := m.nextBucket
-
 				if bucket == nil {
-					m.lastKey = nil
-
 					return
 				}
 
 				nkey = bucket.key
 				nval = *(*object.Value)(atomic.LoadPointer(&bucket.val))
-				ok = true
 				m.lastKey = nkey
-
-				m.advance()
 
 				return
 			}
@@ -271,8 +265,10 @@ func (m *concurrentMap) advance() {
 			m.nextBuckets = *(*[]unsafe.Pointer)(atomic.LoadPointer(&segment.buckets))
 			for j := len(m.nextBuckets) - 1; j >= 0; j-- {
 				m.nextBucket = (*sbucket)(atomic.LoadPointer(&m.nextBuckets[j]))
+
+				m.nextIndex = j - 1
+
 				if m.nextBucket != nil {
-					m.nextIndex = j - 1
 					return
 				}
 			}
