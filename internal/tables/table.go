@@ -159,15 +159,16 @@ func (t *table) next(key object.Value) (nkey, nval object.Value, ok bool) {
 	}
 
 	if ikey, ok := t.ikey(key); ok {
-		i := int(ikey)
-		for ; i < len(t.a); i++ {
-			v := t.a[i]
-			if v != nil {
-				return object.Integer(i + 1), t.a[i], true
+		if i := int(ikey); i >= 0 {
+			for ; i < len(t.a); i++ {
+				v := t.a[i]
+				if v != nil {
+					return object.Integer(i + 1), t.a[i], true
+				}
 			}
-		}
-		if i == len(t.a) {
-			return t.m.Next(nil)
+			if i == len(t.a) {
+				return t.m.Next(nil)
+			}
 		}
 	}
 
