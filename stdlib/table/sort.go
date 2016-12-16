@@ -2,6 +2,7 @@ package table
 
 import (
 	"github.com/hirochachacha/plua/internal/arith"
+	"github.com/hirochachacha/plua/internal/limits"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/object/fnutil"
 )
@@ -14,16 +15,25 @@ func sort(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		return nil, err
 	}
 
-	var cmp object.Value
+	var lt object.Value
 
-	if _, ok := ap.Get(1); ok {
-		cmp, err = ap.ToFunction(1)
+	if len(args) > 1 {
+		lt, err = ap.ToTypes(1, object.TFUNCTION, object.TNIL)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	err = doSort(th, t, cmp)
+	tlen, err := callLen(th, t)
+	if err != nil {
+		return nil, err
+	}
+
+	if tlen >= int(limits.MaxInt) {
+		return nil, ap.ArgError(0, "array too big")
+	}
+
+	err = quickSort(th, t, lt, 1, tlen)
 	if err != nil {
 		return nil, err
 	}
@@ -31,29 +41,17 @@ func sort(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	return nil, nil
 }
 
-func doSort(th object.Thread, t object.Table, cmp object.Value) *object.RuntimeError {
-	tlen, err := callLen(th, t)
-	if err != nil {
-		return err
-	}
-	err = quickSort(th, t, cmp, 1, tlen)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func quickSort(th object.Thread, t object.Table, cmp object.Value, lo, hi int) *object.RuntimeError {
+func quickSort(th object.Thread, t object.Table, lt object.Value, lo, hi int) *object.RuntimeError {
 	if lo < hi {
-		p, err := partition(th, t, cmp, lo, hi)
+		p, err := partition(th, t, lt, lo, hi)
 		if err != nil {
 			return err
 		}
-		err = quickSort(th, t, cmp, lo, p)
+		err = quickSort(th, t, lt, lo, p)
 		if err != nil {
 			return err
 		}
-		err = quickSort(th, t, cmp, p+1, hi)
+		err = quickSort(th, t, lt, p+1, hi)
 		if err != nil {
 			return err
 		}
@@ -61,7 +59,7 @@ func quickSort(th object.Thread, t object.Table, cmp object.Value, lo, hi int) *
 	return nil
 }
 
-func partition(th object.Thread, t object.Table, cmp object.Value, lo, hi int) (int, *object.RuntimeError) {
+func partition(th object.Thread, t object.Table, lt object.Value, lo, hi int) (int, *object.RuntimeError) {
 	pivot, err := arith.CallGettable(th, t, object.Integer(lo))
 	if err != nil {
 		return 0, err
@@ -79,12 +77,15 @@ func partition(th object.Thread, t object.Table, cmp object.Value, lo, hi int) (
 			if err != nil {
 				return 0, err
 			}
-			b, err := docmp(th, cmp, xi, pivot)
+			b, err := callLessThan(th, lt, xi, pivot)
 			if err != nil {
 				return 0, err
 			}
 			if !b {
 				break
+			}
+			if i == hi {
+				return 0, object.NewRuntimeError("invalid order function for sorting")
 			}
 		}
 		for {
@@ -93,25 +94,28 @@ func partition(th object.Thread, t object.Table, cmp object.Value, lo, hi int) (
 			if err != nil {
 				return 0, err
 			}
-			b, err := docmp(th, cmp, pivot, xj)
+			b, err := callLessThan(th, lt, pivot, xj)
 			if err != nil {
 				return 0, err
 			}
 			if !b {
 				break
 			}
+			if j < i {
+				return 0, object.NewRuntimeError("invalid order function for sorting")
+			}
 		}
 		if i >= j {
 			return j, nil
 		}
-		err = doswap(th, t, i, j)
+		err = tabSwap(th, t, i, j)
 		if err != nil {
 			return 0, err
 		}
 	}
 }
 
-func doswap(th object.Thread, t object.Table, i, j int) *object.RuntimeError {
+func tabSwap(th object.Thread, t object.Table, i, j int) *object.RuntimeError {
 	x, err := arith.CallGettable(th, t, object.Integer(i))
 	if err != nil {
 		return err
@@ -131,8 +135,8 @@ func doswap(th object.Thread, t object.Table, i, j int) *object.RuntimeError {
 	return nil
 }
 
-func docmp(th object.Thread, cmp, x, y object.Value) (bool, *object.RuntimeError) {
-	if cmp == nil {
+func callLessThan(th object.Thread, lt, x, y object.Value) (bool, *object.RuntimeError) {
+	if lt == nil {
 		b, err := arith.CallLessThan(th, false, x, y)
 		if err != nil {
 			return false, err
@@ -141,7 +145,7 @@ func docmp(th object.Thread, cmp, x, y object.Value) (bool, *object.RuntimeError
 		return b, nil
 	}
 
-	rets, err := th.Call(cmp, nil, x, y)
+	rets, err := th.Call(lt, nil, x, y)
 	if err != nil {
 		return false, err
 	}
