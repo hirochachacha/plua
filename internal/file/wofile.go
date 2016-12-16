@@ -3,6 +3,7 @@ package file
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"os"
 	"strings"
 )
@@ -12,6 +13,7 @@ type wofile struct {
 	mode   int
 	w      *bufio.Writer
 	closed bool
+	std    bool
 }
 
 func (wo *wofile) IsClosed() bool {
@@ -19,6 +21,10 @@ func (wo *wofile) IsClosed() bool {
 }
 
 func (wo *wofile) Close() error {
+	if wo.std {
+		return errors.New("cannot close standard file")
+	}
+
 	err := wo.File.Close()
 
 	wo.closed = true

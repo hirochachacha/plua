@@ -1,8 +1,11 @@
-package strconv
+package io
 
 import (
 	"io"
 	"strings"
+
+	"github.com/hirochachacha/plua/internal/strconv"
+	"github.com/hirochachacha/plua/object"
 )
 
 type scanner struct {
@@ -13,13 +16,19 @@ type scanner struct {
 }
 
 func newScanner(sc io.ByteScanner) *scanner {
-	return &scanner{
+	s := &scanner{
 		sc: sc,
 	}
+
+	s.next()
+
+	return s
 }
 
 func (s *scanner) next() {
-	s.c, s.err = s.sc.ReadByte()
+	if s.err == nil {
+		s.c, s.err = s.sc.ReadByte()
+	}
 }
 
 func (s *scanner) accept() {
@@ -107,96 +116,69 @@ func (s *scanner) acceptHexDigits() {
 	s.acceptUntil(isXdigit)
 }
 
-func (s *scanner) scanUint() (uint64, error) {
-	neg, _ := s.acceptSign()
-	if neg {
-		return 0, ErrSyntax
-	}
+func (s *scanner) scanNumber() (object.Value, error) {
+	s.skipSpace()
+
+	s.acceptSign()
 
 	base, zero, _ := s.acceptBase()
 	if zero {
-		return 0, nil
-	}
-
-	if s.err != nil {
-		return 0, s.err
+		return object.Integer(0), nil
 	}
 
 	if base == 16 {
 		s.acceptHexDigits()
+		if s.acceptByte('.') {
+			s.acceptHexDigits()
+		}
+		if s.accepts("pP") {
+			s.acceptSign()
+			s.acceptDigits()
+		} else if s.accepts("eE") {
+			s.acceptSign()
+			s.acceptDigits()
+		}
 	} else {
 		s.acceptDigits()
+		if s.acceptByte('.') {
+			s.acceptDigits()
+		}
+		if s.accepts("eE") {
+			s.acceptSign()
+			s.acceptDigits()
+		}
 	}
 
-	if s.err != nil && s.err != io.EOF {
-		return 0, s.err
+	if s.err != nil {
+		return nil, s.err
 	}
 
-	err := s.sc.UnreadByte()
+	if err := s.sc.UnreadByte(); err != nil {
+		return nil, err
+	}
+
+	str := string(s.buf)
+
+	if i, err := strconv.ParseInt(str); err == nil {
+		return object.Integer(i), err
+	}
+
+	f, err := strconv.ParseFloat(str)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	return ParseUint(string(s.buf))
+	return object.Number(f), nil
 }
 
-func (s *scanner) scanInt() (int64, error) {
-	s.skipSpace()
-
-	s.acceptSign()
-
-	base, zero, _ := s.acceptBase()
-	if zero {
-		return 0, nil
-	}
-
-	if s.err != nil {
-		return 0, s.err
-	}
-
-	if base == 16 {
-		s.acceptHexDigits()
-	} else {
-		s.acceptDigits()
-	}
-
-	if s.err != nil && s.err != io.EOF {
-		return 0, s.err
-	}
-
-	return ParseInt(string(s.buf))
+func isXdigit(c byte) bool {
+	return uint(c)-'0' < 10 || (uint(c)|32)-'a' < 6
 }
 
-func (s *scanner) scanFloat() (float64, error) {
-	s.skipSpace()
+func isSpace(c byte) bool {
+	return c == ' ' || uint(c)-'\t' < 5
+}
 
-	s.acceptSign()
-
-	base, zero, _ := s.acceptBase()
-	if zero {
-		return 0, nil
-	}
-
-	if s.err != nil {
-		return 0, s.err
-	}
-
-	if base == 16 {
-		s.acceptHexDigits()
-		s.acceptByte('.')
-		s.acceptHexDigits()
-		s.accepts("pP")
-		s.acceptSign()
-		s.acceptDigits()
-	} else {
-		s.acceptDigits()
-		s.acceptByte('.')
-		s.acceptDigits()
-	}
-
-	if s.err != nil && s.err != io.EOF {
-		return 0, s.err
-	}
-
-	return ParseFloat(string(s.buf))
+func isDigit(c byte) bool {
+	return uint(c)-'0' < 10
 }

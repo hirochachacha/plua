@@ -25,37 +25,40 @@ type File interface {
 	Setvbuf(mode int, size int) (err error)
 }
 
-func newFile(f *os.File) File {
+func newFile(f *os.File, std bool) File {
 	return &file{
 		File:  f,
 		state: seek,
 		r:     bufio.NewReader(f),
 		w:     bufio.NewWriter(f),
+		std:   std,
 	}
 }
 
-func newReadOnlyFile(f *os.File) File {
+func newReadOnlyFile(f *os.File, std bool) File {
 	return &rofile{
 		File: f,
 		r:    bufio.NewReader(f),
+		std:  std,
 	}
 }
 
-func newWriteOnlyFile(f *os.File) File {
+func newWriteOnlyFile(f *os.File, std bool) File {
 	return &wofile{
 		File: f,
 		w:    bufio.NewWriter(f),
+		std:  std,
 	}
 }
 
-func NewFile(f *os.File, flag int) File {
+func NewFile(f *os.File, flag int, std bool) File {
 	switch flag & (os.O_RDONLY | os.O_WRONLY | os.O_RDWR) {
 	case os.O_RDONLY:
-		return newReadOnlyFile(f)
+		return newReadOnlyFile(f, std)
 	case os.O_WRONLY:
-		return newWriteOnlyFile(f)
+		return newWriteOnlyFile(f, std)
 	case os.O_RDWR:
-		return newFile(f)
+		return newFile(f, std)
 	default:
 		panic("unreachable")
 	}
@@ -67,5 +70,5 @@ func OpenFile(name string, flag int, perm os.FileMode) (file File, err error) {
 		return nil, err
 	}
 
-	return NewFile(f, flag), nil
+	return NewFile(f, flag, false), nil
 }

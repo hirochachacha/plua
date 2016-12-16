@@ -2,6 +2,7 @@ package file
 
 import (
 	"bufio"
+	"errors"
 	"os"
 )
 
@@ -9,6 +10,7 @@ type rofile struct {
 	*os.File
 	r      *bufio.Reader
 	closed bool
+	std    bool
 }
 
 func (ro *rofile) IsClosed() bool {
@@ -16,6 +18,10 @@ func (ro *rofile) IsClosed() bool {
 }
 
 func (ro *rofile) Close() error {
+	if ro.std {
+		return errors.New("cannot close standard file")
+	}
+
 	err := ro.File.Close()
 
 	ro.closed = true

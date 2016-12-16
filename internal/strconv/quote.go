@@ -330,3 +330,7 @@ func min(x, y int) int {
 	}
 	return y
 }
+
+func isSpace(c byte) bool {
+	return c == ' ' || uint(c)-'\t' < 5
+}

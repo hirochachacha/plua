@@ -5,36 +5,43 @@ import (
 	"io/ioutil"
 
 	"github.com/hirochachacha/plua/internal/file"
-	"github.com/hirochachacha/plua/internal/strconv"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/object/fnutil"
 )
 
-func _read(th object.Thread, args []object.Value, f file.File, off int) ([]object.Value, *object.RuntimeError) {
+func _read(th object.Thread, args []object.Value, f file.File, off int, doClose bool) ([]object.Value, *object.RuntimeError) {
+	if f.IsClosed() {
+		return nil, object.NewRuntimeError("file is already closed")
+	}
+
 	ap := fnutil.NewArgParser(th, args)
 
 	if len(args) == off {
 		line, err := readStrippedLine(f)
 		if err != nil {
+			if doClose {
+				f.Close()
+			}
 			if err != io.EOF {
 				return fileResult(th, err)
 			}
-
 			return []object.Value{nil}, nil
 		}
-		return []object.Value{object.String(line)}, nil
+		return []object.Value{line}, nil
 	}
 
 	var rets []object.Value
 
-	for i := range args[off+1:] {
-		if i64, err := ap.ToGoInt64(i + off + 1); err == nil {
+	for i := range args[off:] {
+		if i64, err := ap.ToGoInt64(i + off); err == nil {
 			s, err := readCount(f, i64)
 			if err != nil {
+				if doClose {
+					f.Close()
+				}
 				if err != io.EOF {
 					return fileResult(th, err)
 				}
-
 				rets = append(rets, nil)
 			} else {
 				rets = append(rets, object.String(s))
@@ -43,9 +50,9 @@ func _read(th object.Thread, args []object.Value, f file.File, off int) ([]objec
 			continue
 		}
 
-		fmt, err := ap.ToGoString(i + off + i)
+		fmt, err := ap.ToGoString(i + off)
 		if err != nil {
-			return nil, ap.TypeError(i+off+1, "string or integer")
+			return nil, ap.TypeError(i+off, "string or integer")
 		}
 
 		if len(fmt) == 0 {
@@ -56,103 +63,68 @@ func _read(th object.Thread, args []object.Value, f file.File, off int) ([]objec
 			fmt = fmt[1:]
 		}
 
+		var val object.Value
+		var e error
+
 		switch fmt {
 		case "n":
-			f64, err := readFloat(f)
-			if err != nil {
-				if err != io.EOF {
-					return fileResult(th, err)
-				}
-
-				rets = append(rets, nil)
-			} else {
-				rets = append(rets, object.Number(f64))
-			}
-		case "i":
-			i64, err := readInteger(f)
-			if err != nil {
-				if err != io.EOF {
-					return fileResult(th, err)
-				}
-
-				rets = append(rets, nil)
-			} else {
-				rets = append(rets, object.Integer(i64))
-			}
+			val, e = readNumber(f)
 		case "a":
-			s, err := readAll(f)
-			if err != nil {
-				if err != io.EOF {
-					return fileResult(th, err)
-				}
-
-				rets = append(rets, nil)
-			} else {
-				rets = append(rets, object.String(s))
-			}
+			val, e = readAll(f)
 		case "l":
-			s, err := readStrippedLine(f)
-			if err != nil {
-				if err != io.EOF {
-					return fileResult(th, err)
-				}
-
-				rets = append(rets, nil)
-			} else {
-				rets = append(rets, object.String(s))
-			}
+			val, e = readStrippedLine(f)
 		case "L":
-			s, err := readLine(f)
-			if err != nil {
-				if err != io.EOF {
-					return fileResult(th, err)
-				}
-
-				rets = append(rets, nil)
-			} else {
-				rets = append(rets, object.String(s))
-			}
+			val, e = readLine(f)
 		default:
 			return nil, object.NewRuntimeError("invalid format")
+		}
+
+		if e != nil {
+			if doClose {
+				f.Close()
+			}
+			if e != io.EOF {
+				return fileResult(th, e)
+			}
+
+			rets = append(rets, nil)
+		} else {
+			rets = append(rets, val)
 		}
 	}
 
 	return rets, nil
 }
 
-func readFloat(f file.File) (f64 float64, err error) {
-	return strconv.ScanFloat(f)
+func readNumber(f file.File) (val object.Value, err error) {
+	return newScanner(f).scanNumber()
 }
 
-func readInteger(f file.File) (i64 int64, err error) {
-	return strconv.ScanInt(f)
-}
-
-func readAll(f file.File) (s string, err error) {
+func readAll(f file.File) (val object.Value, err error) {
 	bs, err := ioutil.ReadAll(f)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(bs), nil
+	return object.String(bs), nil
 }
 
-func readStrippedLine(f file.File) (s string, err error) {
+func readStrippedLine(f file.File) (s object.Value, err error) {
 	line, err := f.ReadSlice('\n')
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(line[:len(line)-1]), nil
+	return object.String(line[:len(line)-1]), nil
 }
 
-func readLine(f file.File) (s string, err error) {
+func readLine(f file.File) (s object.Value, err error) {
 	line, err := f.ReadSlice('\n')
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(line), nil
+	return object.String(line), nil
 }
 
 func readCount(f file.File, i int64) (s string, err error) {

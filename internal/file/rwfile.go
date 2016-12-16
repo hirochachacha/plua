@@ -3,6 +3,7 @@ package file
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"os"
 	"strings"
 )
@@ -22,6 +23,7 @@ type file struct {
 	r      *bufio.Reader
 	w      *bufio.Writer
 	closed bool
+	std    bool
 }
 
 func (f *file) IsClosed() bool {
@@ -29,6 +31,10 @@ func (f *file) IsClosed() bool {
 }
 
 func (f *file) Close() error {
+	if f.std {
+		return errors.New("cannot close standard file")
+	}
+
 	err := f.File.Close()
 
 	f.closed = true

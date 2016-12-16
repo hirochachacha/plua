@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -222,19 +221,17 @@ func tmpname(th object.Thread, args ...object.Value) ([]object.Value, *object.Ru
 		return nil, object.NewRuntimeError(err.Error())
 	}
 
-	path := filepath.Join(os.TempDir(), f.Name())
-
 	err = f.Close()
 	if err != nil {
 		return nil, object.NewRuntimeError(err.Error())
 	}
 
-	err = os.Remove(path)
+	err = os.Remove(f.Name())
 	if err != nil {
 		return nil, object.NewRuntimeError(err.Error())
 	}
 
-	return []object.Value{object.String(path)}, nil
+	return []object.Value{object.String(f.Name())}, nil
 }
 
 func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {

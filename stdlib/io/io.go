@@ -29,17 +29,17 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	mt.Set(object.TM_NAME, object.String("FILE*"))
 
 	stdin := &object.Userdata{
-		Value:     file.NewFile(os.Stdin, os.O_RDONLY),
+		Value:     file.NewFile(os.Stdin, os.O_RDONLY, true),
 		Metatable: mt,
 	}
 
 	stdout := &object.Userdata{
-		Value:     file.NewFile(os.Stdout, os.O_WRONLY),
+		Value:     file.NewFile(os.Stdout, os.O_WRONLY, true),
 		Metatable: mt,
 	}
 
 	stderr := &object.Userdata{
-		Value:     file.NewFile(os.Stderr, os.O_WRONLY),
+		Value:     file.NewFile(os.Stderr, os.O_WRONLY, true),
 		Metatable: mt,
 	}
 
@@ -72,13 +72,11 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		ap := fnutil.NewArgParser(th, args)
 
 		var ud *object.Userdata
-		var f file.File
-		var e error
 
 		if fname, err := ap.ToGoString(0); err == nil {
-			f, e = file.OpenFile(fname, os.O_RDONLY, 0644)
+			f, e := file.OpenFile(fname, os.O_RDONLY, 0644)
 			if e != nil {
-				return fileResult(th, e)
+				return nil, object.NewRuntimeError(e.Error())
 			}
 
 			ud = &object.Userdata{
@@ -86,9 +84,10 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 				Metatable: mt,
 			}
 		} else {
-			ud, e = ap.ToFullUserdata(0)
-			if e != nil {
-				return nil, ap.TypeError(0, "FILE* or string")
+			var err *object.RuntimeError
+			ud, err = ap.ToFullUserdata(0)
+			if err != nil {
+				return nil, err
 			}
 
 			_, ok := ud.Value.(file.File)
@@ -104,20 +103,30 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 
 	// lines([filename, ...])
 	var lines = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-		ap := fnutil.NewArgParser(th, args)
+		var f file.File
+		var off int
 
-		fname, err := ap.ToGoString(0)
-		if err != nil {
-			return nil, err
-		}
+		if len(args) == 0 {
+			f = _input.Value.(file.File)
+		} else {
+			ap := fnutil.NewArgParser(th, args)
 
-		f, e := file.OpenFile(fname, os.O_RDONLY, 0644)
-		if e != nil {
-			return fileResult(th, e)
+			fname, err := ap.ToGoString(0)
+			if err != nil {
+				return nil, err
+			}
+
+			var e error
+			f, e = file.OpenFile(fname, os.O_RDONLY, 0644)
+			if e != nil {
+				return nil, object.NewRuntimeError(e.Error())
+			}
+
+			off = 1
 		}
 
 		retfn := func(_ object.Thread, _ ...object.Value) ([]object.Value, *object.RuntimeError) {
-			return _read(th, args, f, 1)
+			return _read(th, args, f, off, true)
 		}
 
 		return []object.Value{object.GoFunction(retfn)}, nil
@@ -137,6 +146,10 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			return nil, err
 		}
 
+		if len(mode) > 0 && mode[len(mode)-1] == 'b' {
+			mode = mode[:len(mode)-1]
+		}
+
 		var f file.File
 		var e error
 
@@ -154,7 +167,7 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		case "a+":
 			f, e = file.OpenFile(fname, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
 		default:
-			return nil, ap.OptionError(1, mode)
+			return nil, ap.ArgError(1, "invalid mode")
 		}
 		if e != nil {
 			return fileResult(th, e)
@@ -177,13 +190,11 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		ap := fnutil.NewArgParser(th, args)
 
 		var ud *object.Userdata
-		var f file.File
-		var e error
 
 		if fname, err := ap.ToGoString(0); err == nil {
-			f, e = file.OpenFile(fname, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+			f, e := file.OpenFile(fname, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 			if e != nil {
-				return fileResult(th, e)
+				return nil, object.NewRuntimeError(e.Error())
 			}
 
 			ud = &object.Userdata{
@@ -191,9 +202,10 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 				Metatable: mt,
 			}
 		} else {
-			ud, e = ap.ToFullUserdata(0)
-			if e != nil {
-				return nil, ap.TypeError(0, "FILE* or string")
+			var err *object.RuntimeError
+			ud, err = ap.ToFullUserdata(0)
+			if err != nil {
+				return nil, err
 			}
 
 			_, ok := ud.Value.(file.File)
@@ -239,7 +251,7 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			}
 
 			ud = &object.Userdata{
-				Value:     file.NewFile(f, os.O_RDONLY),
+				Value:     file.NewFile(f, os.O_RDONLY, false),
 				Metatable: mt,
 			}
 		case "w":
@@ -254,7 +266,7 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			}
 
 			ud = &object.Userdata{
-				Value:     file.NewFile(f, os.O_WRONLY),
+				Value:     file.NewFile(f, os.O_WRONLY, false),
 				Metatable: mt,
 			}
 		default:
@@ -265,7 +277,7 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	}
 
 	var read = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-		return _read(th, args, _input.Value.(file.File), 0)
+		return _read(th, args, _input.Value.(file.File), 0, false)
 	}
 
 	var tmpfile = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -275,7 +287,7 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		}
 
 		ud := &object.Userdata{
-			Value:     file.NewFile(f, os.O_RDWR),
+			Value:     file.NewFile(f, os.O_RDWR, false),
 			Metatable: mt,
 		}
 
@@ -319,7 +331,7 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			}
 		}
 
-		return fileResult(th, nil)
+		return []object.Value{_output}, nil
 	}
 
 	m := th.NewTableSize(0, 14)

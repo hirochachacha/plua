@@ -8,17 +8,30 @@ import (
 	"github.com/hirochachacha/plua/object/fnutil"
 )
 
-func fclose(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	ap := fnutil.NewArgParser(th, args)
-
-	ud, err := ap.ToFullUserdata(0)
+func toFile(ap *fnutil.ArgParser, n int) (file.File, *object.RuntimeError) {
+	ud, err := ap.ToFullUserdata(n)
 	if err != nil {
 		return nil, err
 	}
 
 	f, ok := ud.Value.(file.File)
 	if !ok {
-		return nil, ap.TypeError(0, "FILE*")
+		return nil, ap.TypeError(n, "FILE*")
+	}
+
+	if f.IsClosed() {
+		return nil, object.NewRuntimeError("attempt to use a closed file")
+	}
+
+	return f, nil
+}
+
+func fclose(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	ap := fnutil.NewArgParser(th, args)
+
+	f, err := toFile(ap, 0)
+	if err != nil {
+		return nil, err
 	}
 
 	return fileResult(th, f.Close())
@@ -27,14 +40,9 @@ func fclose(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 func fflush(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
-	ud, err := ap.ToFullUserdata(0)
+	f, err := toFile(ap, 0)
 	if err != nil {
 		return nil, err
-	}
-
-	f, ok := ud.Value.(file.File)
-	if !ok {
-		return nil, ap.TypeError(0, "FILE*")
 	}
 
 	return fileResult(th, f.Flush())
@@ -43,18 +51,13 @@ func fflush(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 func flines(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
-	ud, err := ap.ToFullUserdata(0)
+	f, err := toFile(ap, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	f, ok := ud.Value.(file.File)
-	if !ok {
-		return nil, ap.TypeError(0, "FILE*")
-	}
-
 	retfn := func(_ object.Thread, _ ...object.Value) ([]object.Value, *object.RuntimeError) {
-		return _read(th, args, f, 1)
+		return _read(th, args, f, 1, false)
 	}
 
 	return []object.Value{object.GoFunction(retfn)}, nil
@@ -63,30 +66,20 @@ func flines(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 func fread(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
-	ud, err := ap.ToFullUserdata(0)
+	f, err := toFile(ap, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	f, ok := ud.Value.(file.File)
-	if !ok {
-		return nil, ap.TypeError(0, "FILE*")
-	}
-
-	return _read(th, args, f, 1)
+	return _read(th, args, f, 1, false)
 }
 
 func fseek(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
-	ud, err := ap.ToFullUserdata(0)
+	f, err := toFile(ap, 0)
 	if err != nil {
 		return nil, err
-	}
-
-	f, ok := ud.Value.(file.File)
-	if !ok {
-		return nil, ap.TypeError(0, "FILE*")
 	}
 
 	whence, err := ap.OptGoString(1, "cur")
@@ -123,14 +116,9 @@ func fseek(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 func fsetvbuf(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
-	ud, err := ap.ToFullUserdata(0)
+	f, err := toFile(ap, 0)
 	if err != nil {
 		return nil, err
-	}
-
-	f, ok := ud.Value.(file.File)
-	if !ok {
-		return nil, ap.TypeError(0, "FILE*")
 	}
 
 	mode, err := ap.ToGoString(1)
@@ -162,14 +150,9 @@ func fsetvbuf(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 func fwrite(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
-	ud, err := ap.ToFullUserdata(0)
+	f, err := toFile(ap, 0)
 	if err != nil {
 		return nil, err
-	}
-
-	f, ok := ud.Value.(file.File)
-	if !ok {
-		return nil, ap.TypeError(0, "FILE*")
 	}
 
 	for i := range args[1:] {
@@ -201,7 +184,7 @@ func ftostring(th object.Thread, args ...object.Value) ([]object.Value, *object.
 	}
 
 	if f.IsClosed() {
-		return []object.Value{object.String("closed file")}, nil
+		return []object.Value{object.String("file (closed)")}, nil
 	}
 
 	return []object.Value{object.String(fmt.Sprintf("file (%p)", f))}, nil

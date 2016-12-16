@@ -1,7 +1,6 @@
 package strconv
 
 import (
-	"io"
 	"math"
 	"strconv"
 	"strings"
@@ -136,60 +135,6 @@ func ParseFloat(s string) (float64, error) {
 	}
 
 	return f, unwrap(err)
-}
-
-func ScanUint(sc io.ByteScanner) (uint64, error) {
-	s := newScanner(sc)
-
-	s.next()
-
-	u64, err := s.scanUint()
-	if err != nil {
-		return 0, err
-	}
-
-	err = s.sc.UnreadByte()
-	if err != nil {
-		return 0, err
-	}
-
-	return u64, err
-}
-
-func ScanInt(sc io.ByteScanner) (int64, error) {
-	s := newScanner(sc)
-
-	s.next()
-
-	i64, err := s.scanInt()
-	if err != nil {
-		return 0, err
-	}
-
-	err = s.sc.UnreadByte()
-	if err != nil {
-		return 0, err
-	}
-
-	return i64, err
-}
-
-func ScanFloat(sc io.ByteScanner) (float64, error) {
-	s := newScanner(sc)
-
-	s.next()
-
-	f64, err := s.scanFloat()
-	if err != nil {
-		return 0, err
-	}
-
-	err = s.sc.UnreadByte()
-	if err != nil {
-		return 0, err
-	}
-
-	return f64, err
 }
 
 func parseHexFloat(s string) (float64, error) {
