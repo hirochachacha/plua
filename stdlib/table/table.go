@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/hirochachacha/plua/internal/arith"
+	"github.com/hirochachacha/plua/internal/limits"
+	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/object/fnutil"
 )
@@ -86,8 +88,8 @@ func insert(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	val, ok := ap.Get(2)
-	if !ok {
+	switch len(args) {
+	case 2:
 		val, err := ap.ToValue(1)
 		if err != nil {
 			return nil, err
@@ -99,34 +101,41 @@ func insert(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		}
 
 		return nil, nil
-	}
-
-	pos, err := ap.OptGoInt(1, tlen+1)
-	if err != nil {
-		return nil, err
-	}
-
-	if pos < 1 || pos > tlen+1 {
-		return nil, ap.ArgError(1, "position out of bounds")
-	}
-
-	for i := tlen + 1; i > pos; i-- {
-		v, err := arith.CallGettable(th, t, object.Integer(i-1))
+	case 3:
+		pos, err := ap.OptGoInt(1, tlen+1)
 		if err != nil {
 			return nil, err
 		}
-		err = arith.CallSettable(th, t, object.Integer(i), v)
+
+		if pos < 1 || pos > tlen+1 {
+			return nil, ap.ArgError(1, "position out of bounds")
+		}
+
+		for i := tlen + 1; i > pos; i-- {
+			v, err := arith.CallGettable(th, t, object.Integer(i-1))
+			if err != nil {
+				return nil, err
+			}
+			err = arith.CallSettable(th, t, object.Integer(i), v)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		val, err := ap.ToValue(2)
 		if err != nil {
 			return nil, err
 		}
-	}
 
-	err = arith.CallSettable(th, t, object.Integer(pos), val)
-	if err != nil {
-		return nil, err
-	}
+		err = arith.CallSettable(th, t, object.Integer(pos), val)
+		if err != nil {
+			return nil, err
+		}
 
-	return nil, nil
+		return nil, nil
+	default:
+		return nil, object.NewRuntimeError("wrong number of arguments to 'insert'")
+	}
 }
 
 // TODO support for not table type
@@ -161,18 +170,42 @@ func move(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		}
 	}
 
-	for i := 0; i <= e-f; i++ {
-		v, err := arith.CallGettable(th, a1, object.Integer(f+i))
-		if err != nil {
-			return nil, err
+	// copy(a2[t:], a1[f:e])
+	if e >= f {
+		if f <= 0 && e > version.MAXMOVE+f || f > 0 && e-f > version.MAXMOVE {
+			return nil, ap.ArgError(2, "too many elements to move")
 		}
-		err = arith.CallSettable(th, a2, object.Integer(t+i), v)
-		if err != nil {
-			return nil, err
+
+		if t > int(limits.MaxInt)-(e-f) {
+			return nil, ap.ArgError(3, "destination wrap around")
+		}
+
+		if t > e || t <= f || a1 != a2 { // no overwrap
+			for i := 0; i <= e-f; i++ {
+				v, err := arith.CallGettable(th, a1, object.Integer(f+i))
+				if err != nil {
+					return nil, err
+				}
+				err = arith.CallSettable(th, a2, object.Integer(t+i), v)
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else {
+			for i := e - f; i >= 0; i-- {
+				v, err := arith.CallGettable(th, a1, object.Integer(f+i))
+				if err != nil {
+					return nil, err
+				}
+				err = arith.CallSettable(th, a2, object.Integer(t+i), v)
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
 	}
 
-	return nil, nil
+	return []object.Value{a2}, nil
 }
 
 func pack(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -265,12 +298,14 @@ func unpack(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, nil
 	}
 
-	var rets []object.Value
+	if i <= 0 && j > version.MAXUNPACK+i || i > 0 && j-i > version.MAXUNPACK {
+		return nil, object.NewRuntimeError("too many results to unpack")
+	}
 
-	var val object.Value
+	rets := make([]object.Value, 0, j-i+1)
 
 	for {
-		val, err = arith.CallGettable(th, t, object.Integer(i))
+		val, err := arith.CallGettable(th, t, object.Integer(i))
 		if err != nil {
 			return nil, err
 		}

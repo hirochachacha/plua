@@ -28,4 +28,7 @@ const (
 
 	MAXUPVAL = 255
 	MAXVAR   = 200
+
+	MAXUNPACK = 2000
+	MAXMOVE   = 2000
 )
