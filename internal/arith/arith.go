@@ -300,11 +300,11 @@ func Bxor(x, y object.Value) object.Value {
 func Shl(x, y object.Value) object.Value {
 	if x, ok := object.ToInteger(x); ok {
 		if y, ok := object.ToInteger(y); ok {
-			if y > 0 {
-				return x << uint64(y)
+			if y < 0 {
+				return object.Integer(uint64(x) >> uint64(-y))
 			}
 
-			return x >> uint64(-y)
+			return object.Integer(uint64(x) << uint64(y))
 		}
 	}
 
@@ -314,11 +314,11 @@ func Shl(x, y object.Value) object.Value {
 func Shr(x, y object.Value) object.Value {
 	if x, ok := object.ToInteger(x); ok {
 		if y, ok := object.ToInteger(y); ok {
-			if y > 0 {
-				return x >> uint64(y)
+			if y < 0 {
+				return object.Integer(uint64(x) << uint64(-y))
 			}
 
-			return x << uint64(-y)
+			return object.Integer(uint64(x) >> uint64(y))
 		}
 	}
 
