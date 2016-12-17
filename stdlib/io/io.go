@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hirochachacha/plua/internal/file"
+	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/object/fnutil"
 )
@@ -123,6 +124,10 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			}
 
 			off = 1
+		}
+
+		if len(args)-off > version.MAXARGLINE {
+			return nil, object.NewRuntimeError("too many arguments")
 		}
 
 		retfn := func(_ object.Thread, _ ...object.Value) ([]object.Value, *object.RuntimeError) {

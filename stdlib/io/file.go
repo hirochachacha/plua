@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hirochachacha/plua/internal/file"
+	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/object/fnutil"
 )
@@ -54,6 +55,10 @@ func flines(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	f, err := toFile(ap, 0)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(args)-1 > version.MAXARGLINE {
+		return nil, object.NewRuntimeError("too many arguments")
 	}
 
 	retfn := func(_ object.Thread, _ ...object.Value) ([]object.Value, *object.RuntimeError) {
