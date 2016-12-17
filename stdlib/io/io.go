@@ -87,7 +87,7 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			var err *object.RuntimeError
 			ud, err = ap.ToFullUserdata(0)
 			if err != nil {
-				return nil, err
+				return nil, ap.TypeError(0, "FILE*")
 			}
 
 			_, ok := ud.Value.(file.File)
@@ -205,7 +205,7 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			var err *object.RuntimeError
 			ud, err = ap.ToFullUserdata(0)
 			if err != nil {
-				return nil, err
+				return nil, ap.TypeError(0, "FILE*")
 			}
 
 			_, ok := ud.Value.(file.File)

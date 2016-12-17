@@ -11,7 +11,7 @@ import (
 func toFile(ap *fnutil.ArgParser, n int) (file.File, *object.RuntimeError) {
 	ud, err := ap.ToFullUserdata(n)
 	if err != nil {
-		return nil, err
+		return nil, ap.TypeError(n, "FILE*")
 	}
 
 	f, ok := ud.Value.(file.File)
@@ -175,7 +175,7 @@ func ftostring(th object.Thread, args ...object.Value) ([]object.Value, *object.
 
 	ud, err := ap.ToFullUserdata(0)
 	if err != nil {
-		return nil, err
+		return nil, ap.TypeError(0, "FILE*")
 	}
 
 	f, ok := ud.Value.(file.File)
