@@ -435,7 +435,7 @@ func _print(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 func pcall(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 	ap := fnutil.NewArgParser(th, args)
 
-	fn, err := ap.ToTypes(0, object.TNIL, object.TFUNCTION)
+	fn, err := ap.ToFunctionOrNil(0)
 	if err != nil {
 		return nil, err
 	}

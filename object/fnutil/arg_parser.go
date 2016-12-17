@@ -96,6 +96,19 @@ func (ap *ArgParser) ToFunction(n int) (object.Value, *object.RuntimeError) {
 	return arg, nil
 }
 
+func (ap *ArgParser) ToFunctionOrNil(n int) (object.Value, *object.RuntimeError) {
+	arg, ok := ap.Get(n)
+	if !ok {
+		return nil, ap.ArgError(n, "function expected, got no value")
+	}
+
+	if typ := object.ToType(arg); typ != object.TFUNCTION && typ != object.TNIL {
+		return nil, ap.TypeError(n, "function or nil")
+	}
+
+	return arg, nil
+}
+
 func (ap *ArgParser) ToTypes(n int, types ...object.Type) (object.Value, *object.RuntimeError) {
 	val, ok := ap.Get(n)
 	if !ok {

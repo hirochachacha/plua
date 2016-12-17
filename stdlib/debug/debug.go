@@ -314,7 +314,7 @@ func sethook(th object.Thread, args ...object.Value) ([]object.Value, *object.Ru
 
 	th1 := ap.GetThread()
 
-	hook, err := ap.ToTypes(0, object.TNIL, object.TFUNCTION)
+	hook, err := ap.ToFunctionOrNil(0)
 	if err != nil {
 		return nil, err
 	}

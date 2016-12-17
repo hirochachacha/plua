@@ -18,7 +18,7 @@ func sort(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	var lt object.Value
 
 	if len(args) > 1 {
-		lt, err = ap.ToTypes(1, object.TFUNCTION, object.TNIL)
+		lt, err = ap.ToFunctionOrNil(1)
 		if err != nil {
 			return nil, err
 		}
