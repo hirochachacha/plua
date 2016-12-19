@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"io"
 	"os"
 	"strings"
 )
@@ -52,7 +51,7 @@ func (f *file) Close() error {
 
 func (f *file) Write(p []byte) (nn int, err error) {
 	if f.state == read {
-		_, err = f.Seek(f.off, io.SeekStart)
+		_, err = f.Seek(f.off, 0)
 		if err != nil {
 			return
 		}
@@ -107,7 +106,7 @@ func (f *file) Write(p []byte) (nn int, err error) {
 
 func (f *file) WriteString(s string) (nn int, err error) {
 	if f.state == read {
-		_, err = f.Seek(f.off, io.SeekStart)
+		_, err = f.Seek(f.off, 0)
 		if err != nil {
 			return
 		}
@@ -248,24 +247,24 @@ func (f *file) Seek(offset int64, whence int) (n int64, err error) {
 	}
 
 	switch whence {
-	case io.SeekStart:
+	case 0:
 		if f.off <= offset && offset <= f.off+int64(f.br.Buffered()) {
 			f.br.Discard(int(offset - f.off))
 			f.off = offset
 		} else {
-			f.off, err = f.File.Seek(offset, io.SeekStart)
+			f.off, err = f.File.Seek(offset, 0)
 			f.br.Reset(f.File)
 		}
-	case io.SeekCurrent:
+	case 1:
 		if 0 <= offset && offset <= int64(f.br.Buffered()) {
 			f.br.Discard(int(offset))
 			f.off += offset
 		} else {
-			f.off, err = f.File.Seek(f.off+offset, io.SeekStart)
+			f.off, err = f.File.Seek(f.off+offset, 1)
 			f.br.Reset(f.File)
 		}
-	case io.SeekEnd:
-		f.off, err = f.File.Seek(offset, io.SeekEnd)
+	case 2:
+		f.off, err = f.File.Seek(offset, 2)
 		f.br.Reset(f.File)
 	}
 
@@ -283,9 +282,9 @@ func (f *file) Seek(offset int64, whence int) (n int64, err error) {
 func (f *file) Setvbuf(mode int, size int) (err error) {
 	switch f.state {
 	case read:
-		_, err = f.Seek(-int64(f.br.Buffered()), 1)
+		_, err = f.Seek(f.off, 0)
 		if err != nil {
-			return err
+			return
 		}
 	case write:
 		err = f.bw.Flush()

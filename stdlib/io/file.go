@@ -2,7 +2,6 @@ package io
 
 import (
 	"fmt"
-	"io"
 
 	"github.com/hirochachacha/plua/internal/file"
 	"github.com/hirochachacha/plua/internal/version"
@@ -105,11 +104,11 @@ func fseek(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 
 	switch whence {
 	case "set":
-		n, e = f.Seek(offset, io.SeekStart)
+		n, e = f.Seek(offset, 0)
 	case "cur":
-		n, e = f.Seek(offset, io.SeekCurrent)
+		n, e = f.Seek(offset, 1)
 	case "end":
-		n, e = f.Seek(offset, io.SeekEnd)
+		n, e = f.Seek(offset, 2)
 	default:
 		return nil, ap.OptionError(1, whence)
 	}

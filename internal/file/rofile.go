@@ -3,7 +3,6 @@ package file
 import (
 	"bufio"
 	"errors"
-	"io"
 	"os"
 )
 
@@ -67,24 +66,24 @@ func (ro *rofile) ReadBytes(delim byte) (line []byte, err error) {
 
 func (ro *rofile) Seek(offset int64, whence int) (n int64, err error) {
 	switch whence {
-	case io.SeekStart:
+	case 0:
 		if ro.off <= offset && offset <= ro.off+int64(ro.br.Buffered()) {
 			ro.br.Discard(int(offset - ro.off))
 			ro.off = offset
 		} else {
-			ro.off, err = ro.File.Seek(offset, io.SeekStart)
+			ro.off, err = ro.File.Seek(offset, 0)
 			ro.br.Reset(ro.File)
 		}
-	case io.SeekCurrent:
+	case 1:
 		if 0 <= offset && offset <= int64(ro.br.Buffered()) {
 			ro.br.Discard(int(offset))
 			ro.off += offset
 		} else {
-			ro.off, err = ro.File.Seek(ro.off+offset, io.SeekStart)
+			ro.off, err = ro.File.Seek(ro.off+offset, 0)
 			ro.br.Reset(ro.File)
 		}
-	case io.SeekEnd:
-		ro.off, err = ro.File.Seek(offset, io.SeekEnd)
+	case 2:
+		ro.off, err = ro.File.Seek(offset, 2)
 		ro.br.Reset(ro.File)
 	}
 
@@ -94,7 +93,7 @@ func (ro *rofile) Seek(offset int64, whence int) (n int64, err error) {
 }
 
 func (ro *rofile) Setvbuf(mode int, size int) (err error) {
-	_, err = ro.File.Seek(ro.off, io.SeekStart)
+	_, err = ro.File.Seek(ro.off, 0)
 
 	if size > 0 {
 		ro.br = bufio.NewReaderSize(ro.File, size)
