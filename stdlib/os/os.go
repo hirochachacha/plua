@@ -1,6 +1,7 @@
 package os
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -13,7 +14,6 @@ import (
 
 var (
 	startTime = time.Now()
-	location  = startTime.Local().Location()
 )
 
 func clock(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -50,7 +50,11 @@ func date(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	}
 
 	if format == "*t" {
-		return []object.Value{dateTable(th, t)}, nil
+		tab := th.NewTableSize(0, 8)
+
+		updateTable(th, tab, t)
+
+		return []object.Value{tab}, nil
 	}
 
 	s, err := dateFormat(th, format, t)
@@ -178,39 +182,64 @@ func setlocale(th object.Thread, args ...object.Value) ([]object.Value, *object.
 	return nil, object.NewRuntimeError("not implemented")
 }
 
+func getGoInt(th object.Thread, tab object.Table, key string) (int, *object.RuntimeError) {
+	val := tab.Get(object.String(key))
+	if val == nil {
+		return 0, object.NewRuntimeError(fmt.Sprintf("field '%s' missing in date table", key))
+	}
+	if i, ok := object.ToGoInt(val); ok {
+		return i, nil
+	}
+	return 0, object.NewRuntimeError(fmt.Sprintf("field '%s' is not an integer", key))
+}
+
 func _time(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	if len(args) == 0 {
+	if len(args) == 0 || args[0] == nil {
 		return []object.Value{object.Integer(time.Now().Unix())}, nil
 	}
 
 	ap := fnutil.NewArgParser(th, args)
 
-	t, err := ap.ToTable(0)
+	tab, err := ap.ToTable(0)
 	if err != nil {
 		return nil, err
 	}
 
-	day, ok := object.ToGoInt(t.Get(object.String("day")))
-	if !ok {
-		return nil, object.NewRuntimeError("field 'day' missing in date table")
+	day, err := getGoInt(th, tab, "day")
+	if err != nil {
+		return nil, err
 	}
-	month, ok := object.ToGoInt(t.Get(object.String("month")))
-	if !ok {
-		return nil, object.NewRuntimeError("field 'month' missing in date table")
+	month, err := getGoInt(th, tab, "month")
+	if err != nil {
+		return nil, err
 	}
-	year, ok := object.ToGoInt(t.Get(object.String("year")))
-	if !ok {
-		return nil, object.NewRuntimeError("field 'year' missing in date table")
+	year, err := getGoInt(th, tab, "year")
+	if err != nil {
+		return nil, err
+	}
+	sec, _ := getGoInt(th, tab, "sec")
+	min, _ := getGoInt(th, tab, "min")
+	hour := 12
+	if val := tab.Get(object.String("hour")); val != nil {
+		i, ok := object.ToGoInt(val)
+		if !ok {
+			return nil, object.NewRuntimeError(fmt.Sprintf("field '%s' is not an integer", "hour"))
+		}
+		hour = i
 	}
 
-	sec, _ := object.ToGoInt(t.Get(object.String("sec")))
-	min, _ := object.ToGoInt(t.Get(object.String("min")))
-	hour, ok := object.ToGoInt(t.Get(object.String("hour")))
-	if !ok {
-		hour = 12
-	}
+	var unix int64
+	if sec < 0 {
+		t := time.Date(year, time.Month(month), day, hour, min, 0, 0, time.Local)
 
-	unix := time.Date(year, time.Month(month), day, hour, min, sec, 0, location).Unix()
+		t = t.Add(time.Duration(sec) * time.Second)
+
+		updateTable(th, tab, t)
+
+		unix = t.Unix()
+	} else {
+		unix = time.Date(year, time.Month(month), day, hour, min, sec, 0, time.Local).Unix()
+	}
 
 	return []object.Value{object.Integer(unix)}, nil
 }
