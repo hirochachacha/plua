@@ -44,8 +44,10 @@ import (
 
 const (
 	maxConsecutiveEmptyReads = 100
-	bom                      = 0xFEFF // byte order mark, only permitted as very first character
 	bom1                     = 0xFE
+	bom                      = "\xFE\xFF"
+	utf8bom1                 = 0xEF
+	utf8bom                  = "\xEF\xBB\xBF"
 )
 
 var (
@@ -103,10 +105,11 @@ func Scan(r io.Reader, srcname string, mode Mode) *ScanState {
 
 	s.init()
 
-	switch s.ch {
-	case bom1:
+	if s.ch == bom1 || s.ch == utf8bom1 {
 		s.skipBom()
-	case '#':
+	}
+
+	if s.ch == '#' {
 		s.shebang = s.scanSheBang()
 	}
 
@@ -135,10 +138,11 @@ func (s *ScanState) Reset(r io.Reader, srcname string, mode Mode) {
 
 	s.init()
 
-	switch s.ch {
-	case bom1:
+	if s.ch == bom1 || s.ch == utf8bom1 {
 		s.skipBom()
-	case '#':
+	}
+
+	if s.ch == '#' {
 		s.shebang = s.scanSheBang()
 	}
 }
@@ -359,7 +363,12 @@ scanAgain:
 }
 
 func (s *ScanState) skipBom() {
-	if s.peek(2) == string(bom) {
+	switch {
+	case s.ch == bom1 && s.peek(2) == bom:
+		s.next()
+		s.next()
+	case s.ch == utf8bom1 && s.peek(3) == utf8bom:
+		s.next()
 		s.next()
 		s.next()
 	}
