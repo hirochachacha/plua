@@ -10,8 +10,8 @@ import (
 
 type wofile struct {
 	*os.File
+	bw     *bufio.Writer
 	mode   int
-	w      *bufio.Writer
 	closed bool
 	std    bool
 }
@@ -37,22 +37,22 @@ func (wo *wofile) Write(p []byte) (nn int, err error) {
 	case IONBF:
 		nn, err = wo.File.Write(p)
 	case IOFBF:
-		nn, err = wo.w.Write(p)
+		nn, err = wo.bw.Write(p)
 	case IOLBF:
 		i := bytes.LastIndex(p, []byte{'\n'})
 		if i == -1 {
-			nn, err = wo.w.Write(p)
+			nn, err = wo.bw.Write(p)
 		} else {
-			nn, err = wo.w.Write(p[:i])
+			nn, err = wo.bw.Write(p[:i])
 			if err != nil {
 				return
 			}
-			err = wo.w.Flush()
+			err = wo.bw.Flush()
 			if err != nil {
 				return
 			}
 
-			nn, err = wo.w.Write(p[i+1:])
+			nn, err = wo.bw.Write(p[i+1:])
 		}
 	}
 
@@ -64,22 +64,22 @@ func (wo *wofile) WriteString(s string) (nn int, err error) {
 	case IONBF:
 		nn, err = wo.File.WriteString(s)
 	case IOFBF:
-		nn, err = wo.w.WriteString(s)
+		nn, err = wo.bw.WriteString(s)
 	case IOLBF:
 		i := strings.LastIndex(s, "\n")
 		if i == -1 {
-			nn, err = wo.w.WriteString(s)
+			nn, err = wo.bw.WriteString(s)
 		} else {
-			nn, err = wo.w.WriteString(s[:i])
+			nn, err = wo.bw.WriteString(s[:i])
 			if err != nil {
 				return
 			}
-			err = wo.w.Flush()
+			err = wo.bw.Flush()
 			if err != nil {
 				return
 			}
 
-			nn, err = wo.w.WriteString(s[i+1:])
+			nn, err = wo.bw.WriteString(s[i+1:])
 		}
 	}
 
@@ -87,7 +87,7 @@ func (wo *wofile) WriteString(s string) (nn int, err error) {
 }
 
 func (wo *wofile) Flush() error {
-	return wo.w.Flush()
+	return wo.bw.Flush()
 }
 
 func (wo *wofile) UnreadByte() error {
@@ -112,14 +112,14 @@ func (wo *wofile) ReadFloat() (f float64, err error) {
 	return 0, err
 }
 
-func (wo *wofile) ReadSlice(delim byte) (line []byte, err error) {
+func (wo *wofile) ReadBytes(delim byte) (line []byte, err error) {
 	_, err = wo.Read(nil)
 
 	return nil, err
 }
 
 func (wo *wofile) Seek(offset int64, whence int) (n int64, err error) {
-	err = wo.w.Flush()
+	err = wo.bw.Flush()
 	if err != nil {
 		return
 	}
@@ -130,7 +130,7 @@ func (wo *wofile) Seek(offset int64, whence int) (n int64, err error) {
 }
 
 func (wo *wofile) Setvbuf(mode int, size int) (err error) {
-	err = wo.w.Flush()
+	err = wo.bw.Flush()
 	if err != nil {
 		return
 	}
@@ -138,7 +138,7 @@ func (wo *wofile) Setvbuf(mode int, size int) (err error) {
 	wo.mode = mode
 
 	if size > 0 {
-		wo.w = bufio.NewWriterSize(wo.File, size)
+		wo.bw = bufio.NewWriterSize(wo.File, size)
 	}
 
 	return

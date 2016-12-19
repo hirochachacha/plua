@@ -106,10 +106,20 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	var lines = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		var f file.File
 		var off int
+		var doClose bool
 
-		if len(args) == 0 {
+		switch {
+		case len(args) == 0:
 			f = _input.Value.(file.File)
-		} else {
+
+			off = 0
+			doClose = false
+		case args[0] == nil:
+			f = _input.Value.(file.File)
+
+			off = 1
+			doClose = false
+		default:
 			ap := fnutil.NewArgParser(th, args)
 
 			fname, err := ap.ToGoString(0)
@@ -124,14 +134,17 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 			}
 
 			off = 1
+			doClose = true
 		}
 
 		if len(args)-off > version.MAXARGLINE {
 			return nil, object.NewRuntimeError("too many arguments")
 		}
 
+		fnargs := append([]object.Value{}, args...)
+
 		retfn := func(_ object.Thread, _ ...object.Value) ([]object.Value, *object.RuntimeError) {
-			return _read(th, args, f, off, true)
+			return _read(th, fnargs, f, off, doClose, true)
 		}
 
 		return []object.Value{object.GoFunction(retfn)}, nil
@@ -282,7 +295,13 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	}
 
 	var read = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-		return _read(th, args, _input.Value.(file.File), 0, false)
+		f := _input.Value.(file.File)
+
+		if f.IsClosed() {
+			return nil, object.NewRuntimeError("standard input file is closed")
+		}
+
+		return _read(th, args, f, 0, false, false)
 	}
 
 	var tmpfile = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -321,6 +340,10 @@ func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 
 	var write = func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
 		f := _output.Value.(file.File)
+
+		if f.IsClosed() {
+			return nil, object.NewRuntimeError("standard output file is closed")
+		}
 
 		ap := fnutil.NewArgParser(th, args)
 

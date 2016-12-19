@@ -20,7 +20,7 @@ type File interface {
 	UnreadByte() error
 	ReadByte() (c byte, err error)
 	Read(p []byte) (n int, err error)
-	ReadSlice(delim byte) (line []byte, err error)
+	ReadBytes(delim byte) (line []byte, err error)
 	Seek(offset int64, whence int) (n int64, err error)
 	Setvbuf(mode int, size int) (err error)
 }
@@ -29,8 +29,8 @@ func newFile(f *os.File, std bool) File {
 	return &file{
 		File:  f,
 		state: seek,
-		r:     bufio.NewReader(f),
-		w:     bufio.NewWriter(f),
+		br:    bufio.NewReader(f),
+		bw:    bufio.NewWriter(f),
 		std:   std,
 	}
 }
@@ -38,7 +38,7 @@ func newFile(f *os.File, std bool) File {
 func newReadOnlyFile(f *os.File, std bool) File {
 	return &rofile{
 		File: f,
-		r:    bufio.NewReader(f),
+		br:   bufio.NewReader(f),
 		std:  std,
 	}
 }
@@ -46,7 +46,7 @@ func newReadOnlyFile(f *os.File, std bool) File {
 func newWriteOnlyFile(f *os.File, std bool) File {
 	return &wofile{
 		File: f,
-		w:    bufio.NewWriter(f),
+		bw:   bufio.NewWriter(f),
 		std:  std,
 	}
 }

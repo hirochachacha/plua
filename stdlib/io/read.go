@@ -9,7 +9,7 @@ import (
 	"github.com/hirochachacha/plua/object/fnutil"
 )
 
-func _read(th object.Thread, args []object.Value, f file.File, off int, doClose bool) ([]object.Value, *object.RuntimeError) {
+func _read(th object.Thread, args []object.Value, f file.File, off int, doClose bool, raiseError bool) ([]object.Value, *object.RuntimeError) {
 	if f.IsClosed() {
 		return nil, object.NewRuntimeError("file is already closed")
 	}
@@ -23,6 +23,9 @@ func _read(th object.Thread, args []object.Value, f file.File, off int, doClose 
 				f.Close()
 			}
 			if err != io.EOF {
+				if raiseError {
+					return nil, object.NewRuntimeError(err.Error())
+				}
 				return fileResult(th, err)
 			}
 			return []object.Value{nil}, nil
@@ -30,22 +33,31 @@ func _read(th object.Thread, args []object.Value, f file.File, off int, doClose 
 		return []object.Value{line}, nil
 	}
 
-	var rets []object.Value
+	rets := make([]object.Value, 0, len(args)-off)
 
 	for i := range args[off:] {
 		if i64, err := ap.ToGoInt64(i + off); err == nil {
 			s, err := readCount(f, i64)
 			if err != nil {
+				if err == io.EOF {
+					if len(rets) == 0 {
+						if doClose {
+							f.Close()
+						}
+						rets = append(rets, nil)
+					}
+					return rets, nil
+				}
 				if doClose {
 					f.Close()
 				}
-				if err != io.EOF {
-					return fileResult(th, err)
+				if raiseError {
+					return nil, object.NewRuntimeError(err.Error())
 				}
-				rets = append(rets, nil)
-			} else {
-				rets = append(rets, object.String(s))
+				return fileResult(th, err)
 			}
+
+			rets = append(rets, s)
 
 			continue
 		}
@@ -55,11 +67,7 @@ func _read(th object.Thread, args []object.Value, f file.File, off int, doClose 
 			return nil, ap.TypeError(i+off, "string or integer")
 		}
 
-		if len(fmt) == 0 {
-			return nil, object.NewRuntimeError("invalid format")
-		}
-
-		if fmt[0] == '*' {
+		if len(fmt) > 0 && fmt[0] == '*' {
 			fmt = fmt[1:]
 		}
 
@@ -76,21 +84,29 @@ func _read(th object.Thread, args []object.Value, f file.File, off int, doClose 
 		case "L":
 			val, e = readLine(f)
 		default:
-			return nil, object.NewRuntimeError("invalid format")
+			return nil, ap.ArgError(i+off, "invalid format")
 		}
 
 		if e != nil {
+			if e == io.EOF {
+				if len(rets) == 0 {
+					if doClose {
+						f.Close()
+					}
+					rets = append(rets, nil)
+				}
+				return rets, nil
+			}
 			if doClose {
 				f.Close()
 			}
-			if e != io.EOF {
-				return fileResult(th, e)
+			if raiseError {
+				return nil, object.NewRuntimeError(e.Error())
 			}
-
-			rets = append(rets, nil)
-		} else {
-			rets = append(rets, val)
+			return fileResult(th, e)
 		}
+
+		rets = append(rets, val)
 	}
 
 	return rets, nil
@@ -110,8 +126,14 @@ func readAll(f file.File) (val object.Value, err error) {
 }
 
 func readStrippedLine(f file.File) (s object.Value, err error) {
-	line, err := f.ReadSlice('\n')
+	line, err := f.ReadBytes('\n')
 	if err != nil {
+		if err == io.EOF {
+			if len(line) == 0 {
+				return nil, io.EOF
+			}
+			return object.String(line), nil
+		}
 		return nil, err
 	}
 
@@ -119,21 +141,46 @@ func readStrippedLine(f file.File) (s object.Value, err error) {
 }
 
 func readLine(f file.File) (s object.Value, err error) {
-	line, err := f.ReadSlice('\n')
+	line, err := f.ReadBytes('\n')
 	if err != nil {
+		if err == io.EOF {
+			if len(line) == 0 {
+				return nil, io.EOF
+			}
+			return object.String(line), nil
+		}
 		return nil, err
 	}
 
 	return object.String(line), nil
 }
 
-func readCount(f file.File, i int64) (s string, err error) {
-	bs := make([]byte, i)
+func readCount(f file.File, i int64) (s object.Value, err error) {
+	if i == 0 {
+		_, err := f.ReadByte()
+		if err != nil {
+			return nil, err
+		}
 
-	n, err := f.Read(bs)
-	if err != nil {
-		return "", err
+		f.UnreadByte()
+
+		return object.String(""), nil
 	}
 
-	return string(bs[:n]), nil
+	bs := make([]byte, i)
+
+	var n int
+	for {
+		var m int
+		m, err = f.Read(bs[n:])
+		n += m
+		if err != nil {
+			break
+		}
+		if i == int64(n) {
+			break
+		}
+	}
+
+	return object.String(bs[:n]), err
 }

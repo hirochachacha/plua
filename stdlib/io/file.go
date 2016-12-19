@@ -2,6 +2,7 @@ package io
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/hirochachacha/plua/internal/file"
 	"github.com/hirochachacha/plua/internal/version"
@@ -61,8 +62,10 @@ func flines(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, object.NewRuntimeError("too many arguments")
 	}
 
+	fnargs := append([]object.Value{}, args...)
+
 	retfn := func(_ object.Thread, _ ...object.Value) ([]object.Value, *object.RuntimeError) {
-		return _read(th, args, f, 1, false)
+		return _read(th, fnargs, f, 1, false, true)
 	}
 
 	return []object.Value{object.GoFunction(retfn)}, nil
@@ -76,7 +79,7 @@ func fread(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 		return nil, err
 	}
 
-	return _read(th, args, f, 1, false)
+	return _read(th, args, f, 1, false, false)
 }
 
 func fseek(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
@@ -102,11 +105,11 @@ func fseek(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 
 	switch whence {
 	case "set":
-		n, e = f.Seek(offset, 0)
+		n, e = f.Seek(offset, io.SeekStart)
 	case "cur":
-		n, e = f.Seek(offset, 1)
+		n, e = f.Seek(offset, io.SeekCurrent)
 	case "end":
-		n, e = f.Seek(offset, 2)
+		n, e = f.Seek(offset, io.SeekEnd)
 	default:
 		return nil, ap.OptionError(1, whence)
 	}

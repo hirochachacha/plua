@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"io"
 	"os"
 	"strings"
 )
@@ -18,10 +19,11 @@ const (
 
 type file struct {
 	*os.File
+	br     *bufio.Reader
+	bw     *bufio.Writer
+	off    int64
 	mode   int
 	state  state // previous action type
-	r      *bufio.Reader
-	w      *bufio.Writer
 	closed bool
 	std    bool
 }
@@ -44,43 +46,48 @@ func (f *file) Close() error {
 
 func (f *file) Write(p []byte) (nn int, err error) {
 	if f.state == read {
-		_, err = f.Seek(-int64(f.r.Buffered()), 1)
+		_, err = f.Seek(f.off, io.SeekStart)
 		if err != nil {
 			return
 		}
 
-		f.r.Reset(f.File)
+		f.br.Reset(f.File)
 	}
 
 	switch f.mode {
 	case IONBF:
 		nn, err = f.File.Write(p)
+		f.off += int64(nn)
 		if err != nil {
 			return
 		}
 	case IOFBF:
-		nn, err = f.w.Write(p)
+		nn, err = f.bw.Write(p)
+		f.off += int64(nn)
 		if err != nil {
 			return
 		}
 	case IOLBF:
 		i := bytes.LastIndex(p, []byte{'\n'})
 		if i == -1 {
-			nn, err = f.w.Write(p)
+			nn, err = f.bw.Write(p)
+			f.off += int64(nn)
 			if err != nil {
 				return
 			}
 		} else {
-			nn, err = f.w.Write(p[:i])
+			nn, err = f.bw.Write(p[:i])
+			f.off += int64(nn)
 			if err != nil {
 				return
 			}
-			err = f.w.Flush()
+			err = f.bw.Flush()
 			if err != nil {
 				return
 			}
 
-			nn, err = f.w.Write(p[i+1:])
+			nn, err = f.bw.Write(p[i+1:])
+			f.off += int64(nn)
 			if err != nil {
 				return
 			}
@@ -94,43 +101,48 @@ func (f *file) Write(p []byte) (nn int, err error) {
 
 func (f *file) WriteString(s string) (nn int, err error) {
 	if f.state == read {
-		_, err = f.Seek(-int64(f.r.Buffered()), 1)
+		_, err = f.Seek(f.off, io.SeekStart)
 		if err != nil {
 			return
 		}
 
-		f.r.Reset(f.File)
+		f.br.Reset(f.File)
 	}
 
 	switch f.mode {
 	case IONBF:
 		nn, err = f.File.WriteString(s)
+		f.off += int64(nn)
 		if err != nil {
 			return
 		}
 	case IOFBF:
-		nn, err = f.w.WriteString(s)
+		nn, err = f.bw.WriteString(s)
+		f.off += int64(nn)
 		if err != nil {
 			return
 		}
 	case IOLBF:
 		i := strings.LastIndex(s, "\n")
 		if i == -1 {
-			nn, err = f.w.WriteString(s)
+			nn, err = f.bw.WriteString(s)
+			f.off += int64(nn)
 			if err != nil {
 				return
 			}
 		} else {
-			nn, err = f.w.WriteString(s[:i])
+			nn, err = f.bw.WriteString(s[:i])
+			f.off += int64(nn)
 			if err != nil {
 				return
 			}
-			err = f.w.Flush()
+			err = f.bw.Flush()
 			if err != nil {
 				return
 			}
 
-			nn, err = f.w.WriteString(s[i+1:])
+			nn, err = f.bw.WriteString(s[i+1:])
+			f.off += int64(nn)
 			if err != nil {
 				return
 			}
@@ -143,18 +155,21 @@ func (f *file) WriteString(s string) (nn int, err error) {
 }
 
 func (f *file) Flush() error {
-	return f.w.Flush()
+	return f.bw.Flush()
 }
 
 func (f *file) UnreadByte() (err error) {
 	if f.state == write {
-		err = f.w.Flush()
+		err = f.bw.Flush()
 		if err != nil {
 			return
 		}
 	}
 
-	err = f.r.UnreadByte()
+	err = f.br.UnreadByte()
+	if err == nil {
+		f.off--
+	}
 
 	f.state = read
 
@@ -163,15 +178,15 @@ func (f *file) UnreadByte() (err error) {
 
 func (f *file) ReadByte() (c byte, err error) {
 	if f.state == write {
-		err = f.w.Flush()
+		err = f.bw.Flush()
 		if err != nil {
 			return
 		}
 	}
 
-	c, err = f.r.ReadByte()
-	if err != nil {
-		return
+	c, err = f.br.ReadByte()
+	if err == nil {
+		f.off++
 	}
 
 	f.state = read
@@ -181,13 +196,14 @@ func (f *file) ReadByte() (c byte, err error) {
 
 func (f *file) Read(p []byte) (n int, err error) {
 	if f.state == write {
-		err = f.w.Flush()
+		err = f.bw.Flush()
 		if err != nil {
 			return
 		}
 	}
 
-	n, err = f.r.Read(p)
+	n, err = f.br.Read(p)
+	f.off += int64(n)
 	if err != nil {
 		return
 	}
@@ -197,17 +213,18 @@ func (f *file) Read(p []byte) (n int, err error) {
 	return
 }
 
-func (f *file) ReadSlice(delim byte) (line []byte, err error) {
+func (f *file) ReadBytes(delim byte) (line []byte, err error) {
 	if f.state == write {
-		err = f.w.Flush()
+		err = f.bw.Flush()
 		if err != nil {
 			return
 		}
 
-		f.r.Reset(f.File)
+		f.br.Reset(f.File)
 	}
 
-	line, err = f.r.ReadSlice(delim)
+	line, err = f.br.ReadBytes(delim)
+	f.off += int64(len(line))
 	if err != nil {
 		return
 	}
@@ -219,25 +236,35 @@ func (f *file) ReadSlice(delim byte) (line []byte, err error) {
 
 func (f *file) Seek(offset int64, whence int) (n int64, err error) {
 	if f.state == write {
-		err = f.w.Flush()
+		err = f.bw.Flush()
 		if err != nil {
 			return
 		}
 	}
 
 	switch whence {
-	case 0:
-		n, err = f.File.Seek(offset, 0)
-	case 1:
-		if f.state == read {
-			n, err = f.File.Seek(offset-int64(f.r.Buffered()), 1)
-			f.r.Reset(f.File)
+	case io.SeekStart:
+		if f.off <= offset && offset <= f.off+int64(f.br.Buffered()) {
+			f.br.Discard(int(offset - f.off))
+			f.off = offset
 		} else {
-			n, err = f.File.Seek(offset, 1)
+			f.off, err = f.File.Seek(offset, io.SeekStart)
+			f.br.Reset(f.File)
 		}
-	case 2:
-		n, err = f.File.Seek(offset, 2)
+	case io.SeekCurrent:
+		if 0 <= offset && offset <= int64(f.br.Buffered()) {
+			f.br.Discard(int(offset))
+			f.off += offset
+		} else {
+			f.off, err = f.File.Seek(f.off+offset, io.SeekStart)
+			f.br.Reset(f.File)
+		}
+	case io.SeekEnd:
+		f.off, err = f.File.Seek(offset, io.SeekEnd)
+		f.br.Reset(f.File)
 	}
+
+	n = f.off
 
 	if err != nil {
 		return
@@ -251,12 +278,12 @@ func (f *file) Seek(offset int64, whence int) (n int64, err error) {
 func (f *file) Setvbuf(mode int, size int) (err error) {
 	switch f.state {
 	case read:
-		_, err = f.Seek(-int64(f.r.Buffered()), 1)
+		_, err = f.Seek(-int64(f.br.Buffered()), 1)
 		if err != nil {
 			return err
 		}
 	case write:
-		err = f.w.Flush()
+		err = f.bw.Flush()
 		if err != nil {
 			return err
 		}
@@ -266,8 +293,8 @@ func (f *file) Setvbuf(mode int, size int) (err error) {
 	f.state = seek
 
 	if size > 0 {
-		f.r = bufio.NewReaderSize(f.File, size)
-		f.w = bufio.NewWriterSize(f.File, size)
+		f.br = bufio.NewReaderSize(f.File, size)
+		f.bw = bufio.NewWriterSize(f.File, size)
 	}
 
 	return
