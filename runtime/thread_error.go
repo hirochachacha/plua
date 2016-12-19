@@ -1,32 +1,42 @@
 package runtime
 
-import (
-	"github.com/hirochachacha/plua/object"
-	"github.com/hirochachacha/plua/position"
-)
+import "github.com/hirochachacha/plua/object"
+
+func (th *thread) trackErrorOnce(err *object.RuntimeError) {
+	if d := th.getInfo(0, "Slnt"); d != nil {
+		err.Traceback = append(err.Traceback, th.stackTrace(d))
+
+		if d.IsTailCall {
+			err.Traceback = append(err.Traceback, &object.StackTrace{
+				Signature: "(...tail calls...)",
+			})
+		}
+	}
+}
 
 func (th *thread) trackError(err *object.RuntimeError) {
-	l := err.Level - 1
+	level := 0
 	for {
-		d := th.getInfo(l, "Sl")
+		d := th.getInfo(level, "Slnt")
 		if d == nil {
 			break
 		}
-		err.Traceback = append(err.Traceback, position.Position{
-			SourceName: "@" + d.ShortSource,
-			Line:       d.CurrentLine,
-			Column:     -1,
-		})
 
-		l++
+		err.Traceback = append(err.Traceback, th.stackTrace(d))
+
+		if d.IsTailCall {
+			err.Traceback = append(err.Traceback, &object.StackTrace{
+				Signature: "(...tail calls...)",
+			})
+		}
+
+		level++
 	}
 }
 
 func (th *thread) error(err *object.RuntimeError) {
 	if th.status != object.THREAD_ERROR {
-		if err.Level > 0 {
-			th.trackError(err)
-		}
+		th.trackError(err)
 		th.status = object.THREAD_ERROR
 		th.err = err
 	}

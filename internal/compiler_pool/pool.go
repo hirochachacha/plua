@@ -1,6 +1,7 @@
 package compiler_pool
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"github.com/hirochachacha/plua/compiler/scanner"
 	"github.com/hirochachacha/plua/compiler/undump"
 	"github.com/hirochachacha/plua/object"
-	"github.com/hirochachacha/plua/position"
 )
 
 var pool = &sync.Pool{
@@ -68,21 +68,18 @@ func newRuntimeError(err error) *object.RuntimeError {
 		return object.NewRuntimeError(err.Err.Error())
 	case *scanner.Error:
 		return &object.RuntimeError{
-			Value:     object.String(err.Err.Error()),
-			Level:     1,
-			Traceback: []position.Position{err.Pos},
+			Value: object.String(fmt.Sprintf("%s: %v", err.Pos, err.Err)),
+			Level: 0,
 		}
 	case *parser.Error:
 		return &object.RuntimeError{
-			Value:     object.String(err.Err.Error()),
-			Level:     1,
-			Traceback: []position.Position{err.Pos},
+			Value: object.String(fmt.Sprintf("%s: %v", err.Pos, err.Err)),
+			Level: 0,
 		}
 	case *codegen.Error:
 		return &object.RuntimeError{
-			Value:     object.String(err.Err.Error()),
-			Level:     1,
-			Traceback: []position.Position{err.Pos},
+			Value: object.String(fmt.Sprintf("%s: %v", err.Pos, err.Err)),
+			Level: 0,
 		}
 	case *dump.Error:
 		return object.NewRuntimeError(err.Err.Error())

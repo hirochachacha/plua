@@ -452,10 +452,32 @@ func setuservalue(th object.Thread, args ...object.Value) ([]object.Value, *obje
 	return nil, nil
 }
 
-// TODO
 // traceback([thread,] [message [, level]])
 func traceback(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	return nil, object.NewRuntimeError("not implemented")
+	ap := fnutil.NewArgParser(th, args)
+
+	th1 := ap.GetThread()
+
+	msg, err := ap.ToGoString(0)
+	if err != nil {
+		if val, _ := ap.Get(0); val != nil {
+			return []object.Value{val}, nil
+		}
+	}
+
+	l := 0
+	if th == th1 {
+		l = 1
+	}
+
+	level, err := ap.OptGoInt(1, l)
+	if err != nil {
+		return nil, err
+	}
+
+	tb := getTraceback(th1, msg, level)
+
+	return []object.Value{object.String(tb)}, nil
 }
 
 // upvalueid(f, n)

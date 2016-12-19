@@ -46,6 +46,8 @@ type Thread interface {
 	GetInfo(level int, what string) *DebugInfo
 	GetInfoByFunc(fn Value, what string) *DebugInfo
 
+	Traceback(level int) []*StackTrace
+
 	GetLocal(level, n int) (name string, val Value)
 	SetLocal(level, n int, val Value) (name string)
 

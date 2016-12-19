@@ -67,10 +67,6 @@ func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall b
 
 	rets, err := fn(th, ctx.stack[ctx.ci.base:ctx.ci.top]...)
 	if err != nil {
-		// TODO trackError
-
-		ctx.popFrame()
-
 		return err
 	}
 
@@ -332,12 +328,29 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 func (th *thread) docall(fn, errh object.Value, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	switch fn := fn.(type) {
 	case nil:
-		return th.dohandle(errh, errors.CallError(th, fn))
+		err := errors.CallError(th, fn)
+
+		th.trackError(err)
+
+		return th.dohandle(errh, err)
 	case object.GoFunction:
+		old := th.stack[1]
+
 		rets, err := th.docallGo(fn, args...)
+
 		if err != nil {
+			th.trackErrorOnce(err)
+
+			th.stack[1] = old
+
+			th.popFrame()
+
+			th.trackError(err)
+
 			return th.dohandle(errh, err)
 		}
+
+		th.stack[1] = old
 
 		return rets, nil
 	case object.Closure:
@@ -363,32 +376,20 @@ func (th *thread) docallGo(fn object.GoFunction, args ...object.Value) (rets []o
 		pc:   -1,
 	})
 
+	ctx.stack[1] = fn
+
 	if err := th.onCall(); err != nil {
 		return nil, err
 	}
 
-	// see getInfo
-
-	old := ctx.stack[1]
-
-	ctx.stack[1] = fn
-
 	rets, err = fn(th, args...)
 	if err != nil {
-		// TODO trackError
-
-		ctx.stack[1] = old
-
-		ctx.popFrame()
-
 		return nil, err
 	}
 
 	if err := th.onReturn(); err != nil {
 		return nil, err
 	}
-
-	ctx.stack[1] = old
 
 	ctx.popFrame()
 
@@ -405,7 +406,12 @@ func (th *thread) dohandle(errh object.Value, err *object.RuntimeError) ([]objec
 	case nil:
 		return nil, err
 	case object.GoFunction:
+		old := th.stack[1]
+
 		rets, err := th.docallGo(errh, err.Positioned())
+
+		th.stack[1] = old
+
 		if err != nil {
 			return nil, errors.ErrInErrorHandling
 		}

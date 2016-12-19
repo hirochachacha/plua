@@ -18,6 +18,9 @@ func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bo
 		panic("main function isn't loaded yet")
 	case object.GoFunction:
 		var err *object.RuntimeError
+
+		old := th.stack[1]
+
 		rets, err = th.docallGo(fn, args...)
 
 		if err != nil {
@@ -25,6 +28,8 @@ func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bo
 		} else {
 			ctx.status = object.THREAD_RETURN
 		}
+
+		th.stack[1] = old
 
 		done = true
 	case object.Closure:
