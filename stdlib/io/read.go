@@ -77,7 +77,7 @@ func _read(th object.Thread, args []object.Value, f file.File, off int, doClose 
 		switch fmt {
 		case "n":
 			val, e = readNumber(f)
-		case "a":
+		case "a", "all":
 			val, e = readAll(f)
 		case "l":
 			val, e = readStrippedLine(f)

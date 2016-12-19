@@ -175,7 +175,7 @@ func fwrite(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		}
 	}
 
-	return fileResult(th, nil)
+	return []object.Value{args[0]}, nil
 }
 
 func ftostring(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
