@@ -25,11 +25,17 @@ func (wo *wofile) Close() error {
 		return errors.New("cannot close standard file")
 	}
 
-	err := wo.File.Close()
+	if err := wo.bw.Flush(); err != nil {
+		return err
+	}
+
+	if err := wo.File.Close(); err != nil {
+		return err
+	}
 
 	wo.closed = true
 
-	return err
+	return nil
 }
 
 func (wo *wofile) Write(p []byte) (nn int, err error) {
@@ -39,11 +45,11 @@ func (wo *wofile) Write(p []byte) (nn int, err error) {
 	case IOFBF:
 		nn, err = wo.bw.Write(p)
 	case IOLBF:
-		i := bytes.LastIndex(p, []byte{'\n'})
+		i := bytes.LastIndexByte(p, '\n')
 		if i == -1 {
 			nn, err = wo.bw.Write(p)
 		} else {
-			nn, err = wo.bw.Write(p[:i])
+			nn, err = wo.bw.Write(p[:i+1])
 			if err != nil {
 				return
 			}
@@ -66,11 +72,11 @@ func (wo *wofile) WriteString(s string) (nn int, err error) {
 	case IOFBF:
 		nn, err = wo.bw.WriteString(s)
 	case IOLBF:
-		i := strings.LastIndex(s, "\n")
+		i := strings.LastIndexByte(s, '\n')
 		if i == -1 {
 			nn, err = wo.bw.WriteString(s)
 		} else {
-			nn, err = wo.bw.WriteString(s[:i])
+			nn, err = wo.bw.WriteString(s[:i+1])
 			if err != nil {
 				return
 			}
@@ -119,14 +125,11 @@ func (wo *wofile) ReadBytes(delim byte) (line []byte, err error) {
 }
 
 func (wo *wofile) Seek(offset int64, whence int) (n int64, err error) {
-	err = wo.bw.Flush()
-	if err != nil {
-		return
+	if err := wo.bw.Flush(); err != nil {
+		return 0, err
 	}
 
-	n, err = wo.File.Seek(offset, whence)
-
-	return
+	return wo.File.Seek(offset, whence)
 }
 
 func (wo *wofile) Setvbuf(mode int, size int) (err error) {

@@ -37,11 +37,17 @@ func (f *file) Close() error {
 		return errors.New("cannot close standard file")
 	}
 
-	err := f.File.Close()
+	if err := f.bw.Flush(); err != nil {
+		return err
+	}
+
+	if err := f.File.Close(); err != nil {
+		return err
+	}
 
 	f.closed = true
 
-	return err
+	return nil
 }
 
 func (f *file) Write(p []byte) (nn int, err error) {
@@ -68,7 +74,7 @@ func (f *file) Write(p []byte) (nn int, err error) {
 			return
 		}
 	case IOLBF:
-		i := bytes.LastIndex(p, []byte{'\n'})
+		i := bytes.LastIndexByte(p, '\n')
 		if i == -1 {
 			nn, err = f.bw.Write(p)
 			f.off += int64(nn)
@@ -76,7 +82,7 @@ func (f *file) Write(p []byte) (nn int, err error) {
 				return
 			}
 		} else {
-			nn, err = f.bw.Write(p[:i])
+			nn, err = f.bw.Write(p[:i+1])
 			f.off += int64(nn)
 			if err != nil {
 				return
@@ -123,7 +129,7 @@ func (f *file) WriteString(s string) (nn int, err error) {
 			return
 		}
 	case IOLBF:
-		i := strings.LastIndex(s, "\n")
+		i := strings.LastIndexByte(s, '\n')
 		if i == -1 {
 			nn, err = f.bw.WriteString(s)
 			f.off += int64(nn)
@@ -131,7 +137,7 @@ func (f *file) WriteString(s string) (nn int, err error) {
 				return
 			}
 		} else {
-			nn, err = f.bw.WriteString(s[:i])
+			nn, err = f.bw.WriteString(s[:i+1])
 			f.off += int64(nn)
 			if err != nil {
 				return
@@ -236,9 +242,8 @@ func (f *file) ReadBytes(delim byte) (line []byte, err error) {
 
 func (f *file) Seek(offset int64, whence int) (n int64, err error) {
 	if f.state == write {
-		err = f.bw.Flush()
-		if err != nil {
-			return
+		if err := f.bw.Flush(); err != nil {
+			return 0, err
 		}
 	}
 

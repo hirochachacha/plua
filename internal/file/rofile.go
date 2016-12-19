@@ -24,11 +24,13 @@ func (ro *rofile) Close() error {
 		return errors.New("cannot close standard file")
 	}
 
-	err := ro.File.Close()
+	if err := ro.File.Close(); err != nil {
+		return err
+	}
 
 	ro.closed = true
 
-	return err
+	return nil
 }
 
 func (ro *rofile) Flush() error {
