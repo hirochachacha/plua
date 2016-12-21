@@ -7,6 +7,17 @@ import (
 )
 
 func (th *thread) Traceback(level int) (tb []*object.StackTrace) {
+	switch th.status {
+	case object.THREAD_ERROR:
+		tb = th.err.Traceback
+		if level <= 0 && level <= len(tb) {
+			return tb[level:]
+		}
+		return nil
+	case object.THREAD_RETURN:
+		return nil
+	}
+
 	for {
 		d := th.GetInfo(level, "Slnt")
 		if d == nil {
