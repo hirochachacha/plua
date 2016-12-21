@@ -7,6 +7,30 @@ import (
 	"github.com/hirochachacha/plua/object"
 )
 
+func writeStackTrace(buf *bytes.Buffer, st *object.StackTrace) {
+	buf.WriteString("\n\t")
+
+	var write bool
+
+	if st.Source != "" {
+		buf.WriteString(st.Source)
+		buf.WriteByte(':')
+		write = true
+	}
+
+	if st.Line > 0 {
+		buf.WriteString(strconv.Itoa(st.Line))
+		buf.WriteByte(':')
+		write = true
+	}
+
+	if write {
+		buf.WriteString(" in ")
+	}
+
+	buf.WriteString(st.Signature)
+}
+
 func getTraceback(th object.Thread, msg string, level int) string {
 	buf := new(bytes.Buffer)
 
@@ -17,28 +41,21 @@ func getTraceback(th object.Thread, msg string, level int) string {
 
 	buf.WriteString("stack traceback:")
 
-	for _, tb := range th.Traceback(level) {
+	tb := th.Traceback(level)
+
+	if len(tb) <= 22 {
+		for _, st := range tb {
+			writeStackTrace(buf, st)
+		}
+	} else {
+		for _, st := range tb[:10] {
+			writeStackTrace(buf, st)
+		}
 		buf.WriteString("\n\t")
-
-		var write bool
-
-		if tb.Source != "" {
-			buf.WriteString(tb.Source)
-			buf.WriteByte(':')
-			write = true
+		buf.WriteString("...")
+		for _, st := range tb[len(tb)-11:] {
+			writeStackTrace(buf, st)
 		}
-
-		if tb.Line > 0 {
-			buf.WriteString(strconv.Itoa(tb.Line))
-			buf.WriteByte(':')
-			write = true
-		}
-
-		if write {
-			buf.WriteString(" in ")
-		}
-
-		buf.WriteString(tb.Signature)
 	}
 
 	return buf.String()

@@ -25,9 +25,9 @@ func (err *RuntimeError) Positioned() Value {
 	if msg, ok := err.Value.(String); ok {
 		if 0 < err.Level && err.Level < len(err.Traceback) {
 			tb := err.Traceback[err.Level]
-			if tb.Source != "[Go]" {
-				return String(fmt.Sprintf("%s:%d: %s", tb.Source, tb.Line, msg))
-			}
+			// if tb.Source != "[Go]" {
+			return String(fmt.Sprintf("%s:%d: %s", tb.Source, tb.Line, msg))
+			// }
 		}
 		return msg
 	}
@@ -38,32 +38,48 @@ func (err *RuntimeError) Error() string {
 	return fmt.Sprintf("runtime: %s", Repr(err.Positioned()))
 }
 
+func printStackTrace(w io.Writer, st *StackTrace) {
+	fmt.Fprint(w, "\n\t")
+
+	var write bool
+
+	if st.Source != "" {
+		fmt.Fprint(w, st.Source)
+		fmt.Fprint(w, ":")
+		write = true
+	}
+
+	if st.Line > 0 {
+		fmt.Fprint(w, st.Line)
+		fmt.Fprint(w, ":")
+		write = true
+	}
+
+	if write {
+		fmt.Fprint(w, " in ")
+	}
+
+	fmt.Fprint(w, st.Signature)
+}
+
 func PrintError(w io.Writer, err error) {
 	if err, ok := err.(*RuntimeError); ok {
 		fmt.Fprintln(w, err)
 		fmt.Fprint(w, "stack traceback:")
-		for _, tb := range err.Traceback {
+		tb := err.Traceback
+		if len(tb) <= 22 {
+			for _, st := range tb {
+				printStackTrace(w, st)
+			}
+		} else {
+			for _, st := range tb[:10] {
+				printStackTrace(w, st)
+			}
 			fmt.Fprint(w, "\n\t")
-
-			var write bool
-
-			if tb.Source != "" {
-				fmt.Fprint(w, tb.Source)
-				fmt.Fprint(w, ":")
-				write = true
+			fmt.Fprint(w, "...")
+			for _, st := range tb[len(tb)-11:] {
+				printStackTrace(w, st)
 			}
-
-			if tb.Line > 0 {
-				fmt.Fprint(w, tb.Line)
-				fmt.Fprint(w, ":")
-				write = true
-			}
-
-			if write {
-				fmt.Fprint(w, " in ")
-			}
-
-			fmt.Fprint(w, tb.Signature)
 		}
 		fmt.Fprintln(w)
 	} else {
