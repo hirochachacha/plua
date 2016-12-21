@@ -221,9 +221,8 @@ do   -- test hook presence in debug info
   local count = 0
   local function f ()
     assert(debug.getinfo(1).namewhat == "hook")
--- TODO traceback is not implmented
-    -- local sndline = string.match(debug.traceback(), "\n(.-)\n")
-    -- assert(string.find(sndline, "hook"))
+	local sndline = string.match(debug.traceback(), "\n(.-)\n")
+	assert(string.find(sndline, "hook"))
     count = count + 1
   end
   debug.sethook(f, "l")
@@ -527,14 +526,13 @@ print"+"
 
 -- testing traceback
 
--- TODO traceback is not implemented
--- assert(debug.traceback(print) == print)
--- assert(debug.traceback(print, 4) == print)
--- assert(string.find(debug.traceback("hi", 4), "^hi\n"))
--- assert(string.find(debug.traceback("hi"), "^hi\n"))
--- assert(not string.find(debug.traceback("hi"), "'debug.traceback'"))
--- assert(string.find(debug.traceback("hi", 0), "'debug.traceback'"))
--- assert(string.find(debug.traceback(), "^stack traceback:\n"))
+assert(debug.traceback(print) == print)
+assert(debug.traceback(print, 4) == print)
+assert(string.find(debug.traceback("hi", 4), "^hi\n"))
+assert(string.find(debug.traceback("hi"), "^hi\n"))
+assert(not string.find(debug.traceback("hi"), "'debug.traceback'"))
+assert(string.find(debug.traceback("hi", 0), "'debug.traceback'"))
+assert(string.find(debug.traceback(), "^stack traceback:\n"))
 
 -- do  -- C-function names in traceback
   -- local st, msg = (function () return pcall end)()(debug.traceback)
@@ -559,32 +557,31 @@ assert(t.isvararg == true and t.nparams == 0 and t.nups == 1 and
 
 
 
--- TODO traceback is not implemented
 -- testing debugging of coroutines
 
--- local function checktraceback (co, p, level)
-  -- local tb = debug.traceback(co, nil, level)
-  -- local i = 0
-  -- for l in string.gmatch(tb, "[^\n]+\n?") do
-    -- assert(i == 0 or string.find(l, p[i]))
-    -- i = i+1
-  -- end
-  -- assert(p[i] == nil)
--- end
+local function checktraceback (co, p, level)
+  local tb = debug.traceback(co, nil, level)
+  local i = 0
+  for l in string.gmatch(tb, "[^\n]+\n?") do
+	assert(i == 0 or string.find(l, p[i]))
+	i = i+1
+  end
+  assert(p[i] == nil)
+end
 
 
--- local function f (n)
-  -- if n > 0 then f(n-1)
-  -- else coroutine.yield() end
--- end
+local function f (n)
+  if n > 0 then f(n-1)
+  else coroutine.yield() end
+end
 
--- local co = coroutine.create(f)
--- coroutine.resume(co, 3)
--- checktraceback(co, {"yield", "db.lua", "db.lua", "db.lua", "db.lua"})
--- checktraceback(co, {"db.lua", "db.lua", "db.lua", "db.lua"}, 1)
--- checktraceback(co, {"db.lua", "db.lua", "db.lua"}, 2)
--- checktraceback(co, {"db.lua"}, 4)
--- checktraceback(co, {}, 40)
+local co = coroutine.create(f)
+coroutine.resume(co, 3)
+checktraceback(co, {"yield", "db.lua", "db.lua", "db.lua", "db.lua"})
+checktraceback(co, {"db.lua", "db.lua", "db.lua", "db.lua"}, 1)
+checktraceback(co, {"db.lua", "db.lua", "db.lua"}, 2)
+checktraceback(co, {"db.lua"}, 4)
+checktraceback(co, {}, 40)
 
 
 co = coroutine.create(function (x)
@@ -619,14 +616,14 @@ assert(#tr == 2 and
 
 a,b,c = pcall(coroutine.resume, co)
 assert(a and b and c == l.currentline+1)
--- checktraceback(co, {"yield", "in function <"})
+checktraceback(co, {"yield", "in function <"})
 
 a,b = coroutine.resume(co)
 assert(a and b == "hi")
 assert(#tr == 4 and tr[4] == l.currentline+2)
 assert(debug.gethook(co) == foo)
 assert(not debug.gethook())
--- checktraceback(co, {})
+checktraceback(co, {})
 
 
 -- check get/setlocal in coroutines
@@ -654,12 +651,12 @@ co = coroutine.create(function (x) f(x) end)
 a, b = coroutine.resume(co, 3)
 t = {"'coroutine.yield'", "'f'", "in function <"}
 while coroutine.status(co) == "suspended" do
-  -- checktraceback(co, t)
+  checktraceback(co, t)
   a, b = coroutine.resume(co)
   table.insert(t, 2, "'f'")   -- one more recursive call to 'f'
 end
 t[1] = "'error'"
--- checktraceback(co, t)
+checktraceback(co, t)
 
 
 -- test acessing line numbers of a coroutine from a resume inside
@@ -723,46 +720,45 @@ do   -- testing for-iterator name
   for i in f do end
 end
 
--- TODO traceback is not implemented
--- do
-  -- print("testing traceback sizes")
+do
+  print("testing traceback sizes")
 
-  -- local function countlines (s)
-    -- return select(2, string.gsub(s, "\n", ""))
-  -- end
+  local function countlines (s)
+	return select(2, string.gsub(s, "\n", ""))
+  end
 
-  -- local function deep (lvl, n)
-    -- if lvl == 0 then
-      -- return (debug.traceback("message", n))
-    -- else
-      -- return (deep(lvl-1, n))
-    -- end
-  -- end
+  local function deep (lvl, n)
+	if lvl == 0 then
+	  return (debug.traceback("message", n))
+	else
+	  return (deep(lvl-1, n))
+	end
+  end
 
-  -- local function checkdeep (total, start)
-    -- local s = deep(total, start)
-    -- local rest = string.match(s, "^message\nstack traceback:\n(.*)$")
-    -- local cl = countlines(rest)
-    -- -- at most 10 lines in first part, 11 in second, plus '...'
-    -- assert(cl <= 10 + 11 + 1)
-    -- local brk = string.find(rest, "%.%.%.")
-    -- if brk then   -- does message have '...'?
-      -- local rest1 = string.sub(rest, 1, brk)
-      -- local rest2 = string.sub(rest, brk, #rest)
-      -- assert(countlines(rest1) == 10 and countlines(rest2) == 11)
-    -- else
-      -- assert(cl == total - start + 2)
-    -- end
-  -- end
+  local function checkdeep (total, start)
+	local s = deep(total, start)
+	local rest = string.match(s, "^message\nstack traceback:\n(.*)$")
+	local cl = countlines(rest)
+	-- at most 10 lines in first part, 11 in second, plus '...'
+	assert(cl <= 10 + 11 + 1)
+	local brk = string.find(rest, "%.%.%.")
+	if brk then   -- does message have '...'?
+	  local rest1 = string.sub(rest, 1, brk)
+	  local rest2 = string.sub(rest, brk, #rest)
+	  assert(countlines(rest1) == 10 and countlines(rest2) == 11)
+	else
+	  assert(cl == total - start + 2)
+	end
+  end
 
-  -- for d = 1, 51, 10 do
-    -- for l = 1, d do
-      -- -- use coroutines to ensure complete control of the stack
-      -- coroutine.wrap(checkdeep)(d, l)
-    -- end
-  -- end
+  for d = 1, 51, 10 do
+	for l = 1, d do
+	  -- use coroutines to ensure complete control of the stack
+	  coroutine.wrap(checkdeep)(d, l)
+	end
+  end
 
--- end
+end
 
 
 print("testing debug functions on chunk without debug info")
