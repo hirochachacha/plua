@@ -25,9 +25,9 @@ func (err *RuntimeError) Positioned() Value {
 	if msg, ok := err.Value.(String); ok {
 		if 0 < err.Level && err.Level < len(err.Traceback) {
 			tb := err.Traceback[err.Level]
-			// if tb.Source != "[Go]" {
-			return String(fmt.Sprintf("%s:%d: %s", tb.Source, tb.Line, msg))
-			// }
+			if tb.Source != "[Go]" {
+				return String(fmt.Sprintf("%s:%d: %s", tb.Source, tb.Line, msg))
+			}
 		}
 		return msg
 	}
