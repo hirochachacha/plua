@@ -1,7 +1,6 @@
 package plua_test
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -41,10 +40,8 @@ func TestLuaTest(t *testing.T) {
 
 	p.Globals().Set(object.String("_U"), object.True) // set user test flag
 
-	rets, err := p.Exec(proto)
+	_, err = p.Exec(proto)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	fmt.Println(rets)
 }
