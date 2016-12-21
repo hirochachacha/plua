@@ -129,9 +129,9 @@ func updateTable(th object.Thread, tab object.Table, t time.Time) {
 		w, s = s, w
 	}
 
-	isdst := object.Boolean(w != s && n != w)
+	isdst := w != s && n != w
 
-	tab.Set(object.String("isdst"), isdst)
+	tab.Set(object.String("isdst"), object.Boolean(isdst))
 
 	tab.Set(object.String("wday"), object.Integer(int(t.Weekday()+1)))
 	tab.Set(object.String("year"), object.Integer(t.Year()))
