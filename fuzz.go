@@ -9,6 +9,7 @@ import (
 	"github.com/hirochachacha/plua/compiler"
 	"github.com/hirochachacha/plua/compiler/ast/printer"
 	"github.com/hirochachacha/plua/compiler/parser"
+	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/runtime"
 	"github.com/hirochachacha/plua/stdlib"
 )
@@ -59,12 +60,22 @@ func Fuzz(data []byte) int {
 		return 0
 	}
 
+	err = object.PrintProto(proto)
+	if err != nil {
+		panic(err)
+	}
+
 	p := runtime.NewProcess()
 
 	p.Require("", stdlib.Open)
 
 	_, err = p.Exec(proto)
 	if err != nil {
+		err = object.PrintError(err)
+		if err != nil {
+			panic(err)
+		}
+
 		return 0
 	}
 

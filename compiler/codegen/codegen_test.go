@@ -5,7 +5,7 @@ import (
 
 	"github.com/hirochachacha/plua/compiler/codegen"
 	"github.com/hirochachacha/plua/compiler/parser"
-	"github.com/hirochachacha/plua/object/printer"
+	"github.com/hirochachacha/plua/object"
 )
 
 func TestGenerate(t *testing.T) {
@@ -19,5 +19,5 @@ func TestGenerate(t *testing.T) {
 		panic(err)
 	}
 
-	printer.Print(proto)
+	object.PrintProto(proto)
 }
