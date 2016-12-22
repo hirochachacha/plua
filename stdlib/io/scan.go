@@ -134,9 +134,6 @@ func (s *scanner) scanNumber() (object.Value, error) {
 		if s.accepts("pP") {
 			s.acceptSign()
 			s.acceptDigits()
-		} else if s.accepts("eE") {
-			s.acceptSign()
-			s.acceptDigits()
 		}
 	} else {
 		s.acceptDigits()
