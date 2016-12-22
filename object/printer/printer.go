@@ -11,52 +11,74 @@ import (
 	"github.com/hirochachacha/plua/opcode"
 )
 
-func Fprint(w io.Writer, x interface{}) {
-	printer{w}.print(x)
+func Print(x interface{}) error {
+	return Fprint(os.Stdout, x)
 }
 
-func Print(x interface{}) {
-	printer{os.Stdout}.print(x)
+func Fprint(w io.Writer, x interface{}) error {
+	pr := &printer{w: w}
+	pr.printMain(x)
+	return pr.err
 }
 
 type printer struct {
-	w io.Writer
+	w   io.Writer
+	err error
 }
 
-func (pr printer) print(x interface{}) {
+func (pr *printer) printMain(x interface{}) {
 	switch x := x.(type) {
 	case *object.Proto:
 		pr.printFunc(x)
 	case *object.DebugInfo:
 		pr.printDebug(x)
 	case object.Value:
-		fmt.Fprintf(pr.w, "%s value = %v", object.ToType(x), x)
+		pr.printf("%s value = %v", object.ToType(x), x)
 		pr.printValue(x)
-		fmt.Fprintln(pr.w)
+		pr.println()
 	case object.Process:
 		// TODO
 	}
 }
 
-func (pr printer) printDebug(d *object.DebugInfo) {
-	fmt.Fprintf(pr.w, "debug info %p = {\n", d)
-	fmt.Fprintf(pr.w, "\tName            =\t%s\n", d.Name)
-	fmt.Fprintf(pr.w, "\tNameWhat        =\t%s\n", d.NameWhat)
-	fmt.Fprintf(pr.w, "\tWhat            =\t%s\n", d.What)
-	fmt.Fprintf(pr.w, "\tSource          =\t%s\n", d.Source)
-	fmt.Fprintf(pr.w, "\tCurrentLine     =\t%d\n", d.CurrentLine)
-	fmt.Fprintf(pr.w, "\tLineDefined     =\t%d\n", d.LineDefined)
-	fmt.Fprintf(pr.w, "\tLastLineDefined =\t%d\n", d.LastLineDefined)
-	fmt.Fprintf(pr.w, "\tNUpvalues       =\t%d\n", d.NUpvalues)
-	fmt.Fprintf(pr.w, "\tNParams         =\t%d\n", d.NParams)
-	fmt.Fprintf(pr.w, "\tIsVararg        =\t%t\n", d.IsVararg)
-	fmt.Fprintf(pr.w, "\tIsTailCall      =\t%t\n", d.IsTailCall)
-	fmt.Fprintf(pr.w, "\tShortSource     =\t%s\n", d.ShortSource)
-	fmt.Fprintf(pr.w, "\tFunc            =\t%v\n", d.Func)
-	fmt.Fprintf(pr.w, "}\n")
+func (pr *printer) Write(p []byte) (n int, err error) {
+	if pr.err == nil {
+		n, pr.err = pr.w.Write(p)
+	}
+	return n, pr.err
 }
 
-func (pr printer) printFunc(p *object.Proto) {
+func (pr *printer) printf(s string, args ...interface{}) {
+	fmt.Fprintf(pr, s, args...)
+}
+
+func (pr *printer) print(args ...interface{}) {
+	fmt.Fprint(pr, args...)
+}
+
+func (pr *printer) println(args ...interface{}) {
+	fmt.Fprintln(pr, args...)
+}
+
+func (pr *printer) printDebug(d *object.DebugInfo) {
+	pr.printf("debug info %p = {\n", d)
+	pr.printf("\tName            =\t%s\n", d.Name)
+	pr.printf("\tNameWhat        =\t%s\n", d.NameWhat)
+	pr.printf("\tWhat            =\t%s\n", d.What)
+	pr.printf("\tSource          =\t%s\n", d.Source)
+	pr.printf("\tCurrentLine     =\t%d\n", d.CurrentLine)
+	pr.printf("\tLineDefined     =\t%d\n", d.LineDefined)
+	pr.printf("\tLastLineDefined =\t%d\n", d.LastLineDefined)
+	pr.printf("\tNUpvalues       =\t%d\n", d.NUpvalues)
+	pr.printf("\tNParams         =\t%d\n", d.NParams)
+	pr.printf("\tIsVararg        =\t%t\n", d.IsVararg)
+	pr.printf("\tIsTailCall      =\t%t\n", d.IsTailCall)
+	pr.printf("\tShortSource     =\t%s\n", d.ShortSource)
+	pr.printf("\tFunc            =\t%v\n", d.Func)
+	pr.printf("}\n")
+}
+
+func (pr *printer) printFunc(p *object.Proto) {
 	pr.printHeader(p)
 	pr.printCode(p)
 	pr.printConstants(p)
@@ -65,7 +87,7 @@ func (pr printer) printFunc(p *object.Proto) {
 	pr.printProtos(p)
 }
 
-func (pr printer) printHeader(p *object.Proto) {
+func (pr *printer) printHeader(p *object.Proto) {
 	s := "=?"
 	if len(p.Source) != 0 {
 		s = string(p.Source)
@@ -86,8 +108,7 @@ func (pr printer) printHeader(p *object.Proto) {
 		typ = "function"
 	}
 
-	fmt.Fprintf(
-		pr.w,
+	pr.printf(
 		"\n%s <%s:%d,%d> (%d instructions at %p)\n",
 		typ, s, p.LineDefined, p.LastLineDefined, len(p.Code), p,
 	)
@@ -97,30 +118,28 @@ func (pr printer) printHeader(p *object.Proto) {
 		vararg = "+"
 	}
 
-	fmt.Fprintf(
-		pr.w,
+	pr.printf(
 		"%d%s params, %d slots, %d upvalues, ",
 		p.NParams, vararg, p.MaxStackSize, len(p.Upvalues),
 	)
 
-	fmt.Fprintf(
-		pr.w,
+	pr.printf(
 		"%d locals, %d constants, %d functions\n",
 		len(p.LocVars), len(p.Constants), len(p.Protos),
 	)
 }
 
-func (pr printer) printValue(val object.Value) {
+func (pr *printer) printValue(val object.Value) {
 	if val, ok := val.(object.String); ok {
-		fmt.Fprint(pr.w, strconv.Quote(string(val)))
+		pr.print(strconv.Quote(string(val)))
 
 		return
 	}
 
-	fmt.Fprint(pr.w, val)
+	pr.print(val)
 }
 
-func (pr printer) printCode(p *object.Proto) {
+func (pr *printer) printCode(p *object.Proto) {
 	for pc, code := range p.Code {
 		a := code.A()
 		b := code.B()
@@ -129,77 +148,77 @@ func (pr printer) printCode(p *object.Proto) {
 		ax := code.Ax()
 		sbx := code.SBx()
 
-		fmt.Fprintf(pr.w, "\t%d\t", pc+1)
+		pr.printf("\t%d\t", pc+1)
 
 		if p.LineInfo != nil {
-			fmt.Fprintf(pr.w, "[%d]\t", p.LineInfo[pc])
+			pr.printf("[%d]\t", p.LineInfo[pc])
 		} else {
-			fmt.Fprintf(pr.w, "[-]\t")
+			pr.printf("[-]\t")
 		}
 
-		fmt.Fprintf(pr.w, "%-9s\t", code.OpName())
+		pr.printf("%-9s\t", code.OpName())
 
 		switch code.OpMode() {
 		case opcode.IABC:
-			fmt.Fprintf(pr.w, "%d", a)
+			pr.printf("%d", a)
 			if code.BMode() != opcode.OpArgN {
 				if b&opcode.BitRK != 0 {
-					fmt.Fprintf(pr.w, " %d", -1-(b & ^opcode.BitRK))
+					pr.printf(" %d", -1-(b & ^opcode.BitRK))
 				} else {
-					fmt.Fprintf(pr.w, " %d", b)
+					pr.printf(" %d", b)
 				}
 			}
 			if code.CMode() != opcode.OpArgN {
 				if c&opcode.BitRK != 0 {
-					fmt.Fprintf(pr.w, " %d", -1-(c & ^opcode.BitRK))
+					pr.printf(" %d", -1-(c & ^opcode.BitRK))
 				} else {
-					fmt.Fprintf(pr.w, " %d", c)
+					pr.printf(" %d", c)
 				}
 			}
 		case opcode.IABx:
-			fmt.Fprintf(pr.w, "%d", a)
+			pr.printf("%d", a)
 			switch code.BMode() {
 			case opcode.OpArgK:
-				fmt.Fprintf(pr.w, " %d", -1-bx)
+				pr.printf(" %d", -1-bx)
 			case opcode.OpArgU:
-				fmt.Fprintf(pr.w, " %d", bx)
+				pr.printf(" %d", bx)
 			}
 		case opcode.IAsBx:
-			fmt.Fprintf(pr.w, "%d %d", a, sbx)
+			pr.printf("%d %d", a, sbx)
 		case opcode.IAx:
-			fmt.Fprintf(pr.w, "%d", -1-ax)
+			pr.printf("%d", -1-ax)
 		default:
 			panic("unreachable")
 		}
 
 		switch code.OpCode() {
 		case opcode.LOADK:
-			fmt.Fprint(pr.w, "\t; ")
+			pr.print("\t; ")
 			pr.printValue(p.Constants[bx])
 		case opcode.GETUPVAL, opcode.SETUPVAL:
-			fmt.Fprint(pr.w, "\t; ")
-			fmt.Fprint(pr.w, upvalName(p, b))
+			pr.print("\t; ")
+			pr.print(upvalName(p, b))
 		case opcode.GETTABUP:
-			fmt.Fprint(pr.w, "\t; ")
-			fmt.Fprint(pr.w, upvalName(p, b))
+			pr.print("\t; ")
+			pr.print(upvalName(p, b))
 			if c&opcode.BitRK != 0 {
-				fmt.Fprint(pr.w, " ")
+				pr.print(" ")
 				pr.printValue(p.Constants[c & ^opcode.BitRK])
 			}
 		case opcode.SETTABUP:
-			fmt.Fprint(pr.w, "\t; ")
-			fmt.Fprint(pr.w, upvalName(p, a))
+			pr.print("\t; ")
+			pr.print(upvalName(p, a))
 			if b&opcode.BitRK != 0 {
-				fmt.Fprint(pr.w, " ")
+				pr.print(" ")
 				pr.printValue(p.Constants[b & ^opcode.BitRK])
 			}
 			if c&opcode.BitRK != 0 {
-				fmt.Fprint(pr.w, " ")
+				pr.print(" ")
 				pr.printValue(p.Constants[c & ^opcode.BitRK])
 			}
 		case opcode.GETTABLE, opcode.SELF:
 			if c&opcode.BitRK != 0 {
-				fmt.Fprint(pr.w, "\t; ")
+				pr.print("\t; ")
 				pr.printValue(p.Constants[c & ^opcode.BitRK])
 			}
 		case opcode.SETTABLE, opcode.ADD, opcode.SUB, opcode.MUL,
@@ -207,62 +226,62 @@ func (pr printer) printCode(p *object.Proto) {
 			opcode.BOR, opcode.BXOR, opcode.SHL, opcode.SHR,
 			opcode.EQ, opcode.LT, opcode.LE:
 			if b&opcode.BitRK != 0 || c&opcode.BitRK != 0 {
-				fmt.Fprint(pr.w, "\t; ")
+				pr.print("\t; ")
 				if b&opcode.BitRK != 0 {
 					pr.printValue(p.Constants[b & ^opcode.BitRK])
 				} else {
-					fmt.Fprint(pr.w, "-")
+					pr.print("-")
 				}
 
-				fmt.Fprint(pr.w, " ")
+				pr.print(" ")
 
 				if c&opcode.BitRK != 0 {
 					pr.printValue(p.Constants[c & ^opcode.BitRK])
 				} else {
-					fmt.Fprint(pr.w, "-")
+					pr.print("-")
 				}
 			}
 		case opcode.JMP, opcode.FORLOOP, opcode.FORPREP, opcode.TFORLOOP:
-			fmt.Fprintf(pr.w, "\t; to %d", sbx+pc+2)
+			pr.printf("\t; to %d", sbx+pc+2)
 		case opcode.CLOSURE:
-			fmt.Fprintf(pr.w, "\t; %p", p.Protos[bx])
+			pr.printf("\t; %p", p.Protos[bx])
 		case opcode.SETLIST:
 			if c == 0 {
 				pc++
-				fmt.Fprintf(pr.w, "\t; %d", p.Code[pc])
+				pr.printf("\t; %d", p.Code[pc])
 			} else {
-				fmt.Fprintf(pr.w, "\t; %d", c)
+				pr.printf("\t; %d", c)
 			}
 		}
 
-		fmt.Fprint(pr.w, "\n")
+		pr.print("\n")
 	}
 }
 
-func (pr printer) printConstants(p *object.Proto) {
-	fmt.Fprintf(pr.w, "constants (%d) for %p: \n", len(p.Constants), p)
+func (pr *printer) printConstants(p *object.Proto) {
+	pr.printf("constants (%d) for %p: \n", len(p.Constants), p)
 	for i, c := range p.Constants {
-		fmt.Fprintf(pr.w, "\t%d\t", i+1)
+		pr.printf("\t%d\t", i+1)
 		pr.printValue(c)
-		fmt.Fprintln(pr.w)
+		pr.println()
 	}
 }
 
-func (pr printer) printLocals(p *object.Proto) {
-	fmt.Fprintf(pr.w, "locals (%d) for %p: \n", len(p.LocVars), p)
+func (pr *printer) printLocals(p *object.Proto) {
+	pr.printf("locals (%d) for %p: \n", len(p.LocVars), p)
 	for i, locvar := range p.LocVars {
-		fmt.Fprintf(pr.w, "\t%d\t%s\t%d\t%d\n", i, locvar.Name, locvar.StartPC, locvar.EndPC)
+		pr.printf("\t%d\t%s\t%d\t%d\n", i, locvar.Name, locvar.StartPC, locvar.EndPC)
 	}
 }
 
-func (pr printer) printUpvalues(p *object.Proto) {
-	fmt.Fprintf(pr.w, "upvalues (%d) for %p: \n", len(p.Upvalues), p)
+func (pr *printer) printUpvalues(p *object.Proto) {
+	pr.printf("upvalues (%d) for %p: \n", len(p.Upvalues), p)
 	for i, upval := range p.Upvalues {
-		fmt.Fprintf(pr.w, "\t%d\t%s\t%t\t%d\n", i, upval.Name, upval.Instack, upval.Index)
+		pr.printf("\t%d\t%s\t%t\t%d\n", i, upval.Name, upval.Instack, upval.Index)
 	}
 }
 
-func (pr printer) printProtos(p *object.Proto) {
+func (pr *printer) printProtos(p *object.Proto) {
 	for _, f := range p.Protos {
 		pr.printFunc(f)
 	}

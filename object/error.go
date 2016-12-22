@@ -3,6 +3,7 @@ package object
 import (
 	"fmt"
 	"io"
+	"os"
 )
 
 type StackTrace struct {
@@ -38,6 +39,53 @@ func (err *RuntimeError) Error() string {
 	return fmt.Sprintf("runtime: %s", Repr(err.Positioned()))
 }
 
+func PrintError(err error) error {
+	return FprintError(os.Stderr, err)
+}
+
+func FprintError(w io.Writer, err error) error {
+	return fprintError(w, err)
+}
+
+type errWriter struct {
+	w   io.Writer
+	err error
+}
+
+func (w *errWriter) Write(p []byte) (n int, err error) {
+	if w.err == nil {
+		n, w.err = w.w.Write(p)
+	}
+	return n, w.err
+}
+
+func fprintError(w io.Writer, err error) error {
+	ew := &errWriter{w: w}
+	if err, ok := err.(*RuntimeError); ok {
+		fmt.Fprintln(ew, err)
+		fmt.Fprint(ew, "stack traceback:")
+		tb := err.Traceback
+		if len(tb) <= 22 {
+			for _, st := range tb {
+				printStackTrace(ew, st)
+			}
+		} else {
+			for _, st := range tb[:10] {
+				printStackTrace(ew, st)
+			}
+			fmt.Fprint(ew, "\n\t")
+			fmt.Fprint(ew, "...")
+			for _, st := range tb[len(tb)-11:] {
+				printStackTrace(ew, st)
+			}
+		}
+		fmt.Fprintln(ew)
+	} else {
+		fmt.Fprintln(ew, err)
+	}
+	return ew.err
+}
+
 func printStackTrace(w io.Writer, st *StackTrace) {
 	fmt.Fprint(w, "\n\t")
 
@@ -60,29 +108,4 @@ func printStackTrace(w io.Writer, st *StackTrace) {
 	}
 
 	fmt.Fprint(w, st.Signature)
-}
-
-func PrintError(w io.Writer, err error) {
-	if err, ok := err.(*RuntimeError); ok {
-		fmt.Fprintln(w, err)
-		fmt.Fprint(w, "stack traceback:")
-		tb := err.Traceback
-		if len(tb) <= 22 {
-			for _, st := range tb {
-				printStackTrace(w, st)
-			}
-		} else {
-			for _, st := range tb[:10] {
-				printStackTrace(w, st)
-			}
-			fmt.Fprint(w, "\n\t")
-			fmt.Fprint(w, "...")
-			for _, st := range tb[len(tb)-11:] {
-				printStackTrace(w, st)
-			}
-		}
-		fmt.Fprintln(w)
-	} else {
-		fmt.Fprintln(w, err)
-	}
 }
