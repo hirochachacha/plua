@@ -13,7 +13,7 @@ x = string.format('%q', '\n')
 assert(x == '"\\\n"' or x == [["\n"]]) -- prefer to use [["\n"]] for quote
 
 assert('\x10' == "\16")
-assert(string.format('%q', '\x10') == '"\\16"')
+assert(string.format('%q', '\x10') == '"\\016"')
 
 assert('\u{100}' == 'Ā')
 assert(string.format('%q', '\u{100}') == '"Ā"')
@@ -25,13 +25,13 @@ assert('\100' == "\100")
 assert(string.format('%q', '\100') == '"d"')
 
 assert('\0' == "\0")
-assert(string.format('%q', '\0') == '"\\0"')
+assert(string.format('%q', '\0') == '"\\000"')
 
 assert('\01' == "\01")
-assert(string.format('%q', '\01') == '"\\1"')
+assert(string.format('%q', '\01') == '"\\001"')
 
 assert('\014' == "\014")
-assert(string.format('%q', '\014') == '"\\14"')
+assert(string.format('%q', '\014') == '"\\014"')
 
 assert(tonumber(string.format("%f", 10.3)) == 10.3)
 

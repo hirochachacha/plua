@@ -38,15 +38,21 @@ import (
 )
 
 func Quote(s string) string {
-	return quoteWith(s, '"')
+	return escapeWith(s, '"')
+}
+
+func Escape(s string) string {
+	return escapeWith(s, -1)
 }
 
 const lowerhex = "0123456789abcdef"
 
-func quoteWith(s string, quote byte) string {
+func escapeWith(s string, quote int) string {
 	b := make([]byte, 0, len(s)*3/2)
 
-	b = append(b, quote)
+	if quote >= 0 {
+		b = append(b, byte(quote))
+	}
 
 	runeTmp := make([]byte, utf8.UTFMax)
 
@@ -55,10 +61,15 @@ func quoteWith(s string, quote byte) string {
 		c := s[i]
 
 		switch c {
-		case quote, '\\':
-			b = append(b, '\\')
-			b = append(b, c)
-			i++
+		case '\\':
+			if quote >= 0 {
+				b = append(b, '\\')
+				b = append(b, c)
+				i++
+			} else {
+				b = append(b, '\\')
+				i++
+			}
 		case '\a':
 			b = append(b, `\a`...)
 			i++
@@ -80,6 +91,16 @@ func quoteWith(s string, quote byte) string {
 		case '\v':
 			b = append(b, `\v`...)
 			i++
+		case byte(quote):
+			if quote >= 0 {
+				b = append(b, '\\')
+				b = append(b, c)
+				i++
+
+				continue
+			}
+
+			fallthrough
 		default:
 			if c >= utf8.RuneSelf {
 				r, rsize := utf8.DecodeRuneInString(s[i:])
@@ -105,13 +126,21 @@ func quoteWith(s string, quote byte) string {
 				b = append(b, c)
 			} else {
 				b = append(b, '\\')
+				if c < 10 {
+					b = append(b, '0')
+				}
+				if c < 100 {
+					b = append(b, '0')
+				}
 				b = AppendInt(b, int64(c), 10)
 			}
 			i++
 		}
 	}
 
-	b = append(b, quote)
+	if quote >= 0 {
+		b = append(b, byte(quote))
+	}
 
 	return string(b)
 }
