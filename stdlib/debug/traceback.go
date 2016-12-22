@@ -29,15 +29,18 @@ func writeStackTrace(buf *bytes.Buffer, st *object.StackTrace) {
 	}
 
 	buf.WriteString(st.Signature)
+
+	if st.IsTailCall {
+		buf.WriteString("\n\t")
+		buf.WriteString("(...tail calls...)")
+	}
 }
 
 func getTraceback(th object.Thread, msg string, level int) string {
 	buf := new(bytes.Buffer)
 
-	if msg != "" {
-		buf.WriteString(msg)
-		buf.WriteByte('\n')
-	}
+	buf.WriteString(msg)
+	buf.WriteByte('\n')
 
 	buf.WriteString("stack traceback:")
 

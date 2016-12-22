@@ -7,9 +7,10 @@ import (
 )
 
 type StackTrace struct {
-	Source    string
-	Line      int
-	Signature string
+	Source     string
+	Line       int
+	Signature  string
+	IsTailCall bool
 }
 
 type RuntimeError struct {
@@ -108,4 +109,9 @@ func printStackTrace(w io.Writer, st *StackTrace) {
 	}
 
 	fmt.Fprint(w, st.Signature)
+
+	if st.IsTailCall {
+		fmt.Fprint(w, "\n\t")
+		fmt.Fprint(w, "(...tail calls...)")
+	}
 }

@@ -26,12 +26,6 @@ func (th *thread) Traceback(level int) (tb []*object.StackTrace) {
 
 		tb = append(tb, th.stackTrace(d))
 
-		if d.IsTailCall {
-			tb = append(tb, &object.StackTrace{
-				Signature: "(...tail calls...)",
-			})
-		}
-
 		level++
 	}
 
@@ -42,6 +36,7 @@ func (th *thread) stackTrace(d *object.DebugInfo) *object.StackTrace {
 	st := new(object.StackTrace)
 	st.Source = d.ShortSource
 	st.Line = d.CurrentLine
+	st.IsTailCall = d.IsTailCall
 
 	if g := th.getFuncName(d.Func); g != "?" {
 		st.Signature = fmt.Sprintf("function '%s'", g)

@@ -5,12 +5,6 @@ import "github.com/hirochachacha/plua/object"
 func (th *thread) trackErrorOnce(err *object.RuntimeError) {
 	if d := th.getInfo(0, "Slnt"); d != nil {
 		err.Traceback = append(err.Traceback, th.stackTrace(d))
-
-		if d.IsTailCall {
-			err.Traceback = append(err.Traceback, &object.StackTrace{
-				Signature: "(...tail calls...)",
-			})
-		}
 	}
 }
 
@@ -23,12 +17,6 @@ func (th *thread) trackError(err *object.RuntimeError) {
 		}
 
 		err.Traceback = append(err.Traceback, th.stackTrace(d))
-
-		if d.IsTailCall {
-			err.Traceback = append(err.Traceback, &object.StackTrace{
-				Signature: "(...tail calls...)",
-			})
-		}
 
 		level++
 	}

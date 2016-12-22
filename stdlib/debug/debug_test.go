@@ -8,6 +8,7 @@ import (
 	"github.com/hirochachacha/plua/runtime"
 	"github.com/hirochachacha/plua/stdlib/base"
 	"github.com/hirochachacha/plua/stdlib/debug"
+	"github.com/hirochachacha/plua/stdlib/string"
 )
 
 func TestDebug(t *testing.T) {
@@ -28,6 +29,7 @@ func TestDebug(t *testing.T) {
 
 		p.Require("_G", base.Open)
 		p.Require("debug", debug.Open)
+		p.Require("string", string.Open)
 
 		_, err = p.Exec(proto)
 		if err != nil {
