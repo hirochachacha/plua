@@ -80,5 +80,10 @@ func ExampleFprint() {
 	//   },
 	// }
 	//
+	// x {
+	// }
+	//
+	// print('\'test')
+	//
 	// return (x) + 1
 }

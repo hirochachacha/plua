@@ -7,6 +7,7 @@ import (
 
 	"github.com/hirochachacha/plua/compiler/ast"
 	"github.com/hirochachacha/plua/compiler/token"
+	"github.com/hirochachacha/plua/internal/strconv"
 	"github.com/hirochachacha/plua/position"
 )
 
@@ -421,16 +422,15 @@ func (p *printer) printTableLit(expr *ast.TableLit, mode mode) {
 	if expr.Lbrace.Line == expr.Rbrace.Line {
 		p.print(expr.Lbrace, "{", mode)
 		p.printExprs(expr.Fields, noBlank|noParen)
-		if expr.Rbrace.Line-p.lastPos.Line > 0 {
-			p.writeByte(',')
-		}
 		p.print(expr.Rbrace, "}", noBlank)
 	} else {
 		p.print(expr.Lbrace, "{", mode)
 		p.incIndent(expr.Lbrace)
 		p.printExprs(expr.Fields, noBlank|noParen)
-		if expr.Rbrace.Line-p.lastPos.Line > 0 {
-			p.writeByte(',')
+		if len(expr.Fields) > 0 {
+			if expr.Rbrace.Line-p.lastPos.Line > 0 {
+				p.writeByte(',')
+			}
 		}
 		p.decIndent(expr.Rbrace)
 		p.print(expr.Rbrace, "}", noBlank)
@@ -658,9 +658,27 @@ func (p *printer) nextComment() {
 
 // Other
 
+func replaceEscape(s string) string {
+	if i := strings.IndexByte(s, tabwriter.Escape); i != -1 {
+		bs := make([]byte, len(s))
+		for i := range bs {
+			c := s[i]
+			if c == tabwriter.Escape {
+				bs[i] = 0x00
+			} else {
+				bs[i] = s[i]
+			}
+		}
+		return string(bs)
+	}
+	return s
+}
+
 func (p *printer) printFile(file *ast.File) {
 	if file.Shebang != "" {
-		p.writeString(file.Shebang)
+		p.writeByte(tabwriter.Escape)
+		p.writeString(replaceEscape(file.Shebang))
+		p.writeByte(tabwriter.Escape)
 	}
 
 	p.comments = file.Comments
@@ -794,7 +812,7 @@ func (p *printer) insertComment(pos position.Position) {
 			}
 
 			p.writeByte(tabwriter.Escape)
-			p.writeString(strings.TrimRight(c.Text, "\t\n\v\f\r "))
+			p.writeString(replaceEscape(strings.TrimRight(c.Text, "\t\n\v\f\r ")))
 			p.writeByte(tabwriter.Escape)
 
 			p.lastPos = c.End()
@@ -841,7 +859,7 @@ func (p *printer) print(pos position.Position, s string, mode mode) {
 
 	if mode&escape != 0 {
 		p.writeByte(tabwriter.Escape)
-		p.writeString(s)
+		p.writeString(strconv.Escape(s))
 		p.writeByte(tabwriter.Escape)
 	} else {
 		p.writeString(s)

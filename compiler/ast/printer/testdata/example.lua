@@ -62,4 +62,9 @@ t = {
 	}
 }
 
+x{
+}
+
+print('\'test')
+
 return ((x)+1)
