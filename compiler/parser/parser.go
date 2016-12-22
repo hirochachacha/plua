@@ -1009,8 +1009,13 @@ func (p *parser) parseExprOrAssignStmt() (stmt ast.Stmt) {
 	tok := p.tok
 
 	expr, LHS := p.parseCallExprOrLHSList()
-
 	if p.tok.Type == token.ASSIGN { // assign stmt
+		if len(LHS) == 0 {
+			p.errorExpected(tok, "LHS")
+
+			return &ast.BadStmt{From: tok.Pos, To: p.tok.Pos}
+		}
+
 		stmt = p.parseAssign(LHS)
 	} else { // expr stmt
 		if expr == nil {
