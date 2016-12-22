@@ -458,11 +458,14 @@ func traceback(th object.Thread, args ...object.Value) ([]object.Value, *object.
 
 	th1 := ap.GetThread()
 
+	hasmsg := true
+
 	msg, err := ap.ToGoString(0)
 	if err != nil {
 		if val, _ := ap.Get(0); val != nil {
 			return []object.Value{val}, nil
 		}
+		hasmsg = false
 	}
 
 	l := 0
@@ -475,7 +478,7 @@ func traceback(th object.Thread, args ...object.Value) ([]object.Value, *object.
 		return nil, err
 	}
 
-	tb := getTraceback(th1, msg, level)
+	tb := getTraceback(th1, msg, level, hasmsg)
 
 	return []object.Value{object.String(tb)}, nil
 }

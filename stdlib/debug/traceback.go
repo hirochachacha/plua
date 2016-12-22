@@ -36,11 +36,13 @@ func writeStackTrace(buf *bytes.Buffer, st *object.StackTrace) {
 	}
 }
 
-func getTraceback(th object.Thread, msg string, level int) string {
+func getTraceback(th object.Thread, msg string, level int, hasmsg bool) string {
 	buf := new(bytes.Buffer)
 
-	buf.WriteString(msg)
-	buf.WriteByte('\n')
+	if hasmsg {
+		buf.WriteString(msg)
+		buf.WriteByte('\n')
+	}
 
 	buf.WriteString("stack traceback:")
 
