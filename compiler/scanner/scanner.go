@@ -475,12 +475,6 @@ func (s *ScanState) scanNumber(seenDecimalPoint bool) (tok token.Type, lit strin
 
 		s.skipMantissa(base)
 
-		if s.offset-ioff <= 1 {
-			// only scanned "."
-
-			s.error(s.pos(), errIllegalNumber)
-		}
-
 		goto exponent
 	}
 
@@ -498,33 +492,20 @@ func (s *ScanState) scanNumber(seenDecimalPoint bool) (tok token.Type, lit strin
 
 	s.skipMantissa(base)
 
+	if s.ch == '.' {
+		tok = token.FLOAT
+		s.next()
+
+		s.skipMantissa(base)
+	}
+
+exponent:
 	if base == 16 {
 		if s.offset-ioff <= 2 {
 			// only scanned "0x" or "0X"
 			s.error(ipos, errIllegalHexadecimalNumber)
 		}
-	}
 
-	if s.ch == '.' {
-		tok = token.FLOAT
-		s.next()
-
-		doff := s.offset
-
-		s.skipMantissa(base)
-
-		if s.offset-doff == 0 {
-			// only scanned "."
-			if base == 16 {
-				s.error(s.pos(), errIllegalHexadecimalNumber)
-			} else {
-				s.error(s.pos(), errIllegalNumber)
-			}
-		}
-	}
-
-exponent:
-	if base == 16 {
 		if s.ch == 'p' || s.ch == 'P' {
 			tok = token.FLOAT
 			s.next()
