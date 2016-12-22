@@ -53,6 +53,7 @@ const (
 var (
 	errInvalidLongStringDelimiter       = errors.New("invalid long string delimiter")
 	errIllegalHexadecimalNumber         = errors.New("illegal hexadecimal number")
+	errIllegalNumber                    = errors.New("illegal number")
 	errInvalidEscapeSequence            = errors.New("escape sequence is invalid Unicode code point")
 	errUnknownEscapeSequence            = errors.New("unknown escape sequence")
 	errMissingBracketInEscapeSequence   = errors.New("missing bracket in escape sequence")
@@ -461,87 +462,106 @@ func (s *ScanState) skipMantissa(base int) {
 func (s *ScanState) scanNumber(seenDecimalPoint bool) (tok token.Type, lit string) {
 	s.mark()
 
-	if seenDecimalPoint {
-		s.next() // skip .
-	}
-
 	tok = token.INT
 
+	base := 10
+
+	ioff := s.offset
+	ipos := s.pos()
+
 	if seenDecimalPoint {
+		s.next() // skip .
 		tok = token.FLOAT
-		s.skipMantissa(10)
+
+		s.skipMantissa(base)
+
+		if s.offset-ioff <= 1 {
+			// only scanned "."
+
+			s.error(s.pos(), errIllegalNumber)
+		}
+
 		goto exponent
 	}
 
 	if s.ch == '0' {
 		// int or float
-		offs := s.offset
-		pos := s.pos()
-
 		s.next()
 
 		// hexadecimal int or float
 		if s.ch == 'x' || s.ch == 'X' {
 			s.next()
-			s.skipMantissa(16)
 
-			// hex fraction
-			if s.ch == '.' {
-				tok = token.FLOAT
-				s.next()
-				s.skipMantissa(16)
-
-				if s.ch == 'e' || s.ch == 'E' {
-					tok = token.FLOAT
-					s.next()
-					if s.ch == '-' || s.ch == '+' {
-						s.next()
-					}
-					s.skipMantissa(16)
-				}
-
-			}
-
-			if s.offset-offs <= 2 {
-				// only scanned "0x" or "0X"
-				s.error(pos, errIllegalHexadecimalNumber)
-			}
-
-			// hex exponent
-			if s.ch == 'p' || s.ch == 'P' {
-				tok = token.FLOAT
-				s.next()
-				if s.ch == '-' || s.ch == '+' {
-					s.next()
-				}
-				s.skipMantissa(10)
-			}
-
-			goto exit
+			base = 16
 		}
 	}
 
-	// decimal int or float
-	s.skipMantissa(10)
+	s.skipMantissa(base)
 
-	// fraction:
+	if base == 16 {
+		if s.offset-ioff <= 2 {
+			// only scanned "0x" or "0X"
+			s.error(ipos, errIllegalHexadecimalNumber)
+		}
+	}
+
 	if s.ch == '.' {
 		tok = token.FLOAT
 		s.next()
-		s.skipMantissa(10)
+
+		doff := s.offset
+
+		s.skipMantissa(base)
+
+		if s.offset-doff == 0 {
+			// only scanned "."
+			if base == 16 {
+				s.error(s.pos(), errIllegalHexadecimalNumber)
+			} else {
+				s.error(s.pos(), errIllegalNumber)
+			}
+		}
 	}
 
 exponent:
-	if s.ch == 'e' || s.ch == 'E' {
-		tok = token.FLOAT
-		s.next()
-		if s.ch == '-' || s.ch == '+' {
+	if base == 16 {
+		if s.ch == 'p' || s.ch == 'P' {
+			tok = token.FLOAT
 			s.next()
+
+			if s.ch == '-' || s.ch == '+' {
+				s.next()
+			}
+
+			poff := s.offset
+
+			s.skipMantissa(10)
+
+			if s.offset-poff == 0 {
+				// only scanned "p"
+				s.error(s.pos(), errIllegalHexadecimalNumber)
+			}
 		}
-		s.skipMantissa(10)
+	} else {
+		if s.ch == 'e' || s.ch == 'E' {
+			tok = token.FLOAT
+			s.next()
+
+			if s.ch == '-' || s.ch == '+' {
+				s.next()
+			}
+
+			poff := s.offset
+
+			s.skipMantissa(base)
+
+			if s.offset-poff == 0 {
+				// only scanned "e"
+				s.error(s.pos(), errIllegalNumber)
+			}
+		}
 	}
 
-exit:
 	lit = string(s.capture())
 
 	return
