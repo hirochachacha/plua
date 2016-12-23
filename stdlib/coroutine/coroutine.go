@@ -34,7 +34,7 @@ func resume(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 
 	rets, err := th1.Resume(args[1:]...)
 	if err != nil {
-		return []object.Value{object.False, err.Positioned()}, nil
+		return []object.Value{object.False, err.Value()}, nil
 	}
 
 	return append([]object.Value{object.True}, rets...), nil

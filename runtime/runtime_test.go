@@ -187,8 +187,8 @@ func TestExecError(t *testing.T) {
 			t.Fatalf("expected *object.Error, got %T: %v", err, err)
 		}
 
-		if !object.Equal(oerr.Value, test.ErrValue) {
-			t.Errorf("code: %s: expected %v, got %v", test.Code, test.ErrValue, oerr.Value)
+		if !object.Equal(oerr.RawValue, test.ErrValue) {
+			t.Errorf("code: %s: expected %v, got %v", test.Code, test.ErrValue, oerr.RawValue)
 		}
 	}
 }

@@ -68,18 +68,18 @@ func newRuntimeError(err error) *object.RuntimeError {
 		return object.NewRuntimeError(err.Err.Error())
 	case *scanner.Error:
 		return &object.RuntimeError{
-			Value: object.String(fmt.Sprintf("%s: %v", err.Pos, err.Err)),
-			Level: 0,
+			RawValue: object.String(fmt.Sprintf("%s: %v", err.Pos, err.Err)),
+			Level:    0,
 		}
 	case *parser.Error:
 		return &object.RuntimeError{
-			Value: object.String(fmt.Sprintf("%s: %v", err.Pos, err.Err)),
-			Level: 0,
+			RawValue: object.String(fmt.Sprintf("%s: %v", err.Pos, err.Err)),
+			Level:    0,
 		}
 	case *codegen.Error:
 		return &object.RuntimeError{
-			Value: object.String(fmt.Sprintf("%s: %v", err.Pos, err.Err)),
-			Level: 0,
+			RawValue: object.String(fmt.Sprintf("%s: %v", err.Pos, err.Err)),
+			Level:    0,
 		}
 	case *dump.Error:
 		return object.NewRuntimeError(err.Err.Error())

@@ -81,7 +81,7 @@ func upow(x, y uint64) uint64 {
 func umod(x, y uint64) (uint64, *object.RuntimeError) {
 	if y == 0 {
 		return 0, &object.RuntimeError{
-			Value: object.String("integer divide by zero"),
+			RawValue: object.String("integer divide by zero"),
 		}
 	}
 
@@ -93,7 +93,7 @@ func umod(x, y uint64) (uint64, *object.RuntimeError) {
 func udiv(x, y uint64) (uint64, *object.RuntimeError) {
 	if y == 0 {
 		return 0, &object.RuntimeError{
-			Value: object.String("integer divide by zero"),
+			RawValue: object.String("integer divide by zero"),
 		}
 	}
 

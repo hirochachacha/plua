@@ -31,13 +31,13 @@ type Thread interface {
 
 	Select(cases []SelectCase) (chosen int, recv Value, recvOK bool)
 
-	// aux APIs
+	// aux API
 
 	Require(name string, open GoFunction) (Value, bool)
 
 	// ↓ thread specific APIs
 
-	// ↓ intended to be called from vm loop
+	// ↓ should be called from vm loop
 
 	Call(fn Value, args ...Value) ([]Value, *RuntimeError)
 

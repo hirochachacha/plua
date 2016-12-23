@@ -30,7 +30,7 @@ func assert(th object.Thread, args ...object.Value) (rets []object.Value, err *o
 			return nil, object.NewRuntimeError("assertion failed!")
 		}
 
-		return nil, &object.RuntimeError{Value: val, Level: 1}
+		return nil, &object.RuntimeError{RawValue: val, Level: 1}
 	}
 
 	return args, nil
@@ -101,7 +101,7 @@ func _error(th object.Thread, args ...object.Value) (rets []object.Value, err *o
 
 	val, ok := ap.Get(0)
 	if !ok {
-		return nil, &object.RuntimeError{Value: nil}
+		return nil, &object.RuntimeError{RawValue: nil}
 	}
 
 	level, err := ap.OptGoInt(1, 1)
@@ -110,10 +110,10 @@ func _error(th object.Thread, args ...object.Value) (rets []object.Value, err *o
 	}
 
 	if _, ok := val.(object.String); ok && level > 0 {
-		return nil, &object.RuntimeError{Value: val, Level: level}
+		return nil, &object.RuntimeError{RawValue: val, Level: level}
 	}
 
-	return nil, &object.RuntimeError{Value: val}
+	return nil, &object.RuntimeError{RawValue: val}
 }
 
 // getmetatable(object) -> Value
@@ -299,7 +299,7 @@ func loadfile(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 	}
 
 	if err != nil {
-		return []object.Value{nil, err.Positioned()}, nil
+		return []object.Value{nil, err.Value()}, nil
 	}
 
 	cl := th.NewClosure(p)
@@ -335,7 +335,7 @@ func load(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		for {
 			rets, err := th.Call(s)
 			if err != nil {
-				return []object.Value{nil, err.Positioned()}, nil
+				return []object.Value{nil, err.Value()}, nil
 			}
 			if len(rets) == 0 || rets[0] == nil {
 				break
@@ -374,7 +374,7 @@ func load(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 	}
 
 	if err != nil {
-		return []object.Value{nil, err.Positioned()}, nil
+		return []object.Value{nil, err.Value()}, nil
 	}
 
 	cl := th.NewClosure(p)
@@ -443,7 +443,7 @@ func pcall(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 
 	rets, err := th.Call(fn, args[1:]...)
 	if err != nil {
-		return []object.Value{object.False, err.Positioned()}, nil
+		return []object.Value{object.False, err.Value()}, nil
 	}
 
 	return append([]object.Value{object.True}, rets...), nil
@@ -681,9 +681,9 @@ func xpcall(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 
 	rets, err := th.Call(f, args[2:]...)
 	if err != nil {
-		rets, err = th.Call(msgh, err.Positioned())
+		rets, err = th.Call(msgh, err.Value())
 		if err != nil {
-			return []object.Value{object.False, errors.ErrInErrorHandling.Positioned()}, nil
+			return []object.Value{object.False, errors.ErrInErrorHandling.Value()}, nil
 		}
 		return append([]object.Value{object.False}, rets...), nil
 	}

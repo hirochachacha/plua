@@ -41,7 +41,7 @@ func (th *thread) call(a, nargs, nrets int) (err *object.RuntimeError) {
 	return th.call(a, nargs+1, nrets)
 }
 
-// call a go function by stack index, immediately store values.
+// call a go function by stack index, store values immediately.
 func (th *thread) callGo(fn object.GoFunction, f, nargs, nrets int, isTailCall bool) (err *object.RuntimeError) {
 	ctx := th.context
 
@@ -324,7 +324,7 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 	return nil, false
 }
 
-// call a callable by values, immediately return values.
+// call a callable by values, return values immediately.
 func (th *thread) docall(fn object.Value, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	switch fn := fn.(type) {
 	case nil:
@@ -362,7 +362,7 @@ func (th *thread) docall(fn object.Value, args ...object.Value) (rets []object.V
 	return th.docall(tm, append([]object.Value{fn}, args...)...)
 }
 
-// call a go function by values, immediately return values.
+// call a go function by values, return values immediately.
 func (th *thread) docallGo(fn object.GoFunction, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	ctx := th.context
 
@@ -396,7 +396,7 @@ func (th *thread) docallGo(fn object.GoFunction, args ...object.Value) (rets []o
 	return rets, nil
 }
 
-// call a closure by values, immediately return values.
+// call a closure by values, return values immediately.
 func (th *thread) docallLua(c object.Closure, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	return th.doExecute(c, args, false)
 }

@@ -95,7 +95,7 @@ func ishr(x, y int64) int64 {
 func imod(x, y int64) (int64, *object.RuntimeError) {
 	if y == 0 {
 		return 0, &object.RuntimeError{
-			Value: object.String("integer divide by zero"),
+			RawValue: object.String("integer divide by zero"),
 		}
 	}
 
@@ -115,7 +115,7 @@ func imod(x, y int64) (int64, *object.RuntimeError) {
 func idiv(x, y int64) (int64, *object.RuntimeError) {
 	if y == 0 {
 		return 0, &object.RuntimeError{
-			Value: object.String("integer divide by zero"),
+			RawValue: object.String("integer divide by zero"),
 		}
 	}
 
