@@ -5,7 +5,7 @@ type Value interface {
 	String() string
 }
 
-var (
+const (
 	True  = Boolean(true)
 	False = Boolean(false)
 )
