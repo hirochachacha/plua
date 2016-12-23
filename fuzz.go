@@ -60,7 +60,7 @@ func Fuzz(data []byte) int {
 		return 0
 	}
 
-	err = object.PrintProto(proto)
+	err = object.FprintProto(ioutil.Discard, proto)
 	if err != nil {
 		panic(err)
 	}
@@ -71,7 +71,7 @@ func Fuzz(data []byte) int {
 
 	_, err = p.Exec(proto)
 	if err != nil {
-		err = object.PrintError(err)
+		err = object.FprintError(ioutil.Discard, err)
 		if err != nil {
 			panic(err)
 		}
