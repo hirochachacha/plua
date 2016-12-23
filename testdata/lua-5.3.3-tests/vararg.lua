@@ -34,8 +34,6 @@ assert(not a)
 assert(c12(1,2,3) == false)
 local a = vararg(call(next, {_G,nil;n=2}))
 local b,c = next(_G)
--- TODO fix flaky bug
-print(a[1], b, a[2], c, a.n, 2)
 assert(a[1] == b and a[2] == c and a.n == 2)
 a = vararg(call(call, {c12, {1,2}}))
 assert(a.n == 2 and a[1] == 55 and a[2] == 2)
