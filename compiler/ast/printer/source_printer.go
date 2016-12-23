@@ -563,7 +563,12 @@ func (p *printer) printBinaryExpr(expr *ast.BinaryExpr, prec1 int, mode mode) {
 		if x, ok := expr.X.(*ast.BinaryExpr); ok {
 			p.printBinaryExpr(x, prec1, mode)
 		} else {
-			p.printExpr(expr.X, mode)
+			if x, ok := expr.X.(*ast.BasicLit); ok && (x.Token.Type == token.INT || x.Token.Type == token.FLOAT) && expr.Op == token.CONCAT {
+				// 2 .. 3 > "22" => "2"..3 > "22"
+				p.print(x.Token.Pos, strconv.Quote(x.Token.Lit), mode)
+			} else {
+				p.printExpr(expr.X, mode)
+			}
 		}
 
 		p.print(expr.OpPos, expr.Op.String(), noBlank)

@@ -67,4 +67,6 @@ x{
 
 print('\'test')
 
+foo = 5 .. 1 > "21"
+
 return ((x)+1)
