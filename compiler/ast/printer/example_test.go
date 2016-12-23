@@ -42,6 +42,7 @@ func ExampleFprint() {
 	//
 	// x = x + 5*9 - 10/5 - (-5)
 	// x = x + (5-1+9)*6
+	// x = 1-(-5), 9
 	//
 	// if (x ~= 10) == true then
 	//   print(x)

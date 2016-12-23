@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	indent  = "  "
-	rewrite = true
+	indent = "  "
 )
 
 type mode uint
@@ -340,17 +339,15 @@ func (p *printer) printForEachStmt(stmt *ast.ForEachStmt) {
 // Expression
 
 func (p *printer) printExpr(expr ast.Expr, mode mode) {
-	if rewrite {
-		if mode&noParen != 0 {
-			for { // ((expr)) => expr
-				paren, ok := expr.(*ast.ParenExpr)
-				if !ok {
-					break
-				}
-				expr = paren.X
+	if mode&noParen != 0 {
+		for { // ((expr)) => expr
+			paren, ok := expr.(*ast.ParenExpr)
+			if !ok {
+				break
 			}
-			mode &^= noParen
+			expr = paren.X
 		}
+		mode &^= noParen
 	}
 
 	switch expr := expr.(type) {
@@ -524,20 +521,15 @@ func (p *printer) printUnaryExpr(expr *ast.UnaryExpr, mode mode) {
 	p.print(expr.OpPos, expr.Op.String(), mode)
 	switch x := expr.X.(type) {
 	case *ast.UnaryExpr:
-		if rewrite {
-			// - - 6 => -(-6)
-			// not not true => not (not true)
-			if expr.Op != token.NOT {
-				p.print(x.Pos(), "(", noBlank)
-			} else {
-				p.print(x.Pos(), "(", 0)
-			}
-			p.printUnaryExpr(x, noBlank)
-			p.print(x.End(), ")", noBlank)
+		// - - 6 => -(-6)
+		// not not true => not (not true)
+		if expr.Op != token.NOT {
+			p.print(x.Pos(), "(", noBlank)
 		} else {
-			// - - 6 => - -6
-			p.printUnaryExpr(x, 0)
+			p.print(x.Pos(), "(", 0)
 		}
+		p.printUnaryExpr(x, noBlank)
+		p.print(x.End(), ")", noBlank)
 	case *ast.BinaryExpr:
 		if expr.Op != token.NOT {
 			p.printBinaryExpr(x, token.HighestPrec, noBlank)
@@ -575,7 +567,16 @@ func (p *printer) printBinaryExpr(expr *ast.BinaryExpr, prec1 int, mode mode) {
 
 		switch y := expr.Y.(type) {
 		case *ast.UnaryExpr:
-			p.printUnaryExpr(y, noBlank)
+			switch expr.Op.String() + y.Op.String() {
+			case "--", "~~":
+				// 1 - - 2 => 1-(-2)
+				// 1 ~ ~ 2 => 1~(~2)
+				p.print(y.Pos(), "(", noBlank)
+				p.printUnaryExpr(y, noBlank)
+				p.print(y.End(), ")", noBlank)
+			default:
+				p.printUnaryExpr(y, noBlank)
+			}
 		case *ast.BinaryExpr:
 			p.printBinaryExpr(y, prec1, noBlank)
 		default:
@@ -594,17 +595,11 @@ func (p *printer) printBinaryExpr(expr *ast.BinaryExpr, prec1 int, mode mode) {
 		case *ast.UnaryExpr:
 			switch expr.Op.String() + y.Op.String() {
 			case "--", "~~":
-				if rewrite {
-					// 1 - - 2 => 1 - (-2)
-					// 1 ~ ~ 2 => 1 ~ (~2)
-					p.print(y.Pos(), "(", 0)
-					p.printUnaryExpr(y, noBlank)
-					p.print(y.End(), ")", noBlank)
-				} else {
-					// 1 - - 2 => 1 - -2
-					// 1 ~ ~ 2 => 1 ~ ~2
-					p.printUnaryExpr(y, 0)
-				}
+				// 1 - - 2 => 1 - (-2)
+				// 1 ~ ~ 2 => 1 ~ (~2)
+				p.print(y.Pos(), "(", 0)
+				p.printUnaryExpr(y, noBlank)
+				p.print(y.End(), ")", noBlank)
 			default:
 				p.printUnaryExpr(y, 0)
 			}
