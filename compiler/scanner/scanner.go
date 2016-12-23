@@ -473,6 +473,10 @@ func (s *ScanState) scanNumber(seenDecimalPoint bool) (tok token.Type, lit strin
 		s.next() // skip .
 		tok = token.FLOAT
 
+		if s.ch == '.' {
+			s.error(s.pos(), errIllegalNumber)
+		}
+
 		s.skipMantissa(base)
 
 		goto exponent
@@ -495,6 +499,10 @@ func (s *ScanState) scanNumber(seenDecimalPoint bool) (tok token.Type, lit strin
 	if s.ch == '.' {
 		tok = token.FLOAT
 		s.next()
+
+		if s.ch == '.' {
+			s.error(s.pos(), errIllegalNumber)
+		}
 
 		s.skipMantissa(base)
 	}
