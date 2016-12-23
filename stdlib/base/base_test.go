@@ -10,6 +10,7 @@ import (
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/runtime"
 	"github.com/hirochachacha/plua/stdlib/base"
+	"github.com/hirochachacha/plua/stdlib/math"
 )
 
 type execCase struct {
@@ -236,6 +237,7 @@ func TestBase(t *testing.T) {
 		p := runtime.NewProcess()
 
 		p.Require("_G", base.Open)
+		p.Require("math", math.Open)
 
 		_, err = p.Exec(proto)
 		if err != nil {

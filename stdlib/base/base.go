@@ -9,6 +9,7 @@ import (
 	"github.com/hirochachacha/plua/compiler"
 	"github.com/hirochachacha/plua/internal/compiler_pool"
 	"github.com/hirochachacha/plua/internal/errors"
+	"github.com/hirochachacha/plua/internal/limits"
 	"github.com/hirochachacha/plua/internal/version"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/object/fnutil"
@@ -544,7 +545,7 @@ func _select(th object.Thread, args ...object.Value) ([]object.Value, *object.Ru
 
 	switch {
 	case i < 0:
-		if len(args) < -i {
+		if len(args) < -i || int64(i) == limits.MinInt {
 			return nil, ap.ArgError(0, "index out of range")
 		}
 
