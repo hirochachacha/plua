@@ -24,7 +24,6 @@ type context struct {
 
 	status object.ThreadStatus
 	err    *object.RuntimeError
-	errh   object.Value
 	prev   *context
 }
 

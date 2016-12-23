@@ -117,7 +117,7 @@ func (th *thread) onTailCall() *object.RuntimeError {
 func (th *thread) callHook(typ hookType, arg object.Value) (err *object.RuntimeError) {
 	event := object.String(typ.String())
 
-	_, err = th.doExecute(th.hookFunc, nil, []object.Value{event, arg}, true)
+	_, err = th.doExecute(th.hookFunc, []object.Value{event, arg}, true)
 
 	return err
 }

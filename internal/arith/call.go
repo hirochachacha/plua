@@ -211,7 +211,7 @@ func gettmbyobj(th object.Thread, x object.Value, tag object.Value) object.Value
 }
 
 func calltm(th object.Thread, tm object.Value, args ...object.Value) (object.Value, *object.RuntimeError) {
-	rets, err := th.Call(tm, nil, args...)
+	rets, err := th.Call(tm, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +222,7 @@ func calltm(th object.Thread, tm object.Value, args ...object.Value) (object.Val
 }
 
 func callcmptm(th object.Thread, not bool, tm object.Value, x, y object.Value) (bool, *object.RuntimeError) {
-	rets, err := th.Call(tm, nil, x, y)
+	rets, err := th.Call(tm, x, y)
 	if err != nil {
 		return false, err
 	}

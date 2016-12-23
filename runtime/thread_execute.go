@@ -66,123 +66,39 @@ func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bo
 	return
 }
 
-func (th *thread) resumeExecute(rets []object.Value) {
-	ctx := th.context
-
-	ci := ctx.ci
-
-	if ci.nrets != -1 && ci.nrets < len(rets) {
-		rets = rets[:ci.nrets]
-	}
-
-	ctx.err = nil
-
-	top := ctx.ci.base - 1 + len(rets)
-
-	copy(ctx.stack[ci.base-1:], rets)
-
-	for r := ctx.ci.base - 1 + ctx.ci.nrets; r >= top; r-- {
-		ctx.stack[r] = nil
-	}
-
-	// adjust top
-	ci.top = top
-}
-
 func (th *thread) execute() {
 	defer close(th.resume)
 	defer close(th.yield)
 
 	args := <-th.resume
 
-	if rets, done := th.initExecute(args); done {
-		switch th.status {
-		case object.THREAD_RETURN:
-			th.yield <- rets
-		case object.THREAD_ERROR:
-		default:
-			panic("unexpected")
-		}
-
-		return
+	rets, done := th.initExecute(args)
+	if !done {
+		rets = th.execute0()
 	}
 
-	for {
-		rets := th.execute0()
+	if !th.context.isRoot() {
+		panic("unexpected")
+	}
 
-		ctx := th.context
-
-		switch ctx.status {
-		case object.THREAD_RETURN:
-			if ctx.isRoot() {
-				th.yield <- rets
-
-				return
-			}
-
-			ctx.closeUpvals(0) // close all upvalues on this context
-
-			th.popContext()
-		case object.THREAD_ERROR:
-			if ctx.isRoot() {
-				return
-			}
-
-			for ctx.errh == nil {
-				ctx.closeUpvals(0) // close all upvalues on this context
-				ctx = ctx.prev
-
-				if ctx.isRoot() {
-					th.context = ctx
-
-					th.error(ctx.err)
-
-					return
-				}
-			}
-
-			ctx.closeUpvals(0) // close all upvalues on this context
-
-			var err *object.RuntimeError
-			rets, err = th.dohandle(ctx.errh, ctx.err)
-			if err != nil {
-				rets = []object.Value{err.Positioned()}
-			}
-
-			th.popContext()
-		default:
-			panic("unexpected")
-		}
-
-		if th.status != object.THREAD_RUNNING {
-			panic("unexpected")
-		}
-
-		th.resumeExecute(rets)
+	switch th.status {
+	case object.THREAD_RETURN:
+		th.yield <- rets
+	case object.THREAD_ERROR:
+	default:
+		panic("unexpected")
 	}
 }
 
-func (th *thread) doExecute(fn, errh object.Value, args []object.Value, isHook bool) (rets []object.Value, err *object.RuntimeError) {
+func (th *thread) doExecute(fn object.Value, args []object.Value, isHook bool) (rets []object.Value, err *object.RuntimeError) {
 	th.pushContext(basicStackSize, isHook)
-
-	th.errh = errh
 
 	th.loadfn(fn)
 
-	if rets, done := th.initExecute(args); done {
-		ctx := th.popContext()
-
-		switch ctx.status {
-		case object.THREAD_RETURN:
-			return rets, nil
-		case object.THREAD_ERROR:
-			return nil, ctx.err
-		default:
-			panic("unexpected")
-		}
+	rets, done := th.initExecute(args)
+	if !done {
+		rets = th.execute0()
 	}
-
-	rets = th.execute0()
 
 	ctx := th.popContext()
 
@@ -193,15 +109,6 @@ func (th *thread) doExecute(fn, errh object.Value, args []object.Value, isHook b
 		return rets, nil
 	case object.THREAD_ERROR:
 		ctx.closeUpvals(0) // close all upvalues on this context
-
-		if ctx.errh != nil {
-			rets, err = th.dohandle(ctx.errh, ctx.err)
-			if err != nil {
-				return nil, err
-			}
-
-			return rets, nil
-		}
 
 		return nil, ctx.err
 	default:

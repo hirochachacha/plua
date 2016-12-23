@@ -39,7 +39,7 @@ type Thread interface {
 
 	// ↓ intended to be called from vm loop
 
-	Call(fn, errh Value, args ...Value) ([]Value, *RuntimeError)
+	Call(fn Value, args ...Value) ([]Value, *RuntimeError)
 
 	// ↓ for debug support
 

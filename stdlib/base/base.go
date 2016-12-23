@@ -92,7 +92,7 @@ func dofile(th object.Thread, args ...object.Value) (rets []object.Value, err *o
 		return nil, err
 	}
 
-	return th.Call(th.NewClosure(p), nil)
+	return th.Call(th.NewClosure(p))
 }
 
 // error(message [, level]) -> panic
@@ -177,7 +177,7 @@ func makeINext(tm object.Value) object.GoFunction {
 
 		i++
 
-		rets, err := th.Call(tm, nil, t, object.Integer(i))
+		rets, err := th.Call(tm, t, object.Integer(i))
 		if err != nil {
 			return nil, err
 		}
@@ -208,7 +208,7 @@ func ipairs(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	}
 
 	if tm := mt.Get(object.TM_IPAIRS); tm != nil {
-		return th.Call(tm, nil, args...)
+		return th.Call(tm, args...)
 	}
 
 	for i := 0; i < version.MAX_TAG_LOOP; i++ {
@@ -264,7 +264,7 @@ func pairs(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 
 	if mt := th.GetMetatable(t); mt != nil {
 		if tm := mt.Get(object.TM_PAIRS); tm != nil {
-			return th.Call(tm, nil, args...)
+			return th.Call(tm, args...)
 		}
 	}
 
@@ -333,7 +333,7 @@ func load(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 		}
 	case object.GoFunction, object.Closure:
 		for {
-			rets, err := th.Call(s, nil)
+			rets, err := th.Call(s)
 			if err != nil {
 				return []object.Value{nil, err.Positioned()}, nil
 			}
@@ -396,7 +396,7 @@ func _print(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	tostring := th.Globals().Get(object.String("tostring"))
 
 	for _, arg := range args[:len(args)-1] {
-		rets, err := th.Call(tostring, nil, arg)
+		rets, err := th.Call(tostring, arg)
 		if err != nil {
 			return nil, err
 		}
@@ -414,7 +414,7 @@ func _print(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		fmt.Print("\t")
 	}
 
-	rets, err := th.Call(tostring, nil, args[len(args)-1])
+	rets, err := th.Call(tostring, args[len(args)-1])
 	if err != nil {
 		return nil, err
 	}
@@ -441,7 +441,7 @@ func pcall(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 		return nil, err
 	}
 
-	rets, err := th.Call(fn, nil, args[1:]...)
+	rets, err := th.Call(fn, args[1:]...)
 	if err != nil {
 		return []object.Value{object.False, err.Positioned()}, nil
 	}
@@ -648,7 +648,7 @@ func tostring(th object.Thread, args ...object.Value) ([]object.Value, *object.R
 
 	if mt := th.GetMetatable(val); mt != nil {
 		if tm := mt.Get(object.TM_TOSTRING); tm != nil {
-			return th.Call(tm, nil, val)
+			return th.Call(tm, val)
 		}
 	}
 
@@ -679,9 +679,9 @@ func xpcall(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 		return nil, err
 	}
 
-	rets, err := th.Call(f, nil, args[2:]...)
+	rets, err := th.Call(f, args[2:]...)
 	if err != nil {
-		rets, err = th.Call(msgh, nil, err.Positioned())
+		rets, err = th.Call(msgh, err.Positioned())
 		if err != nil {
 			return []object.Value{object.False, errors.ErrInErrorHandling.Positioned()}, nil
 		}

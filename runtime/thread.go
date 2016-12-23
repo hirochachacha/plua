@@ -237,8 +237,8 @@ func (th *thread) LoadFunc(fn object.Value) {
 	th.loadfn(fn)
 }
 
-func (th *thread) Call(fn object.Value, errh object.Value, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	return th.docall(fn, errh, args...)
+func (th *thread) Call(fn object.Value, args ...object.Value) ([]object.Value, *object.RuntimeError) {
+	return th.docall(fn, args...)
 }
 
 func (th *thread) newThreadWith(typ threadType, env *environment, stackSize int) *thread {

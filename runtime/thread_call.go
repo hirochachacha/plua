@@ -241,7 +241,7 @@ func (th *thread) tforcall(a, nrets int) (err *object.RuntimeError) {
 	case object.Closure:
 		args := ctx.stack[f+1 : f+3]
 
-		rets, err := th.docallLua(fn, nil, args...)
+		rets, err := th.docallLua(fn, args...)
 		if err != nil {
 			return err
 		}
@@ -325,14 +325,14 @@ func (th *thread) returnLua(a, nrets int) (rets []object.Value, exit bool) {
 }
 
 // call a callable by values, immediately return values.
-func (th *thread) docall(fn, errh object.Value, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
+func (th *thread) docall(fn object.Value, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	switch fn := fn.(type) {
 	case nil:
 		err := errors.CallError(th, fn)
 
 		th.trackError(err)
 
-		return th.dohandle(errh, err)
+		return nil, err
 	case object.GoFunction:
 		old := th.stack[1]
 
@@ -347,19 +347,19 @@ func (th *thread) docall(fn, errh object.Value, args ...object.Value) (rets []ob
 
 			th.trackError(err)
 
-			return th.dohandle(errh, err)
+			return nil, err
 		}
 
 		th.stack[1] = old
 
 		return rets, nil
 	case object.Closure:
-		return th.docallLua(fn, errh, args...)
+		return th.docallLua(fn, args...)
 	}
 
 	tm := th.gettmbyobj(fn, object.TM_CALL)
 
-	return th.docall(tm, errh, append([]object.Value{fn}, args...)...)
+	return th.docall(tm, append([]object.Value{fn}, args...)...)
 }
 
 // call a go function by values, immediately return values.
@@ -397,36 +397,8 @@ func (th *thread) docallGo(fn object.GoFunction, args ...object.Value) (rets []o
 }
 
 // call a closure by values, immediately return values.
-func (th *thread) docallLua(c object.Closure, errh object.Value, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
-	return th.doExecute(c, errh, args, false)
-}
-
-func (th *thread) dohandle(errh object.Value, err *object.RuntimeError) ([]object.Value, *object.RuntimeError) {
-	switch errh := errh.(type) {
-	case nil:
-		return nil, err
-	case object.GoFunction:
-		old := th.stack[1]
-
-		rets, err := th.docallGo(errh, err.Positioned())
-
-		th.stack[1] = old
-
-		if err != nil {
-			return nil, errors.ErrInErrorHandling
-		}
-
-		return rets, nil
-	case object.Closure:
-		rets, err := th.docallLua(errh, nil, err.Positioned())
-		if err != nil {
-			return nil, errors.ErrInErrorHandling
-		}
-
-		return rets, nil
-	default:
-		return nil, errors.ErrInErrorHandling
-	}
+func (th *thread) docallLua(c object.Closure, args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
+	return th.doExecute(c, args, false)
 }
 
 func (th *thread) gettmbyobj(val object.Value, tag object.Value) object.Value {

@@ -38,7 +38,7 @@ func debug(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 			return nil, err
 		}
 
-		rets, err := th.Call(th.NewClosure(p), nil)
+		rets, err := th.Call(th.NewClosure(p))
 		if err != nil {
 			return nil, err
 		}

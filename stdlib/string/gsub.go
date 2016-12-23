@@ -77,7 +77,7 @@ func gsubFunc(th object.Thread, input, pat string, fn object.Value, n int) (stri
 			rargs[i] = cap.Value(input)
 		}
 
-		rets, rerr := th.Call(fn, nil, rargs...)
+		rets, rerr := th.Call(fn, rargs...)
 		if rerr != nil {
 			return "", rerr
 		}

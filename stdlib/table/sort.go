@@ -145,7 +145,7 @@ func callLessThan(th object.Thread, lt, x, y object.Value) (bool, *object.Runtim
 		return b, nil
 	}
 
-	rets, err := th.Call(lt, nil, x, y)
+	rets, err := th.Call(lt, x, y)
 	if err != nil {
 		return false, err
 	}
