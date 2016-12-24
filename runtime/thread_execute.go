@@ -40,7 +40,7 @@ func (th *thread) initExecute(args []object.Value) (rets []object.Value, done bo
 		ci.top = ci.base + cl.MaxStackSize
 
 		if !ctx.growStack(ci.top) {
-			panic(errors.ErrStackOverflow)
+			th.error(errors.StackOverflowError())
 		}
 
 		if len(args) > cl.NParams {
@@ -119,7 +119,7 @@ func (th *thread) doExecute(fn object.Value, args []object.Value, isHook bool) (
 // execute with current context
 func (th *thread) execute0() (rets []object.Value) {
 	if th.depth >= version.MAX_VM_RECURSION {
-		th.error(errors.ErrStackOverflow)
+		th.error(errors.StackOverflowError())
 
 		return nil
 	}
@@ -151,7 +151,7 @@ func (th *thread) execute0() (rets []object.Value) {
 		case opcode.LOADKX:
 			extra := ci.Code[ci.pc]
 			if extra.OpCode() != opcode.EXTRAARG {
-				th.error(errors.ErrInvalidByteCode)
+				th.error(errors.InvalidByteCodeError())
 
 				return nil
 			}
@@ -447,7 +447,7 @@ func (th *thread) execute0() (rets []object.Value) {
 				jmp := ci.Code[ci.pc]
 
 				if jmp.OpCode() != opcode.JMP {
-					th.error(errors.ErrInvalidByteCode)
+					th.error(errors.InvalidByteCodeError())
 
 					return nil
 				}
@@ -473,7 +473,7 @@ func (th *thread) execute0() (rets []object.Value) {
 				jmp := ci.Code[ci.pc]
 
 				if jmp.OpCode() != opcode.JMP {
-					th.error(errors.ErrInvalidByteCode)
+					th.error(errors.InvalidByteCodeError())
 
 					return nil
 				}
@@ -499,7 +499,7 @@ func (th *thread) execute0() (rets []object.Value) {
 				jmp := ci.Code[ci.pc]
 
 				if jmp.OpCode() != opcode.JMP {
-					th.error(errors.ErrInvalidByteCode)
+					th.error(errors.InvalidByteCodeError())
 
 					return nil
 				}
@@ -517,7 +517,7 @@ func (th *thread) execute0() (rets []object.Value) {
 				jmp := ci.Code[ci.pc]
 
 				if jmp.OpCode() != opcode.JMP {
-					th.error(errors.ErrInvalidByteCode)
+					th.error(errors.InvalidByteCodeError())
 
 					return nil
 				}
@@ -537,7 +537,7 @@ func (th *thread) execute0() (rets []object.Value) {
 				jmp := ci.Code[ci.pc]
 
 				if jmp.OpCode() != opcode.JMP {
-					th.error(errors.ErrInvalidByteCode)
+					th.error(errors.InvalidByteCodeError())
 
 					return nil
 				}
@@ -736,7 +736,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			tloop := ci.Code[ci.pc]
 
 			if tloop.OpCode() != opcode.TFORLOOP {
-				th.error(errors.ErrInvalidByteCode)
+				th.error(errors.InvalidByteCodeError())
 
 				return nil
 			}
@@ -762,7 +762,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			if c == 0 {
 				extra := ci.Code[ci.pc]
 				if extra.OpCode() != opcode.EXTRAARG {
-					th.error(errors.ErrInvalidByteCode)
+					th.error(errors.InvalidByteCodeError())
 
 					return nil
 				}
@@ -781,7 +781,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			bx := inst.Bx()
 
 			if len(ci.Protos) <= bx {
-				th.error(errors.ErrInvalidByteCode)
+				th.error(errors.InvalidByteCodeError())
 
 				return nil
 			}
@@ -801,7 +801,7 @@ func (th *thread) execute0() (rets []object.Value) {
 			top := ci.base + a + len(varargs)
 
 			if !ctx.growStack(top) {
-				th.error(errors.ErrStackOverflow)
+				th.error(errors.StackOverflowError())
 			}
 
 			copy(ctx.stack[ci.base+a:], varargs)
@@ -812,11 +812,11 @@ func (th *thread) execute0() (rets []object.Value) {
 
 			ctx.ci.top = top
 		case opcode.EXTRAARG:
-			th.error(errors.ErrInvalidByteCode)
+			th.error(errors.InvalidByteCodeError())
 
 			return nil
 		default:
-			th.error(errors.ErrInvalidByteCode)
+			th.error(errors.InvalidByteCodeError())
 
 			return nil
 		}

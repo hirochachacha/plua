@@ -33,7 +33,7 @@ func CallGettable(th object.Thread, t, key object.Value) (object.Value, *object.
 		t = tm
 	}
 
-	return nil, errors.ErrGetTable
+	return nil, object.NewRuntimeError("gettable chain too long; possible loop")
 }
 
 func CallSettable(th object.Thread, t, key, val object.Value) *object.RuntimeError {
@@ -43,11 +43,11 @@ func CallSettable(th object.Thread, t, key, val object.Value) *object.RuntimeErr
 			tm = gettm(tab.Metatable(), object.TM_NEWINDEX)
 			if tm == nil || tab.Get(key) != nil {
 				if key == nil {
-					return errors.ErrNilIndex
+					return errors.NilIndexError()
 				}
 
 				if object.IsNaN(key) {
-					return errors.ErrNaNIndex
+					return errors.NaNIndexError()
 				}
 
 				tab.Set(key, val)
@@ -70,7 +70,7 @@ func CallSettable(th object.Thread, t, key, val object.Value) *object.RuntimeErr
 		t = tm
 	}
 
-	return errors.ErrSetTable
+	return object.NewRuntimeError("settable chain too long; possible loop")
 }
 
 func isFunction(val object.Value) bool {

@@ -3,7 +3,6 @@ package runtime
 import (
 	"fmt"
 
-	"github.com/hirochachacha/plua/internal/errors"
 	"github.com/hirochachacha/plua/object"
 )
 
@@ -44,10 +43,10 @@ func (th *thread) String() string {
 func (th *thread) Yield(args ...object.Value) (rets []object.Value, err *object.RuntimeError) {
 	switch th.typ {
 	case threadMain:
-		return nil, errors.ErrYieldMainThread
+		return nil, object.NewRuntimeError("attempt to yield a main thread")
 	case threadCo:
 		if th.status != object.THREAD_RUNNING {
-			return nil, errors.ErrYieldFromOutside
+			return nil, object.NewRuntimeError("attempt to yield from outside a coroutine")
 		}
 
 		th.status = object.THREAD_SUSPENDED
@@ -60,7 +59,7 @@ func (th *thread) Yield(args ...object.Value) (rets []object.Value, err *object.
 
 		return rets, nil
 	case threadGo:
-		return nil, errors.ErrYieldGoThread
+		return nil, object.NewRuntimeError("attempt to yield a goroutine")
 	default:
 		panic("unreachable")
 	}
@@ -70,7 +69,7 @@ func (th *thread) Resume(args ...object.Value) (rets []object.Value, err *object
 	switch th.typ {
 	case threadMain, threadCo:
 		if !(th.status == object.THREAD_INIT || th.status == object.THREAD_SUSPENDED) {
-			return nil, errors.ErrDeadCoroutine
+			return nil, object.NewRuntimeError("cannot resume dead coroutine")
 		}
 
 		th.resume <- args
@@ -88,7 +87,7 @@ func (th *thread) Resume(args ...object.Value) (rets []object.Value, err *object
 		return rets, nil
 	case threadGo:
 		if th.status != object.THREAD_INIT {
-			return nil, errors.ErrGoroutineTwice
+			return nil, object.NewRuntimeError("goroutine is already resumed")
 		}
 
 		th.resume <- args

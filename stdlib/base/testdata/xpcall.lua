@@ -5,7 +5,7 @@ assert(not ok and err == "testdata/xpcall.lua:1: error")
 
 function g2(x) error(x) end
 ok, err = xpcall(f, g2)
-assert(not ok and err == "error in error handling")
+assert(not ok and err == "testdata/xpcall.lua:6: error in error handling")
 
 function f() return 1, 2 end
 

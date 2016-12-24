@@ -513,11 +513,11 @@ func rawset(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	}
 
 	if key == nil {
-		return nil, errors.ErrNilIndex
+		return nil, errors.NilIndexError()
 	}
 
 	if object.IsNaN(key) {
-		return nil, errors.ErrNaNIndex
+		return nil, errors.NaNIndexError()
 	}
 
 	val, err := ap.ToValue(2)
@@ -683,7 +683,9 @@ func xpcall(th object.Thread, args ...object.Value) ([]object.Value, *object.Run
 	if err != nil {
 		rets, err = th.Call(msgh, err.Value())
 		if err != nil {
-			return []object.Value{object.False, errors.ErrInErrorHandling.Value()}, nil
+			err.RawValue = object.String("error in error handling")
+
+			return []object.Value{object.False, err.Value()}, nil
 		}
 		return append([]object.Value{object.False}, rets...), nil
 	}

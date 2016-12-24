@@ -6,22 +6,21 @@ import (
 	"github.com/hirochachacha/plua/object"
 )
 
-var (
-	ErrDeadCoroutine    = object.NewRuntimeError("cannot resume dead coroutine")
-	ErrGoroutineTwice   = object.NewRuntimeError("cannot resume goroutine twice")
-	ErrInvalidByteCode  = object.NewRuntimeError("malformed bytecode detected")
-	ErrYieldMainThread  = object.NewRuntimeError("attempt to yield a main thread")
-	ErrYieldFromOutside = object.NewRuntimeError("attempt to yield from outside a coroutine")
-	ErrYieldGoThread    = object.NewRuntimeError("attempt to yield a goroutine")
-	ErrStackOverflow    = object.NewRuntimeError("Go stack overflow")
-	ErrGetTable         = object.NewRuntimeError("gettable chain too long; possible loop")
-	ErrSetTable         = object.NewRuntimeError("settable chain too long; possible loop")
-	ErrNilIndex         = object.NewRuntimeError("table index is nil")
-	ErrNaNIndex         = object.NewRuntimeError("table index is nan")
-	ErrZeroDivision     = object.NewRuntimeError("attempt to divide by zero")
-	ErrModuloByZero     = object.NewRuntimeError("attempt to perform 'n%0'")
-	ErrInErrorHandling  = object.NewRuntimeError("error in error handling")
-)
+func NaNIndexError() *object.RuntimeError {
+	return object.NewRuntimeError("table index is nan")
+}
+
+func NilIndexError() *object.RuntimeError {
+	return object.NewRuntimeError("table index is nil")
+}
+
+func StackOverflowError() *object.RuntimeError {
+	return object.NewRuntimeError("Go stack overflow")
+}
+
+func InvalidByteCodeError() *object.RuntimeError {
+	return object.NewRuntimeError("malformed bytecode detected")
+}
 
 func ForLoopError(elem string) *object.RuntimeError {
 	return object.NewRuntimeError(fmt.Sprintf("'for' %s value must be a number", elem))

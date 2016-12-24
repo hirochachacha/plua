@@ -120,7 +120,7 @@ func CallDiv(th object.Thread, x, y object.Value) (object.Value, *object.Runtime
 func CallIdiv(th object.Thread, x, y object.Value) (object.Value, *object.RuntimeError) {
 	quo, ok := Idiv(x, y)
 	if !ok {
-		return nil, errors.ErrZeroDivision
+		return nil, object.NewRuntimeError("attempt to divide by zero")
 	}
 	if quo != nil {
 		return quo, nil
@@ -131,7 +131,7 @@ func CallIdiv(th object.Thread, x, y object.Value) (object.Value, *object.Runtim
 func CallMod(th object.Thread, x, y object.Value) (object.Value, *object.RuntimeError) {
 	rem, ok := Mod(x, y)
 	if !ok {
-		return nil, errors.ErrModuloByZero
+		return nil, object.NewRuntimeError("attempt to perform 'n%0'")
 	}
 	if rem != nil {
 		return rem, nil
