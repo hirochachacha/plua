@@ -35,16 +35,9 @@ func (typ FormatType) String() string {
 	}
 }
 
-type readerAt interface {
-	io.Reader
-	io.ReaderAt
-}
-
 type Compiler struct {
 	s *scanner.ScanState
-	u *bufio.Reader // buffer for undump
-	r readerAt
-	b [1]byte
+	r *bufio.Reader
 }
 
 func NewCompiler() *Compiler {
@@ -52,16 +45,17 @@ func NewCompiler() *Compiler {
 }
 
 func (c *Compiler) Compile(r io.Reader, srcname string, typ FormatType) (*object.Proto, error) {
-	if r, ok := r.(readerAt); ok {
-		c.r = r
+
+	if c.r == nil {
+		c.r = bufio.NewReader(r)
 	} else {
-		c.r = &onceReadAt{r: r}
+		c.r.Reset(r)
 	}
 
-	_, err := c.r.ReadAt(c.b[:], 0)
+	b, err := c.r.Peek(1)
 
 	switch {
-	case err == io.EOF, err == nil && c.b[0] != version.LUA_SIGNATURE[0]:
+	case err == io.EOF, err == nil && b[0] != version.LUA_SIGNATURE[0]:
 		if typ != Either && typ != Text {
 			return nil, &Error{fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "text", typ)}
 		}
@@ -78,18 +72,12 @@ func (c *Compiler) Compile(r io.Reader, srcname string, typ FormatType) (*object
 		}
 
 		return codegen.Generate(ast)
-	case err == nil && c.b[0] == version.LUA_SIGNATURE[0]:
+	case err == nil && b[0] == version.LUA_SIGNATURE[0]:
 		if typ != Either && typ != Binary {
 			return nil, &Error{fmt.Errorf("compiler: attempt to load a %s chunk (mode is '%s')", "binary", typ)}
 		}
 
-		if c.u == nil {
-			c.u = bufio.NewReader(c.r)
-		} else {
-			c.u.Reset(c.r)
-		}
-
-		return undump.Undump(c.u, 0)
+		return undump.Undump(c.r, 0)
 	default:
 		return nil, err
 	}
@@ -103,41 +91,4 @@ func (c *Compiler) CompileFile(path string, typ FormatType) (*object.Proto, erro
 	defer f.Close()
 
 	return c.Compile(f, "@"+f.Name(), typ)
-}
-
-type onceReadAt struct {
-	r   io.Reader
-	buf []byte
-}
-
-func (r *onceReadAt) ReadAt(p []byte, off int64) (n int, err error) {
-	if r.buf != nil {
-		panic("ReadAt can be called only once")
-	}
-
-	n, err = io.ReadFull(r.r, p)
-	if err != nil {
-		if err == io.ErrUnexpectedEOF {
-			err = io.EOF
-		}
-		return
-	}
-
-	r.buf = p
-
-	return
-}
-
-func (r *onceReadAt) Read(p []byte) (n int, err error) {
-	if len(r.buf) > 0 && len(p) > 0 {
-		n1 := copy(p, r.buf)
-
-		r.buf = r.buf[n1:]
-
-		n, err = r.r.Read(p[n1:])
-
-		return n + n1, err
-	}
-
-	return r.r.Read(p)
 }
