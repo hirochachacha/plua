@@ -122,6 +122,10 @@ func valueOfReflect(rval reflect.Value, skipPrimitive bool) object.Value {
 	if !skipPrimitive {
 		typ := rval.Type()
 		if typ == tValue {
+			if rval.IsNil() {
+				return nil
+			}
+
 			rval = rval.Elem()
 			typ = rval.Type()
 		}
