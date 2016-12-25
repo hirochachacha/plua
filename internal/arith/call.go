@@ -43,6 +43,18 @@ func CallEqual(th object.Thread, not bool, x, y object.Value) (bool, *object.Run
 
 	switch x := x.(type) {
 	case object.Table:
+		// tm := gettm(x.Metatable(), object.TM_EQ)
+		// if tm != nil {
+		// return callcmptm(th, not, tm, x, y)
+		// }
+
+		// tm = gettmbyobj(th, y, object.TM_EQ)
+		// if tm != nil {
+		// return callcmptm(th, not, tm, x, y)
+		// }
+
+		// return false != not, nil
+
 		if y, ok := y.(object.Table); ok {
 			tm := gettm(x.Metatable(), object.TM_EQ)
 			if tm == nil {
@@ -57,6 +69,18 @@ func CallEqual(th object.Thread, not bool, x, y object.Value) (bool, *object.Run
 
 		return false != not, nil
 	case *object.Userdata:
+		// tm := gettm(x.Metatable, object.TM_EQ)
+		// if tm != nil {
+		// return callcmptm(th, not, tm, x, y)
+		// }
+
+		// tm = gettmbyobj(th, y, object.TM_EQ)
+		// if tm != nil {
+		// return callcmptm(th, not, tm, x, y)
+		// }
+
+		// return false != not, nil
+
 		if y, ok := y.(*object.Userdata); ok {
 			tm := gettm(x.Metatable, object.TM_EQ)
 			if tm == nil {
