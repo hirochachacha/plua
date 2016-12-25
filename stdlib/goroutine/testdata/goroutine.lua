@@ -1,5 +1,7 @@
 -- example code is taken from https://tour.golang.org/concurrency/5
 
+fibs = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34}
+
 function fibonacci(ch, quit)
   local x, y = 0, 1
   while true do
@@ -11,7 +13,6 @@ function fibonacci(ch, quit)
     if chosen == 1 then
       x, y = y, x+y
     elseif chosen == 2 then
-      print("quit")
       return
     end
   end
@@ -22,7 +23,7 @@ quit = goroutine.newchannel()
 
 goroutine.wrap(function()
   for i = 1, 10 do
-    print(ch:recv())
+    assert(ch:recv() == fibs[i])
   end
   quit:send(nil)
 end)()

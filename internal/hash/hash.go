@@ -3,6 +3,7 @@ package hash
 import (
 	"hash"
 	"reflect"
+	"sync"
 	"unsafe"
 
 	"github.com/dchest/siphash"
@@ -15,6 +16,7 @@ import (
 
 type Hash struct {
 	h hash.Hash64
+	m sync.Mutex
 }
 
 func New() *Hash {
@@ -22,6 +24,9 @@ func New() *Hash {
 }
 
 func (h *Hash) Sum(key object.Value) (sum uint64) {
+	h.m.Lock()
+	defer h.m.Unlock()
+
 	h.h.Reset()
 
 	switch key := key.(type) {
