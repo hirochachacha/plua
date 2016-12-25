@@ -1,15 +1,11 @@
 package reflect
 
 import (
-	"fmt"
 	"reflect"
 	"sync"
-	"unicode"
-	"unicode/utf8"
 	"unsafe"
 
 	"github.com/hirochachacha/plua/object"
-	"github.com/hirochachacha/plua/object/fnutil"
 )
 
 // interface{} (Go) -> Value (Lua)
@@ -55,8 +51,6 @@ func ValueOf(x interface{}) object.Value {
 		return x
 	case object.Thread:
 		return x
-	case object.Channel:
-		return x
 	}
 
 	return valueOfReflect(reflect.ValueOf(x), true)
@@ -74,6 +68,8 @@ var (
 	tGoString  = reflect.TypeOf("")
 	tGoPointer = reflect.TypeOf(unsafe.Pointer(nil))
 
+	tValue = reflect.TypeOf((*object.Value)(nil)).Elem()
+
 	tBoolean       = reflect.TypeOf(object.False)
 	tInteger       = reflect.TypeOf(object.Integer(0))
 	tNumber        = reflect.TypeOf(object.Number(0))
@@ -85,7 +81,6 @@ var (
 	tTable   = reflect.TypeOf((*object.Table)(nil)).Elem()
 	tClosure = reflect.TypeOf((*object.Closure)(nil)).Elem()
 	tThread  = reflect.TypeOf((*object.Thread)(nil)).Elem()
-	tChannel = reflect.TypeOf((*object.Channel)(nil)).Elem()
 )
 
 var (
@@ -125,7 +120,13 @@ var (
 // reflect.Value (Go) -> Value (Lua)
 func valueOfReflect(rval reflect.Value, skipPrimitive bool) object.Value {
 	if !skipPrimitive {
-		switch typ := rval.Type(); typ {
+		typ := rval.Type()
+		if typ == tValue {
+			rval = rval.Elem()
+			typ = rval.Type()
+		}
+
+		switch typ {
 		case tGoBool:
 			return object.Boolean(rval.Bool())
 		case tGoInt, tGoInt8, tGoInt16, tGoInt32, tGoInt32:
@@ -158,8 +159,6 @@ func valueOfReflect(rval reflect.Value, skipPrimitive bool) object.Value {
 				return rval.Interface().(object.Closure)
 			case typ.Implements(tThread):
 				return rval.Interface().(object.Thread)
-			case typ.Implements(tChannel):
-				return rval.Interface().(object.Channel)
 			}
 		}
 	}
@@ -262,15 +261,27 @@ func valueOfReflect(rval reflect.Value, skipPrimitive bool) object.Value {
 func toReflectValue(typ reflect.Type, val object.Value) reflect.Value {
 	switch val := val.(type) {
 	case nil:
+		if typ == tValue {
+			return reflect.Zero(typ)
+		}
+
 		switch typ.Kind() {
 		case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Slice:
 			return reflect.Zero(typ)
 		}
 	case object.Boolean:
+		if typ == tValue {
+			return reflect.ValueOf(val)
+		}
+
 		if typ.Kind() == reflect.Bool {
 			return reflect.ValueOf(val).Convert(typ)
 		}
 	case object.Integer:
+		if typ == tValue {
+			return reflect.ValueOf(val)
+		}
+
 		switch typ.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
@@ -280,6 +291,10 @@ func toReflectValue(typ reflect.Type, val object.Value) reflect.Value {
 			return reflect.ValueOf(integerToString(val)).Convert(typ)
 		}
 	case object.Number:
+		if typ == tValue {
+			return reflect.ValueOf(val)
+		}
+
 		switch typ.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			if ival, ok := numberToInteger(val); ok {
@@ -295,6 +310,10 @@ func toReflectValue(typ reflect.Type, val object.Value) reflect.Value {
 			return reflect.ValueOf(numberToString(val)).Convert(typ)
 		}
 	case object.String:
+		if typ == tValue {
+			return reflect.ValueOf(val)
+		}
+
 		switch typ.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			if ival, ok := stringToInteger(val); ok {
@@ -312,10 +331,18 @@ func toReflectValue(typ reflect.Type, val object.Value) reflect.Value {
 			return reflect.ValueOf(val).Convert(typ)
 		}
 	case object.LightUserdata:
+		if typ == tValue {
+			return reflect.ValueOf(val)
+		}
+
 		if typ.Kind() == reflect.UnsafePointer {
 			return reflect.ValueOf(val.Pointer).Convert(typ)
 		}
 	case object.GoFunction:
+		if typ == tValue {
+			return reflect.ValueOf(val)
+		}
+
 		rval := reflect.ValueOf(val)
 		rtyp := rval.Type()
 
@@ -323,6 +350,10 @@ func toReflectValue(typ reflect.Type, val object.Value) reflect.Value {
 			return rval
 		}
 	case *object.Userdata:
+		if typ == tValue {
+			return reflect.ValueOf(val)
+		}
+
 		if rval, ok := val.Value.(reflect.Value); ok {
 			rtyp := rval.Type()
 
@@ -338,6 +369,10 @@ func toReflectValue(typ reflect.Type, val object.Value) reflect.Value {
 			}
 		}
 	case object.Table:
+		if typ == tValue {
+			return reflect.ValueOf(val)
+		}
+
 		rval := reflect.ValueOf(val)
 		rtyp := rval.Type()
 
@@ -345,6 +380,10 @@ func toReflectValue(typ reflect.Type, val object.Value) reflect.Value {
 			return rval
 		}
 	case object.Closure:
+		if typ == tValue {
+			return reflect.ValueOf(val)
+		}
+
 		rval := reflect.ValueOf(val)
 		rtyp := rval.Type()
 
@@ -352,13 +391,10 @@ func toReflectValue(typ reflect.Type, val object.Value) reflect.Value {
 			return rval
 		}
 	case object.Thread:
-		rval := reflect.ValueOf(val)
-		rtyp := rval.Type()
-
-		if rtyp == typ {
-			return rval
+		if typ == tValue {
+			return reflect.ValueOf(val)
 		}
-	case object.Channel:
+
 		rval := reflect.ValueOf(val)
 		rtyp := rval.Type()
 
@@ -370,159 +406,4 @@ func toReflectValue(typ reflect.Type, val object.Value) reflect.Value {
 	}
 
 	return reflect.ValueOf(nil)
-}
-
-var errInvalidUserdata = object.NewRuntimeError("invalid userdata")
-
-func index(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	ap := fnutil.NewArgParser(th, args)
-
-	self, err := ap.ToFullUserdata(0)
-	if err != nil {
-		return nil, err
-	}
-
-	name, err := ap.ToGoString(1)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isPublic(name) {
-		return nil, object.NewRuntimeError(fmt.Sprintf("%s is not public method or field", name))
-	}
-
-	if self, ok := self.Value.(reflect.Value); ok {
-		method := self.MethodByName(name)
-
-		if !method.IsValid() {
-			if self.CanAddr() {
-				method = self.Addr().MethodByName(name)
-			} else {
-				self2 := reflect.New(self.Type())
-				self2.Elem().Set(self)
-				method = self2.MethodByName(name)
-			}
-
-			if !method.IsValid() {
-				return nil, object.NewRuntimeError(fmt.Sprintf("type %s has no method %s", self.Type(), name))
-			}
-		}
-
-		return []object.Value{valueOfReflect(method, false)}, nil
-	}
-
-	return nil, errInvalidUserdata
-}
-
-func tostring(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	ap := fnutil.NewArgParser(th, args)
-
-	self, err := ap.ToFullUserdata(0)
-	if err != nil {
-		return nil, err
-	}
-
-	if self, ok := self.Value.(reflect.Value); ok {
-		return []object.Value{object.String(fmt.Sprintf("go %s: %v", self.Type(), self.Interface()))}, nil
-	}
-
-	return nil, errInvalidUserdata
-}
-
-func cmp(op func(x, y reflect.Value) bool) object.GoFunction {
-	return func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-		ap := fnutil.NewArgParser(th, args)
-
-		x, err := ap.ToFullUserdata(0)
-		if err != nil {
-			return nil, err
-		}
-
-		y, err := ap.ToFullUserdata(1)
-		if err != nil {
-			return nil, err
-		}
-
-		if xval, ok := x.Value.(reflect.Value); ok {
-			if yval, ok := y.Value.(reflect.Value); ok {
-				xtyp := xval.Type()
-				ytyp := yval.Type()
-
-				if xtyp == ytyp {
-					return []object.Value{object.Boolean(op(xval, yval))}, nil
-				}
-
-				return nil, object.NewRuntimeError(fmt.Sprintf("mismatched types %s and %s", xtyp, ytyp))
-			}
-		}
-
-		return nil, object.NewRuntimeError("mismatched types")
-	}
-}
-
-func unary(op func(x reflect.Value) reflect.Value, mt object.Table) object.GoFunction {
-	return func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-		ap := fnutil.NewArgParser(th, args)
-
-		x, err := ap.ToFullUserdata(0)
-		if err != nil {
-			return nil, err
-		}
-
-		if xval, ok := x.Value.(reflect.Value); ok {
-			val := op(xval).Convert(xval.Type())
-
-			ud := &object.Userdata{Value: val, Metatable: mt}
-
-			return []object.Value{ud}, nil
-		}
-
-		return nil, errInvalidUserdata
-	}
-}
-
-func binary(op func(x, y reflect.Value) (reflect.Value, *object.RuntimeError), mt object.Table) object.GoFunction {
-	return func(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-		ap := fnutil.NewArgParser(th, args)
-
-		x, err := ap.ToFullUserdata(0)
-		if err != nil {
-			return nil, err
-		}
-
-		y, err := ap.ToFullUserdata(1)
-		if err != nil {
-			return nil, err
-		}
-
-		if xval, ok := x.Value.(reflect.Value); ok {
-			if yval, ok := y.Value.(reflect.Value); ok {
-				xtyp := xval.Type()
-				ytyp := yval.Type()
-
-				if xtyp == ytyp {
-					val, err := op(xval, yval)
-					if err != nil {
-						return nil, err
-					}
-
-					ud := &object.Userdata{Value: val.Convert(xtyp), Metatable: mt}
-
-					return []object.Value{ud}, nil
-				}
-
-				return nil, object.NewRuntimeError(fmt.Sprintf("mismatched types %s and %s", xtyp, ytyp))
-			}
-
-			return nil, object.NewRuntimeError("mismatched types")
-		}
-
-		return nil, errInvalidUserdata
-	}
-}
-
-func isPublic(name string) bool {
-	r, _ := utf8.DecodeRuneInString(name)
-
-	return unicode.IsUpper(r)
 }

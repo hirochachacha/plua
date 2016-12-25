@@ -20,7 +20,6 @@ type Thread interface {
 	NewThread() Thread
 	NewGoThread() Thread
 	NewClosure(p *Proto) Closure
-	NewChannel(capacity int) Channel
 
 	Globals() Table
 	Loaded() Table
@@ -28,8 +27,6 @@ type Thread interface {
 
 	GetMetatable(val Value) Table
 	SetMetatable(val Value, mt Table)
-
-	Select(cases []SelectCase) (chosen int, recv Value, recvOK bool)
 
 	// aux API
 

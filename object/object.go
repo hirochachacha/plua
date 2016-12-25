@@ -7,12 +7,6 @@ import (
 	"github.com/hirochachacha/plua/internal/limits"
 )
 
-type SelectCase struct {
-	Dir  String
-	Chan Channel
-	Send Value
-}
-
 func Equal(x, y Value) bool {
 	switch x := x.(type) {
 	case GoFunction:

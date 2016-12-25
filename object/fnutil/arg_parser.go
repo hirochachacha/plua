@@ -168,10 +168,6 @@ func (ap *ArgParser) ToTypes(n int, types ...object.Type) (object.Value, *object
 				if typ == object.TTHREAD {
 					goto Found
 				}
-			case object.Channel:
-				if typ == object.TCHANNEL {
-					goto Found
-				}
 			}
 		}
 
@@ -320,20 +316,6 @@ func (ap *ArgParser) ToThread(n int) (object.Thread, *object.RuntimeError) {
 	}
 
 	return th, nil
-}
-
-func (ap *ArgParser) ToChannel(n int) (object.Channel, *object.RuntimeError) {
-	arg, ok := ap.Get(n)
-	if !ok {
-		return nil, ap.ArgError(n, "channel expected, got no value")
-	}
-
-	ch, ok := arg.(object.Channel)
-	if !ok {
-		return nil, ap.TypeError(n, "channel")
-	}
-
-	return ch, nil
 }
 
 func (ap *ArgParser) ToGoInt(n int) (int, *object.RuntimeError) {

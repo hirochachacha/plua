@@ -130,10 +130,6 @@ func (th *thread) NewClosure(p *object.Proto) object.Closure {
 	return th.newClosure(p)
 }
 
-func (th *thread) NewChannel(capacity int) object.Channel {
-	return newChannel(capacity)
-}
-
 func (th *thread) Globals() object.Table {
 	return th.env.globals
 }

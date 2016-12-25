@@ -103,7 +103,6 @@ const (
 	TFUNCTION
 	TUSERDATA
 	TTHREAD
-	TCHANNEL
 
 	MaxType
 )

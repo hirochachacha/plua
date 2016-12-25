@@ -8,7 +8,6 @@ type Process interface {
 
 	NewTableSize(asize, msize int) Table
 	NewClosure(p *Proto) Closure
-	NewChannel(capacity int) Channel
 
 	Globals() Table
 	Loaded() Table
@@ -17,9 +16,7 @@ type Process interface {
 	GetMetatable(val Value) Table
 	SetMetatable(val Value, mt Table)
 
-	Select(cases []SelectCase) (chosen int, recv Value, recvOK bool)
-
-	// aux APIs
+	// aux API
 
 	Require(name string, open GoFunction) (Value, bool)
 }
