@@ -159,7 +159,7 @@ func (t *table) next(key object.Value) (nkey, nval object.Value, ok bool) {
 	}
 
 	if ikey, ok := t.ikey(key); ok {
-		if i := int(ikey); i >= 0 {
+		if i := int(ikey); i > 0 {
 			for ; i < len(t.a); i++ {
 				v := t.a[i]
 				if v != nil {
