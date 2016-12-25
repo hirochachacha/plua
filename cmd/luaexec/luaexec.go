@@ -1,43 +1,153 @@
 package main
 
 import (
+	"bufio"
+	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/hirochachacha/plua/compiler"
 	"github.com/hirochachacha/plua/object"
 	"github.com/hirochachacha/plua/runtime"
 	"github.com/hirochachacha/plua/stdlib"
+
+	isatty "github.com/mattn/go-isatty"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: luaexec file")
-		os.Exit(2)
+	flag.Usage = func() {
+		fmt.Fprintln(os.Stderr, "usage: luaexec [file]")
+		flag.PrintDefaults()
 	}
 
-	c := compiler.NewCompiler()
+	flag.Parse()
 
-	proto, err := c.CompileFile(os.Args[1], compiler.Either)
-	if err != nil {
-		object.PrintError(err)
-		os.Exit(1)
+	switch {
+	case len(os.Args) >= 2:
+		c := compiler.NewCompiler()
+
+		proto, err := c.CompileFile(os.Args[1], compiler.Either)
+		if err != nil {
+			object.PrintError(err)
+			os.Exit(1)
+		}
+
+		exec(proto)
+	case !isatty.IsTerminal(os.Stdin.Fd()):
+		c := compiler.NewCompiler()
+
+		proto, err := c.Compile(os.Stdin, "=stdin", compiler.Either)
+		if err != nil {
+			object.PrintError(err)
+			os.Exit(1)
+		}
+
+		exec(proto)
+	default:
+		interact()
 	}
 
+}
+
+func exec(proto *object.Proto) {
 	p := runtime.NewProcess()
 
-	a := p.NewTableSize(len(os.Args)-2, 2)
-	for i, arg := range os.Args {
-		a.Set(object.Integer(i-1), object.String(arg))
+	var a object.Table
+
+	if len(os.Args) >= 2 {
+		a = p.NewTableSize(len(os.Args)-2, 2)
+		for i, arg := range os.Args {
+			a.Set(object.Integer(i-1), object.String(arg))
+		}
+	} else {
+		a = p.NewTableSize(0, 1)
+		a.Set(object.Integer(0), object.String(os.Args[0]))
 	}
 
 	p.Globals().Set(object.String("arg"), a)
 
 	p.Require("", stdlib.Open)
 
-	_, err = p.Exec(proto)
+	_, err := p.Exec(proto)
 	if err != nil {
 		object.PrintError(err)
 		os.Exit(1)
+	}
+}
+
+func interact() {
+	c := compiler.NewCompiler()
+
+	p := runtime.NewProcess()
+
+	p.Require("", stdlib.Open)
+
+	stdin := bufio.NewScanner(os.Stdin)
+
+	var code string
+
+	for {
+		if len(code) != 0 {
+			_, err := fmt.Fprint(os.Stdout, ">> ")
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			_, err := fmt.Fprint(os.Stdout, "> ")
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		if !stdin.Scan() {
+			if err := stdin.Err(); err != nil {
+				panic(err)
+			}
+
+			return
+		}
+
+		line := stdin.Text()
+		if line == "exit" {
+			return
+		}
+
+		var proto *object.Proto
+		var err error
+
+		if len(code) == 0 {
+			code = "return " + line
+
+			proto, err = c.Compile(strings.NewReader(code), "=stdin", compiler.Text)
+			if err != nil {
+				code = line
+
+				proto, err = c.Compile(strings.NewReader(code), "=stdin", compiler.Text)
+				if err != nil {
+					continue
+				}
+			}
+		} else {
+			code += "\n" + line
+
+			proto, err = c.Compile(strings.NewReader(code), "=stdin", compiler.Text)
+			if err != nil {
+				continue
+			}
+		}
+
+		code = ""
+
+		rets, err := p.Exec(proto)
+		if err != nil {
+			object.PrintError(err)
+		} else {
+			if len(rets) > 0 {
+				fmt.Fprintln(os.Stdout, object.Repr(rets[0]))
+			}
+		}
+
+		p = p.Fork()
 	}
 }
