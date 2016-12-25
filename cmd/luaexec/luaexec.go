@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"github.com/hirochachacha/plua/compiler"
+	"github.com/hirochachacha/plua/compiler/parser"
 	"github.com/hirochachacha/plua/object"
+	"github.com/hirochachacha/plua/position"
 	"github.com/hirochachacha/plua/runtime"
 	"github.com/hirochachacha/plua/stdlib"
 
@@ -76,6 +78,31 @@ func exec(proto *object.Proto) {
 	}
 }
 
+func eof(s string) position.Position {
+	line := 0
+	column := 0
+	for _, r := range s {
+		if r == '\n' {
+			line++
+			column = 0
+		} else {
+			column++
+		}
+	}
+	line++
+	column++
+	return position.Position{Line: line, Column: column}
+}
+
+func isIncomplete(code string, err error) bool {
+	if err, ok := err.(*parser.Error); ok {
+		eof := eof(code)
+		return err.Pos.Line == eof.Line && err.Pos.Column == eof.Column
+	}
+
+	return false
+}
+
 func interact() {
 	c := compiler.NewCompiler()
 
@@ -88,16 +115,16 @@ func interact() {
 	var code string
 
 	for {
+		var err error
+
 		if len(code) != 0 {
-			_, err := fmt.Fprint(os.Stdout, ">> ")
-			if err != nil {
-				panic(err)
-			}
+			_, err = fmt.Fprint(os.Stdout, ">> ")
 		} else {
-			_, err := fmt.Fprint(os.Stdout, "> ")
-			if err != nil {
-				panic(err)
-			}
+			_, err = fmt.Fprint(os.Stdout, "> ")
+		}
+
+		if err != nil {
+			panic(err)
 		}
 
 		if !stdin.Scan() {
@@ -109,14 +136,13 @@ func interact() {
 		}
 
 		line := stdin.Text()
-		if line == "exit" {
-			return
-		}
-
 		var proto *object.Proto
-		var err error
 
 		if len(code) == 0 {
+			if line == "exit" {
+				return
+			}
+
 			code = "return " + line
 
 			proto, err = c.Compile(strings.NewReader(code), "=stdin", compiler.Text)
@@ -124,17 +150,23 @@ func interact() {
 				code = line
 
 				proto, err = c.Compile(strings.NewReader(code), "=stdin", compiler.Text)
-				if err != nil {
-					continue
-				}
 			}
 		} else {
 			code += "\n" + line
 
 			proto, err = c.Compile(strings.NewReader(code), "=stdin", compiler.Text)
-			if err != nil {
+		}
+
+		if err != nil {
+			if isIncomplete(code, err) {
 				continue
 			}
+
+			code = ""
+
+			object.PrintError(err)
+
+			continue
 		}
 
 		code = ""
