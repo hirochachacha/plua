@@ -32,10 +32,10 @@ func (w *errWriter) Write(p []byte) (n int, err error) {
 
 func fprintError(w io.Writer, err error) error {
 	ew := &errWriter{w: w}
-	if err, ok := err.(*RuntimeError); ok {
-		fmt.Fprintln(ew, err)
+	if rerr, ok := err.(*RuntimeError); ok {
+		fmt.Fprintln(ew, rerr)
 		fmt.Fprint(ew, "stack traceback:")
-		tb := err.Traceback
+		tb := rerr.Traceback
 		if len(tb) <= 22 {
 			for _, st := range tb {
 				printStackTrace(ew, st)
