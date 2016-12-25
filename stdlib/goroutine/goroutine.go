@@ -122,7 +122,7 @@ func wrap(th object.Thread, args ...object.Value) ([]object.Value, *object.Runti
 }
 
 func Open(th object.Thread, args ...object.Value) ([]object.Value, *object.RuntimeError) {
-	m := th.NewTableSize(0, 2)
+	m := th.NewTableSize(0, 4)
 
 	m.Set(object.String("newchannel"), object.GoFunction(newchannel))
 	m.Set(object.String("select"), object.GoFunction(_select))
