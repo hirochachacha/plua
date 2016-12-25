@@ -143,7 +143,7 @@ func inext(th object.Thread, args ...object.Value) ([]object.Value, *object.Runt
 		return nil, err
 	}
 
-	i, err := ap.OptGoInt(1, 0)
+	i, err := ap.ToGoInt(1)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func makeINext(tm object.Value) object.GoFunction {
 			return nil, err
 		}
 
-		i, err := ap.OptGoInt(1, 0)
+		i, err := ap.ToGoInt(1)
 		if err != nil {
 			return nil, err
 		}
