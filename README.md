@@ -2,6 +2,8 @@ plua
 ====
 
 [![Build Status](https://travis-ci.org/hirochachacha/plua.svg?branch=master)](https://travis-ci.org/hirochachacha/plua)
+[![Code Climate](https://codeclimate.com/github/hirochachacha/plua/badges/gpa.svg)](https://codeclimate.com/github/hirochachacha/plua)
+[![Test Coverage](https://codeclimate.com/github/hirochachacha/plua/badges/coverage.svg)](https://codeclimate.com/github/hirochachacha/plua/coverage)
 
 Description
 -----------
