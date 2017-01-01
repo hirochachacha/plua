@@ -4,15 +4,6 @@ go:
     - 1.6
     - 1.7
     - tip
-script:
-    - go test -tags gofuzz -race -v ./...
-
-language: go
-go:
-    - 1.5
-    - 1.6
-    - 1.7
-    - tip
 before_install:
     - go get github.com/hirochachacha/go-test-reporter
 script:
