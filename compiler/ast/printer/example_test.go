@@ -36,9 +36,10 @@ func ExampleFprint() {
 	//  man
 	//  ]]
 	//
-	// x = 1 + -- bar
-	//   4 + 9 -- foo
-	//   + 10  -- baz
+	// -- TODO
+	// -- x = 1 + -- bar
+	// -- 4 + 9 -- foo
+	// -- + 10 -- baz
 	//
 	// x = x + 5*9 - 10/5 - (-5)
 	// x = x + (5-1+9)*6
@@ -87,6 +88,15 @@ func ExampleFprint() {
 	// print('\'test')
 	//
 	// foo = "5"..1 > "21"
+	//
+	// fn({
+	//   1,
+	//   9,
+	// })
+	//
+	// fn(function()
+	//   return 1
+	// end)
 	//
 	// return (x) + 1
 }
