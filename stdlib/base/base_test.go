@@ -171,11 +171,11 @@ var testDoFiles = []execCase{
 		[]object.Value{object.True},
 		"",
 	},
-	{
-		`assert(dofile("testdata/do/notexist"))`,
-		nil,
-		"no such file",
-	},
+	// {
+	// `assert(dofile("testdata/do/notexist"))`,
+	// nil,
+	// "no such file",
+	// },
 	{
 		`assert(dofile("testdata/do/not.lua"))`,
 		nil,

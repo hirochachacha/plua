@@ -704,7 +704,20 @@ func (p *printer) insertComment(pos position.Position) {
 			}
 
 			p.writeByte(tabwriter.Escape)
-			p.writeString(replaceEscape(strings.TrimRight(c.Text, "\t\n\v\f\r ")))
+			text := replaceEscape(strings.TrimRight(c.Text, "\t\n\v\f\r "))
+			for {
+				i := strings.IndexByte(text, '\n')
+				if i == -1 {
+					p.writeString(text)
+
+					break
+				}
+
+				p.writeString(trimRightCR(text[:i]))
+				p.writeByte('\n')
+
+				text = text[i+1:]
+			}
 			p.writeByte(tabwriter.Escape)
 
 			p.lastPos = c.End()
@@ -779,4 +792,11 @@ func (p *printer) writeString(s string) {
 		return
 	}
 	_, p.err = p.w.Write([]byte(s))
+}
+
+func trimRightCR(s string) string {
+	if len(s) > 0 && s[len(s)-1] == '\r' {
+		s = s[:len(s)-1]
+	}
+	return s
 }

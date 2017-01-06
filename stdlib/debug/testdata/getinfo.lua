@@ -2,7 +2,7 @@
 
 d = debug.getinfo(1)
 assert(d.currentline == 3)
-assert(d.source == "@testdata/getinfo.lua")
+assert(d.source == "@testdata/getinfo.lua" or d.source == "@testdata\\getinfo.lua")
 assert(d.what == "main")
 
 function f()

@@ -20,7 +20,7 @@ co = coroutine.create(function()
 end)
 
 ok, ret = coroutine.resume(co)
-assert(not ok and ret == "testdata/coroutine.lua:19: test")
+assert(not ok and (ret == "testdata/coroutine.lua:19: test" or ret == "testdata\\coroutine.lua:19: test"))
 
 iter = coroutine.wrap(function()
 	for i = 0, 3 do
