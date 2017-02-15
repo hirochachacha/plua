@@ -87,14 +87,6 @@ func Parse(s *scanner.ScanState, mode Mode) (f *ast.File, err error) {
 
 	f = p.parseFile()
 
-	if p.err == nil {
-		if serr := p.scanState.Err(); serr != nil {
-			p.err = serr
-		}
-	}
-
-	err = p.err
-
 	return
 }
 
@@ -161,6 +153,10 @@ func (p *parser) markRHS(x ast.Expr) {
 // Advance to the next token.
 func (p *parser) next0() {
 	p.tok = p.scanState.Next()
+	if err := p.scanState.Err(); err != nil {
+		p.err = err
+		panic(bailout{})
+	}
 }
 
 // Consume a comment and return it and the line on which it ends.
@@ -257,15 +253,11 @@ func (p *parser) next() {
 }
 
 func (p *parser) error(pos position.Position, err error) {
-	if serr := p.scanState.Err(); serr != nil {
-		p.err = serr
-	} else {
-		pos.SourceName = p.scanState.SourceName()
+	pos.SourceName = p.scanState.SourceName()
 
-		p.err = &Error{
-			Pos: pos,
-			Err: err,
-		}
+	p.err = &Error{
+		Pos: pos,
+		Err: err,
 	}
 
 	panic(bailout{})
