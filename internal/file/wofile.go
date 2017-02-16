@@ -14,6 +14,7 @@ type wofile struct {
 	mode   int
 	closed bool
 	std    bool
+	probe  [1]byte // workaround for https://github.com/golang/go/issues/19122
 }
 
 func (wo *wofile) IsClosed() bool {
@@ -101,25 +102,25 @@ func (wo *wofile) UnreadByte() error {
 }
 
 func (wo *wofile) ReadByte() (c byte, err error) {
-	_, err = wo.Read(nil)
+	_, err = wo.Read(wo.probe[:])
 
 	return 0, err
 }
 
 func (wo *wofile) ReadInt() (i int64, err error) {
-	_, err = wo.Read(nil)
+	_, err = wo.Read(wo.probe[:])
 
 	return 0, err
 }
 
 func (wo *wofile) ReadFloat() (f float64, err error) {
-	_, err = wo.Read(nil)
+	_, err = wo.Read(wo.probe[:])
 
 	return 0, err
 }
 
 func (wo *wofile) ReadBytes(delim byte) (line []byte, err error) {
-	_, err = wo.Read(nil)
+	_, err = wo.Read(wo.probe[:])
 
 	return nil, err
 }
