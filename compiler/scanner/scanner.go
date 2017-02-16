@@ -149,8 +149,8 @@ func (s *ScanState) Token() (tok token.Token, err error) {
 
 			err = s.err
 			tok = token.Token{Type: typ, Pos: pos, Lit: lit}
-
 			s.err = nil
+			s._mark = -1
 		}
 	}()
 
