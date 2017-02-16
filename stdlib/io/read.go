@@ -137,6 +137,10 @@ func readStrippedLine(f file.File) (s object.Value, err error) {
 		return nil, err
 	}
 
+	if len(line) == 0 {
+		return nil, io.EOF
+	}
+
 	return object.String(line[:len(line)-1]), nil
 }
 
@@ -150,6 +154,10 @@ func readLine(f file.File) (s object.Value, err error) {
 			return object.String(line), nil
 		}
 		return nil, err
+	}
+
+	if len(line) == 0 {
+		return nil, io.EOF
 	}
 
 	return object.String(line), nil

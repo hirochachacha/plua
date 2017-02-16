@@ -148,7 +148,7 @@ return x + y * z
 assert(f:close())
 f = coroutine.wrap(dofile)
 assert(f(file) == 10)
-print(f(100, 101) == 20)
+assert(f(100, 101) == 20)
 assert(f(200) == 100 + 200 * 101)
 assert(os.remove(file))
 
