@@ -17,14 +17,14 @@ func ExampleScan() {
 	s := scanner.Scan(f, "@"+"testdata/example.lua", 0)
 
 	for {
-		tok := s.Next()
+		tok, err := s.Token()
+		if err != nil {
+			panic(err)
+		}
 		if tok.Type == token.EOF {
 			break
 		}
 		fmt.Printf("line: %d, column: %d, tok: %s, lit: %s\n", tok.Pos.Line, tok.Pos.Column, tok.Type, tok.Lit)
-	}
-	if err := s.Err(); err != nil {
-		panic(err)
 	}
 
 	// Output:

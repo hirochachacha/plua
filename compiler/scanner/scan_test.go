@@ -30,14 +30,14 @@ func TestScan(t *testing.T) {
 
 		s := scanner.Scan(f, "@"+fname, 0)
 		for {
-			tok := s.Next()
+			tok, err := s.Token()
+			if err != nil {
+				t.Fatal(err)
+			}
 			if tok.Type == token.EOF {
 				break
 			}
 			fmt.Printf("line: %d, column: %d, tok: %s, lit: %s\n", tok.Pos.Line, tok.Pos.Column, tok.Type, tok.Lit)
-		}
-		if err := s.Err(); err != nil {
-			t.Fatal(err)
 		}
 
 		fmt.Println()

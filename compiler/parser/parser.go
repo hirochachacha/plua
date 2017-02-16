@@ -152,11 +152,12 @@ func (p *parser) markRHS(x ast.Expr) {
 
 // Advance to the next token.
 func (p *parser) next0() {
-	p.tok = p.scanState.Next()
-	if err := p.scanState.Err(); err != nil {
+	tok, err := p.scanState.Token()
+	if err != nil {
 		p.err = err
 		panic(bailout{})
 	}
+	p.tok = tok
 }
 
 // Consume a comment and return it and the line on which it ends.

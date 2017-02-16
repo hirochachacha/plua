@@ -93,6 +93,8 @@ type ScanState struct {
 	err error
 }
 
+type bailout struct{}
+
 func Scan(r io.Reader, srcname string, mode Mode) *ScanState {
 	s := &ScanState{
 		r:          r,
@@ -102,16 +104,6 @@ func Scan(r io.Reader, srcname string, mode Mode) *ScanState {
 		_mark:      -1,
 		lineOffset: -1,
 		line:       1,
-	}
-
-	s.init()
-
-	if s.ch == bom1 || s.ch == utf8bom1 {
-		s.skipBom()
-	}
-
-	if s.ch == '#' {
-		s.shebang = s.scanSheBang()
 	}
 
 	return s
@@ -136,16 +128,6 @@ func (s *ScanState) Reset(r io.Reader, srcname string, mode Mode) {
 	s.line = 1
 
 	s.err = nil
-
-	s.init()
-
-	if s.ch == bom1 || s.ch == utf8bom1 {
-		s.skipBom()
-	}
-
-	if s.ch == '#' {
-		s.shebang = s.scanSheBang()
-	}
 }
 
 func (s *ScanState) SourceName() string {
@@ -156,14 +138,33 @@ func (s *ScanState) Shebang() string {
 	return s.shebang
 }
 
-func (s *ScanState) Err() error {
-	return s.err
-}
-
-func (s *ScanState) Next() token.Token {
+func (s *ScanState) Token() (tok token.Token, err error) {
 	var typ token.Type
 	var pos position.Position
 	var lit string
+
+	defer func() {
+		if r := recover(); r != nil {
+			_ = r.(bailout)
+
+			err = s.err
+			tok = token.Token{Type: typ, Pos: pos, Lit: lit}
+
+			s.err = nil
+		}
+	}()
+
+	if s.offset == 0 {
+		s.init()
+
+		if s.ch == bom1 || s.ch == utf8bom1 {
+			s.skipBom()
+		}
+
+		if s.ch == '#' {
+			s.shebang = s.scanSheBang()
+		}
+	}
 
 scanAgain:
 	s.skipSpace()
@@ -360,7 +361,9 @@ scanAgain:
 		}
 	}
 
-	return token.Token{Type: typ, Pos: pos, Lit: lit}
+	tok = token.Token{Type: typ, Pos: pos, Lit: lit}
+
+	return
 }
 
 func (s *ScanState) skipBom() {
@@ -388,12 +391,12 @@ func (s *ScanState) scanSheBang() (shebang string) {
 	s.next()
 	for s.ch != '\n' {
 		if s.ch == -1 {
-			return trimRightCR(string(s.capture()))
+			return trimRightCR(s.capture())
 		}
 		s.next()
 	}
 
-	shebang = trimRightCR(string(s.capture()))
+	shebang = trimRightCR(s.capture())
 
 	s.next()
 
@@ -417,7 +420,7 @@ func (s *ScanState) scanComment() (lit string) {
 				s.error(s.pos(), err)
 			}
 
-			lit = string(s.capture())
+			lit = s.capture()
 
 			return
 		case '=':
@@ -426,7 +429,7 @@ func (s *ScanState) scanComment() (lit string) {
 				s.error(s.pos(), err)
 			}
 
-			lit = string(s.capture())
+			lit = s.capture()
 
 			return
 		}
@@ -436,7 +439,7 @@ func (s *ScanState) scanComment() (lit string) {
 		s.next()
 	}
 
-	lit = trimRightCR(string(s.capture()))
+	lit = trimRightCR(s.capture())
 
 	return
 }
@@ -450,7 +453,7 @@ func (s *ScanState) scanIdentifier() (lit string) {
 		s.next()
 	}
 
-	return string(s.capture())
+	return s.capture()
 }
 
 func (s *ScanState) skipMantissa(base int) {
@@ -551,7 +554,7 @@ exponent:
 		}
 	}
 
-	lit = string(s.capture())
+	lit = s.capture()
 
 	return
 }
@@ -563,7 +566,7 @@ func (s *ScanState) scanString(quote int) (lit string) {
 
 	for s.ch != quote {
 		if s.ch == '\n' || s.ch == '\r' || s.ch < 0 {
-			lit = string(s.capture())
+			lit = s.capture()
 
 			s.error(s.pos(), errUnterminatedString)
 
@@ -579,7 +582,7 @@ func (s *ScanState) scanString(quote int) (lit string) {
 
 	s.next()
 
-	lit = string(s.capture())
+	lit = s.capture()
 
 	return
 }
@@ -702,7 +705,7 @@ func (s *ScanState) scanLongString(simple bool) (lit string) {
 		s.error(s.pos(), err)
 	}
 
-	lit = string(s.capture())
+	lit = s.capture()
 
 	return
 }
@@ -792,14 +795,14 @@ func (s *ScanState) skipSpace() {
 }
 
 func (s *ScanState) error(pos position.Position, err error) {
-	if s.err == nil {
-		pos.SourceName = s.sourceName
+	pos.SourceName = s.sourceName
 
-		s.err = &Error{
-			Pos: pos,
-			Err: err,
-		}
+	s.err = &Error{
+		Pos: pos,
+		Err: err,
 	}
+
+	panic(bailout{})
 }
 
 func (s *ScanState) pos() position.Position {
@@ -817,7 +820,7 @@ func (s *ScanState) mark() {
 	s._mark = s.start
 }
 
-func (s *ScanState) capture() []byte {
+func (s *ScanState) capture() string {
 	if s._mark == -1 {
 		panic("no mark")
 	}
@@ -832,7 +835,7 @@ func (s *ScanState) capture() []byte {
 		s.clip.Reset()
 	}
 
-	return buf
+	return string(buf)
 }
 
 func (s *ScanState) init() {
