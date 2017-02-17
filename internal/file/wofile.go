@@ -107,18 +107,6 @@ func (wo *wofile) ReadByte() (c byte, err error) {
 	return 0, err
 }
 
-func (wo *wofile) ReadInt() (i int64, err error) {
-	_, err = wo.Read(wo.probe[:])
-
-	return 0, err
-}
-
-func (wo *wofile) ReadFloat() (f float64, err error) {
-	_, err = wo.Read(wo.probe[:])
-
-	return 0, err
-}
-
 func (wo *wofile) ReadBytes(delim byte) (line []byte, err error) {
 	_, err = wo.Read(wo.probe[:])
 
